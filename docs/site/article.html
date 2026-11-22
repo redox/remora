@@ -1,0 +1,28 @@
+<div class="docs-layout">
+  <nav class="docs-sidebar" aria-label="Documentation">
+    @SIDEBAR@
+  </nav>
+  <details class="mobile-docs">
+    <summary>Documentation menu</summary>
+    <nav aria-label="Documentation">@SIDEBAR@</nav>
+  </details>
+  <main id="main" class="article">
+    <header class="article-header">
+      <div class="breadcrumb">@CRUMB@</div>
+      <h1>@ARTICLE_TITLE@</h1>
+    </header>
+    <details class="inline-toc">
+      <summary>On this page</summary>
+      <nav aria-label="On this page"><ul>@TOC@</ul></nav>
+    </details>
+    @BODY@
+    @EDIT@
+    @PAGER@
+  </main>
+  <aside class="docs-toc">
+    <nav aria-label="On this page">
+      <p>On this page</p>
+      <ul>@TOC@</ul>
+    </nav>
+  </aside>
+</div>

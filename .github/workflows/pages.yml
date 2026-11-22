@@ -1,0 +1,51 @@
+name: Website
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/pages.yml'
+      - 'docs/site/**'
+      - 'App/Remora/Assets.xcassets/AppIcon.appiconset/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pages.yml'
+      - 'docs/site/**'
+      - 'App/Remora/Assets.xcassets/AppIcon.appiconset/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build and check internal links
+        env:
+          REMORA_SITE_REPOSITORY: ${{ github.server_url }}/${{ github.repository }}
+        run: python3 docs/site/build.py
+      - name: Upload website
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/site
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,10 @@
+// Copy to Config/Local.xcconfig (gitignored) and uncomment ONE option.
+
+// Option 1: your own Apple developer team.
+// REMORA_DEVELOPMENT_TEAM = <TEAMID>
+
+// Option 2: no Apple account (ad-hoc signing).
+// Note: ad-hoc builds change identity on every rebuild, so macOS drops the
+// Accessibility grant each time and you must re-grant it.
+// REMORA_DEVELOPMENT_TEAM =
+// REMORA_DEBUG_SIGN_IDENTITY = -

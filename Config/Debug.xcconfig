@@ -1,0 +1,6 @@
+#include "Version.xcconfig"
+#include "Signing.xcconfig"
+#include "Updates.xcconfig"
+REMORA_CODE_SIGN_IDENTITY = $(REMORA_DEBUG_SIGN_IDENTITY)
+// Keep last: a gitignored per-developer override.
+#include? "Local.xcconfig"

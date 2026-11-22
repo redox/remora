@@ -1,0 +1,41 @@
+<p class="lede">Remora stores screen memory in a local SQLite database on your Mac. A task that uses a cloud model can send the excerpts it needs directly to OpenAI under your ChatGPT account.</p>
+
+<h2 id="what-remora-captures">What Remora captures</h2>
+<p>Remora reads text the frontmost window exposes to macOS Accessibility and text you copy. It also records available app, window, site, and focus metadata. Capture is text-based, with no screenshots, screen recording, or keystroke log.</p>
+<p>Built-in protections skip secure fields, password managers, private browser windows, known banking or sign-in pages, and clipboard items marked concealed or transient. Your <a href="@ROOT@docs/data-controls/#exclusion-rules">exclusion rules</a> apply in addition to those protections. When Remora cannot verify that a context is allowed, it skips capture.</p>
+<p>Recognized secrets such as card numbers, API tokens, and private keys are replaced with <code>[redacted]</code> before storage. Ordinary names, email addresses, and phone numbers can remain in captured text.</p>
+
+<h2 id="how-model-routing-works">How model routing works</h2>
+<table>
+  <thead><tr><th scope="col">Context</th><th scope="col">Rewrite access</th></tr></thead>
+  <tbody>
+    <tr><td>Allowed window</td><td>The field and relevant window context or memory may be used with the configured model.</td></tr>
+    <tr><td>Capture paused in an otherwise allowed window</td><td>A cloud request may contain the current field text alone.</td></tr>
+    <tr><td>Excluded, private, or unverifiable context</td><td>Supported field operations use the on-device model and stop if it is unavailable.</td></tr>
+    <tr><td>Secure field, password manager, or vault page</td><td>The rewrite is refused.</td></tr>
+  </tbody>
+</table>
+<p>Optional <a href="@ROOT@docs/dictation/#transcript-cleanup">transcript cleanup</a> can use a model after transcription. Background memory and chat can send relevant allowed excerpts to OpenAI. On request, routine discovery can include window titles, app or site names, dates, and focus times in the chat request.</p>
+
+<h2 id="dictation-audio">Dictation audio</h2>
+<p>The live transcript uses Mac speech recognition. If you save an API key for <a href="@ROOT@docs/dictation/#openai-transcription">OpenAI transcription</a>, choosing Insert with an eligible, unchanged transcript sends the completed recording and a language hint to <code>api.openai.com/v1/audio/transcriptions</code> under that API project. Paused, private, excluded, and unverifiable contexts and spoken edit instructions use Mac speech recognition. Remora keeps audio in memory, discards it when the draft is dismissed, and stores the key separately in the macOS Keychain.</p>
+
+<h2 id="where-data-is-kept">Where data is kept</h2>
+<ul>
+  <li><code>~/Library/Application Support/Remora/remora.sqlite</code> holds captures, memory, chat history, and imported meetings.</li>
+  <li>ChatGPT and Granola credentials are stored separately in the macOS Keychain.</li>
+  <li>Remora logs operational events, counts, and codes. Captured text, model prompts and replies, transcripts, and credentials are excluded from logs.</li>
+</ul>
+<p>See <a href="@ROOT@docs/memory/#retention-and-background-work">retention</a> and <a href="@ROOT@docs/data-controls/#delete-all-data">delete all data</a>.</p>
+
+<h2 id="imported-meetings">Imported meetings</h2>
+<p>Meeting imports use a separate search index on this Mac. Quill and other local sources connect over loopback. If you connect Granola, <code>mcp-auth.granola.ai</code> handles sign-in and <code>mcp.granola.ai</code> receives your Granola session credential, sync filters, and meeting IDs for read requests.</p>
+<p>Chat access is off by default. If you turn it on, interactive Remora chat can send relevant excerpts and their meeting titles, dates, and IDs to OpenAI under your ChatGPT account. <a href="@ROOT@docs/meeting-sources/#chat-access">Control chat access</a></p>
+
+<h2 id="network-and-connected-clients">Network and connected clients</h2>
+<ul>
+  <li>OpenAI handles sign-in and model requests under your ChatGPT account.</li>
+  <li>Configured app updates use GitHub Releases. macOS gets dictation language models from Apple.</li>
+  <li>Connected <a href="@ROOT@docs/mcp/">MCP clients</a> read through a local server and control any onward transfer.</li>
+</ul>
+<p>Remora has no backend, telemetry, analytics, or crash reporting service. This documentation site is static and performs searches in your browser.</p>

@@ -1,0 +1,26 @@
+<p class="lede">Open <strong>Settings…</strong> from the Remora menu bar. Settings apply to the app on this Mac.</p>
+
+<h2 id="settings-pages">Settings pages</h2>
+<table>
+  <thead><tr><th scope="col">Page</th><th scope="col">Controls</th></tr></thead>
+  <tbody>
+    <tr><td>General</td><td>Open at login, replay onboarding, acknowledgements, and updates when available.</td></tr>
+    <tr><td>Account</td><td>Sign in with ChatGPT, sign out, and choose available models.</td></tr>
+    <tr><td>Usage</td><td>View calls, token counts, and estimated costs by day, job, or model.</td></tr>
+    <tr><td>Privacy</td><td>Check permissions, change exclusions, pause or resume capture, and delete stored data.</td></tr>
+    <tr><td>Appearance</td><td>Choose the chat bar position and text size, change hover and idle behavior, and show the optional window capture badge.</td></tr>
+    <tr><td>Identity</td><td>Edit the profile Remora uses for rewrites and chat.</td></tr>
+    <tr><td>Memory</td><td>Toggle background processing, choose memory language and retention, browse the wiki and chronicles, and edit time rules.</td></tr>
+    <tr><td>Meeting sources</td><td>Connect a source, sync and search imports, and control chat access. <a href="@ROOT@docs/meeting-sources/">Import meeting notes</a></td></tr>
+    <tr><td>Notifications</td><td>Manage proactive messages and macOS notification permission, or send a test notification.</td></tr>
+    <tr><td>Shortcuts</td><td>Configure the rewrite key, writing popover gestures, fallback shortcut, and sounds.</td></tr>
+    <tr><td>Dictation</td><td>Enable dictation, download speech models, manage microphone access, and configure transcription and cleanup.</td></tr>
+    <tr><td>MCP</td><td>Connect, update, and disconnect AI clients. Copy configuration for other clients.</td></tr>
+    <tr><td>Logs</td><td>Open logs or Console, or export the last 24 hours of diagnostics.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="usage-and-cost">Usage and cost</h2>
+<p>The Usage tab estimates what a call would cost at API list prices. Remora’s model calls use the allowance on your ChatGPT plan. Use <strong>Manage usage</strong> to check that allowance with ChatGPT. If a model has no price entry, the estimate is unavailable.</p>
+<p>The default daily background budget is 750,000 tokens. Background jobs back off when the plan’s usage limit is reached. Interactive chat can still run while the background budget is exhausted, subject to your plan’s limits.</p>
+<p>Use <strong>Edit price table…</strong> to override prices locally at <code>~/Library/Application Support/Remora/model-prices.json</code>. Remora bundles its price table.</p>

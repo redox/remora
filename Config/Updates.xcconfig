@@ -1,0 +1,5 @@
+REMORA_GITHUB_REPO = redox/remora
+REMORA_SPARKLE_PUBLIC_KEY = HfCn8LwPkoVjaljM5dXItiT2weyRMc6rLJx9sIjhs+U=
+// xcconfig treats "//" as a comment, so "/$()/" keeps the URL's double slash.
+REMORA_REPOSITORY_URL = https:/$()/github.com/$(REMORA_GITHUB_REPO)
+REMORA_FEED_URL = $(REMORA_REPOSITORY_URL)/releases/latest/download/appcast.xml

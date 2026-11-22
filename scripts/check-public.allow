@@ -1,0 +1,14 @@
+# Paths exempt from scripts/check-public.sh: `path-prefix` exempts every pattern,
+# `path-prefix<TAB>pattern name` exempts only that one. Keep entries narrow.
+
+# Deliberate fake secrets that the redaction tests must catch.
+Packages/RemoraKit/Tests/RedactionTests/
+
+# Test fixtures and plan examples: a fake PEM header, fake addresses and fake home paths.
+Packages/RemoraKit/Tests/CaptureTests/BoilerplateTests.swift	private key
+Packages/RemoraKit/Tests/ChatBarTests/BarPresentationTests.swift	email address
+Packages/RemoraKit/Tests/ClientConfigTests/ClientRegistrarTests.swift	user home path
+Packages/RemoraKit/Tests/LifecycleTests/LaunchGateLogicTests.swift	user home path
+
+# Verbatim third-party license texts, which carry their authors' contact addresses.
+THIRD-PARTY-NOTICES.md	email address

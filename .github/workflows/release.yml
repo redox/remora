@@ -1,0 +1,108 @@
+name: Build release DMG
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remora-release
+  cancel-in-progress: false
+
+jobs:
+  dmg:
+    if: github.repository == 'redox/remora' && github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 90
+    environment: release-signing
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Select Xcode and install XcodeGen
+        run: |
+          sudo xcode-select -s "$(printf '%s\n' /Applications/Xcode_*.app | sort -V | tail -1)"
+          xcodebuild -version
+          brew install xcodegen
+          printf 'REMORA_NOTARY_KEYCHAIN=%s/remora-release.keychain-db\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          curl --fail --silent --show-error --retry 3 -o "$RUNNER_TEMP/DeveloperIDG2CA.cer" \
+            https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+      - name: Check source and release script
+        run: |
+          scripts/check-public.sh
+          make release-selftest
+      - name: Import Developer ID identity
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          : "${CERTIFICATE_BASE64:?Set DEVELOPER_ID_P12_BASE64 in release-signing}"
+          : "${CERTIFICATE_PASSWORD:?Set DEVELOPER_ID_P12_PASSWORD in release-signing}"
+          umask 077
+          certificate=$(mktemp "$RUNNER_TEMP/remora-cert.XXXXXX")
+          trap 'rm -f "$certificate"' EXIT
+          printf '%s' "$CERTIFICATE_BASE64" | base64 -D > "$certificate"
+          unset CERTIFICATE_BASE64
+          password=$(openssl rand -hex 32)
+          security create-keychain -p "$password" "$REMORA_NOTARY_KEYCHAIN"
+          security set-keychain-settings -lut 7200 "$REMORA_NOTARY_KEYCHAIN"
+          security unlock-keychain -p "$password" "$REMORA_NOTARY_KEYCHAIN"
+          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$REMORA_NOTARY_KEYCHAIN"
+          security import "$certificate" -f pkcs12 -k "$REMORA_NOTARY_KEYCHAIN" \
+            -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" \
+            "$REMORA_NOTARY_KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$REMORA_NOTARY_KEYCHAIN"
+          security default-keychain -d user -s "$REMORA_NOTARY_KEYCHAIN"
+      - name: Build and sign universal DMG
+        run: make release
+      - name: Notarize DMG
+        env:
+          NOTARY_KEY: ${{ secrets.NOTARY_API_KEY }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          : "${NOTARY_KEY:?Set NOTARY_API_KEY in release-signing}"
+          : "${NOTARY_KEY_ID:?Set NOTARY_KEY_ID in release-signing}"
+          : "${NOTARY_ISSUER_ID:?Set NOTARY_ISSUER_ID in release-signing}"
+          umask 077
+          key_dir=$(mktemp -d "$RUNNER_TEMP/remora-notary.XXXXXX")
+          trap 'rm -rf "$key_dir"' EXIT
+          printf '%s\n' "$NOTARY_KEY" > "$key_dir/AuthKey.p8"
+          unset NOTARY_KEY
+          xcrun notarytool store-credentials remora-notary --keychain "$REMORA_NOTARY_KEYCHAIN" \
+            --key "$key_dir/AuthKey.p8" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID"
+          rm -f "$key_dir/AuthKey.p8"
+          if ! make notarize; then
+            for log in dist/notary-*-log.json; do
+              if [[ -f "$log" ]]; then cat "$log"; fi
+            done
+            exit 1
+          fi
+      - name: Staple ticket and check Gatekeeper
+        run: make staple
+      - name: Sign Sparkle update
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          : "${SPARKLE_PRIVATE_KEY:?Set SPARKLE_PRIVATE_KEY in release-signing}"
+          umask 077
+          key_file=$(mktemp "$RUNNER_TEMP/remora-sparkle.XXXXXX")
+          trap 'rm -f "$key_file"' EXIT
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > "$key_file"
+          unset SPARKLE_PRIVATE_KEY
+          REMORA_SPARKLE_KEY_FILE="$key_file" make appcast
+      - name: Delete temporary keychain
+        if: always()
+        run: |
+          if [[ -f "${REMORA_NOTARY_KEYCHAIN:-}" ]]; then security delete-keychain "$REMORA_NOTARY_KEYCHAIN"; fi
+      - name: Upload verified release files
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: remora-release-${{ github.run_attempt }}
+          path: |
+            dist/Remora-*.dmg
+            dist/appcast/appcast.xml
+          if-no-files-found: error
+          compression-level: 0

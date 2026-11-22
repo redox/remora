@@ -1,0 +1,29 @@
+<p class="lede">Check the affected permission, shortcut, or service first. Remora’s menu bar shows capture and sign-in status.</p>
+
+<h2 id="rewrite-key-does-not-work">Rewrite key does nothing or beeps</h2>
+<ol>
+  <li>Open <strong>Settings › Shortcuts</strong> and check the configured key. Tap it without holding another key.</li>
+  <li>Try the practice field in <strong>Settings › General › Show onboarding again</strong>. If needed, use <strong>Settings › Privacy › Re-grant</strong> under Accessibility.</li>
+  <li>Try another ordinary text field. Secure fields and password managers refuse the key. Another app using the same shortcut or an unresponsive editor can also interfere.</li>
+</ol>
+
+<h2 id="capture-is-missing">An app or page is missing from capture</h2>
+<p>Open the Remora menu and check the capture status. Review <strong>Settings › Privacy</strong> for paused capture or a matching exclusion. Private windows, password managers, and unverifiable pages remain protected. If memory is recent, give background processing time to build chronicles and wiki pages.</p>
+
+<h2 id="dictation-does-not-start">Dictation does not start</h2>
+<p>In <strong>Settings › Dictation</strong>, enable voice dictation, check microphone access, and confirm the speech model is installed. In <strong>Settings › Shortcuts</strong>, check that the rewrite key and <strong>Hold opens the popover</strong> are enabled. You can also tap the key to open the popover and try <strong>Record</strong>.</p>
+
+<h2 id="chatgpt-limit-or-sign-in">ChatGPT limit or sign-in error</h2>
+<p>Check sign-in under <strong>Settings › Account</strong>. If the plan’s allowance is exhausted, open <strong>Settings › Usage › Manage usage</strong> to check your ChatGPT allowance. Background work backs off until it can retry.</p>
+
+<h2 id="missing-notifications">A brief or notification is missing</h2>
+<p>Send a test from <strong>Settings › Notifications</strong> to check macOS notification permission. For a missing brief, also check that proactive messages and background memory are on, that recent captured activity exists, and that the catch-up window has not closed.</p>
+
+<h2 id="mcp-client-has-no-results">An MCP client has no results</h2>
+<p>Launch the installed Remora app once to initialize or update the database. Check the client in <strong>Settings › MCP</strong>, update its registration if it points to another copy, then restart the client. Check capture status and <a href="@ROOT@docs/data-controls/#exclusion-rules">exclusions</a> if the server connects but results are empty.</p>
+
+<h2 id="meeting-imports-are-missing">Meeting imports are missing</h2>
+<p>Check the sync status under <strong>Settings › Meeting sources</strong>. For Quill, keep it running and copy its current local HTTP URL. For Granola, check the active workspace and its MCP permissions, or use <strong>Sign in to Granola</strong> again if the connection expired. Verify the start date, look for a capture pause or matching exclusion, then choose <strong>Sync</strong>. If you see an import limit, try a more recent start date. <a href="@ROOT@docs/meeting-sources/">Meeting source setup and sync</a></p>
+
+<h2 id="logs">Find diagnostic logs</h2>
+<p>Use <strong>Settings › Logs</strong> to open the log folder, open Console, or export diagnostics from the last 24 hours. Logs hold operational events, counts, and codes.</p>

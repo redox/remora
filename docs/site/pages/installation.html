@@ -1,0 +1,42 @@
+<p class="lede">Install Remora in Applications and grant Accessibility so it can read window text and write into text fields.</p>
+
+<h2 id="requirements">Requirements</h2>
+<ul>
+  <li>macOS 26 or later.</li>
+  <li>A plan that supports Sign in with ChatGPT for cloud model tasks.</li>
+  <li>Apple Intelligence for tasks that require the on-device model. This matters for rewriting and dictation cleanup in private, excluded, or unverifiable contexts.</li>
+</ul>
+
+<h2 id="install">Install Remora</h2>
+<ol>
+  <li>Download the Remora disk image (<code>.dmg</code>) from @RELEASES@ when a release is available.</li>
+  <li>Open the disk image and launch Remora. Accept <strong>Move to Applications</strong>, or drag the app into Applications before opening it.</li>
+  <li>Run one copy of Remora at a time. Use the copy in <code>/Applications</code> or <code>~/Applications</code> for normal work.</li>
+</ol>
+
+<h2 id="first-run">First run</h2>
+<ol>
+  <li>Grant Accessibility in System Settings. Remora uses it to read the frontmost window and insert text in other apps.</li>
+  <li>Review the built-in capture protections and your own exclusions.</li>
+  <li>Choose <strong>Continue with ChatGPT</strong> to authorize model access in your browser. Choose <strong>Later</strong> to postpone sign-in.</li>
+  <li>After signing in, try the rewrite key in the practice field. Enable the microphone if you want dictation and allow notifications if you want macOS alerts.</li>
+</ol>
+<p>To reopen this flow, choose <strong>Settings › General › Show onboarding again</strong>. Microphone access is for dictation. Remora requires neither Screen Recording nor Input Monitoring nor Full Disk Access.</p>
+
+<h2 id="updates">Updates</h2>
+<p>An installed release with updates configured checks hourly. Automatic updates wait until you quit or Remora is idle and has finished its current work. In <strong>Settings › General</strong>, use <strong>Check for Updates…</strong> or change <strong>Install updates automatically</strong>.</p>
+
+<h2 id="uninstall">Uninstall Remora</h2>
+<ol>
+  <li>Disconnect meeting sources in <strong>Settings › Meeting sources</strong> and AI clients in <strong>Settings › MCP</strong>.</li>
+  <li>Quit from the menu bar and remove <code>Remora.app</code> from Applications.</li>
+  <li>To remove local data and logs, delete <code>~/Library/Application Support/Remora/</code> and <code>~/Library/Logs/Remora/</code>.</li>
+  <li>To remove stored credentials, use Keychain Access to delete <code>dev.remora.Remora.siwc</code> for account <code>chatgpt</code>. If present, also delete <code>dev.remora.meeting-import</code> for account <code>granola</code> and <code>dev.remora.dictation-transcription</code> for account <code>openai</code>.</li>
+</ol>
+
+<h2 id="build-from-source">Build from source</h2>
+<p>Clone the repository. Copy <code>Config/Local.xcconfig.example</code> to <code>Config/Local.xcconfig</code> and select your development team or ad-hoc signing. macOS ties Accessibility grants to the app signature, so a stable development identity makes rebuilds easier to test.</p>
+<pre><code>brew install xcodegen
+make test
+make build</code></pre>
+<p>The Debug app is at <code>build/Build/Products/Debug/Remora.app</code>.</p>

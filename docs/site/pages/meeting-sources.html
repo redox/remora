@@ -1,0 +1,37 @@
+<p class="lede">Import meeting notes and transcripts into Remora and search them on your Mac. Remora reads the text available from the meeting app and stores a local copy.</p>
+
+<h2 id="connect-quill">Connect Quill Meetings</h2>
+<ol>
+  <li>In <strong>Quill › Settings › MCP Server</strong>, turn on the MCP server and choose <strong>Enable local HTTP server</strong>. Select <strong>Copy local HTTP URL</strong>.</li>
+  <li>In <strong>Remora › Settings › Meeting sources</strong>, choose <strong>Quill Meetings</strong> and paste the URL into <strong>Local MCP URL</strong>.</li>
+  <li>Set <strong>Import meetings since</strong> and choose <strong>Connect</strong>. Keep Quill running for sync.</li>
+</ol>
+<p>Copy the URL from Quill again if its port changes. <a href="https://www.quillmeetings.com/docs/mcp">Quill’s MCP setup guide</a></p>
+
+<h2 id="connect-granola">Connect Granola</h2>
+<ol>
+  <li>In <strong>Settings › Meeting sources</strong>, choose <strong>Granola</strong> and set <strong>Import meetings since</strong>.</li>
+  <li>Choose <strong>Sign in to Granola</strong>. In your browser, sign in with the account that has access to your meetings and authorize Remora.</li>
+  <li>Return to Remora and check the sync status under <strong>Connected sources</strong>.</li>
+</ol>
+<p>Granola returns meetings from the active workspace according to your plan and workspace permissions. Basic provides accessible notes from the last 30 days. Transcript access requires a paid plan with the appropriate permissions. <a href="https://docs.granola.ai/help-center/sharing/integrations/mcp#what-mcp-can-access">Granola’s MCP access rules</a></p>
+
+<h2 id="connect-local-mcp">Connect a compatible local MCP server</h2>
+<p>In <strong>Settings › Meeting sources</strong>, choose <strong>Local MCP</strong> and enter the server’s Streamable HTTP URL with an explicit port, such as <code>http://127.0.0.1:8080/mcp</code>. Set <strong>Import meetings since</strong> and choose <strong>Connect</strong>.</p>
+<p>Use a loopback endpoint. The server needs a compatible read tool such as <code>list_meetings</code> that returns stable meeting IDs, titles, and dates. Include notes or transcripts in the listing or expose compatible read tools such as <code>get_minutes</code> and <code>get_transcript</code>.</p>
+
+<h2 id="sync-and-search">Sync and search meetings</h2>
+<p>Remora checks connected sources about every 15 minutes while it is running. After a successful sync, it checks from two days before the last sync so it can pick up changes to recent meetings. To import older history or refresh older edits, choose an earlier <strong>Import meetings since</strong> date and select <strong>Sync</strong> beside the source. The history available to import depends on the provider and its limits.</p>
+<p>Use <strong>Search meetings</strong> to find words in imported titles, notes, and transcripts. Select a result to read it. A Quill import with a supported meeting ID also offers <strong>Open in Quill</strong>.</p>
+
+<h2 id="chat-access">Allow chat to search imports</h2>
+<p>Chat access is off by default. In <strong>Settings › Meeting sources</strong>, turn on <strong>Let Remora chat search imported meetings</strong> and choose <strong>Allow</strong>. Then ask an interactive chat question with a meeting name or keyword, such as “What did we decide about pricing in the launch review?”</p>
+<p>Relevant meeting excerpts can be sent to OpenAI under your ChatGPT account. The imports live in a separate search index accessible from Meeting sources and, with your permission, interactive Remora chat. The bundled MCP server serves screen memory to other AI apps. <a href="@ROOT@docs/privacy/#imported-meetings">Meeting data and privacy</a></p>
+
+<h2 id="manage-imports">Pause, forget, or disconnect</h2>
+<ul>
+  <li>Use Remora’s <strong>Pause</strong> menu to suspend sync and chat searches of meetings. Existing imports remain available in Settings and follow your exclusions.</li>
+  <li>Open an imported meeting and choose <strong>Forget…</strong> to remove its local copy and skip it on future syncs.</li>
+  <li>Choose <strong>Disconnect…</strong> next to a source and confirm to stop sync and remove that source’s imports from Remora. To remove all imports and sources, use <strong>Settings › Privacy › Delete all data…</strong>.</li>
+</ul>
+<p>Forget and disconnect affect the copies in Remora. Manage the originals in your meeting app. If a meeting is deleted there, use <strong>Forget…</strong> to remove the copy from Remora. Forgetting a meeting, removing its source’s imports, or turning off chat access stops Remora from replaying earlier chat to the model.</p>

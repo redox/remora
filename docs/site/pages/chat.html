@@ -1,0 +1,25 @@
+<p class="lede">Use chat to ask about screen activity, browse what you remember, or manage reminders and some Remora settings.</p>
+
+<h2 id="open-the-chat-bar">Open the chat bar</h2>
+<p>By default, the chat bar sits below the notch on your main display, or at the top center if that display has no notch. Click it, hover over it when <strong>Open on hover</strong> is enabled, or choose <strong>Open chat</strong> from the Remora menu. You can also double-tap the rewrite key outside a text field in supported contexts.</p>
+<p>Use <strong>Pin chat</strong> in the header to keep the panel open when you click elsewhere. To resize, click the bar to open it, then drag an edge. In <strong>Settings › Appearance</strong>, change the bar’s position, text size, auto-hide, and dimming behavior.</p>
+
+<h2 id="ask-about-activity">Ask about activity</h2>
+<p>Type in <strong>Ask Remora</strong>. Press <kbd>Return</kbd> to send or <kbd>⇧ Return</kbd> for a new line. Specify a name, app, title, or time window when you know one. Remora searches available captures and derived memory.</p>
+<ul>
+  <li>“What did Sam say about the review in Slack yesterday?”</li>
+  <li>“What was I working on before lunch?”</li>
+  <li>“What commitments are still open for the website project?”</li>
+</ul>
+<p>Chat history is stored locally and retained for up to 90 days. Long conversations may be summarized. Use <strong>Edit</strong> below your latest message to revise it and send it again. Actions already completed stay in effect.</p>
+
+<h2 id="ask-about-meetings">Ask about imported meetings</h2>
+<p>To ask “What did we decide about pricing in the launch review?”, first import your notes and enable chat access in <strong>Settings › Meeting sources</strong>. Meeting excerpts used in the answer may be sent to OpenAI under your ChatGPT account. <a href="@ROOT@docs/meeting-sources/#chat-access">Allow chat to search imports</a></p>
+
+<h2 id="ask-chat-to-act">Ask chat to act</h2>
+<p>Chat can create or cancel a reminder, add an exclusion, pause capture, update your identity, change supported settings, or correct a wiki fact. A confirmation card appears for sensitive actions and for actions in a turn that has read captured or other untrusted data. Some actions include an undo control in the response.</p>
+<p>Manage or remove exclusions in <strong>Settings › Privacy</strong>. See <a href="@ROOT@docs/data-controls/">data controls</a> and <a href="@ROOT@docs/reminders/">reminder examples</a>.</p>
+
+<h2 id="recurring-routines">Discover recurring routines</h2>
+<p>Ask “What routines have you noticed?” Remora looks for pairs of named windows visited in the same order within 45 minutes, on at least three days in the last 28 local days, using current exclusions. Treat the results as suggestions based on dates, window titles, and focus times.</p>
+<p>Ask to rename or dismiss a suggestion and confirm the action. If you want a draft, ask for one in chat. To repeat the work on a schedule, explicitly ask for a recurring prompt.</p>

@@ -1,0 +1,30 @@
+<p class="lede">Remora’s MCP tools read captures, activity, derived memory, and usage. The server accepts tool arguments as JSON objects. Time arguments use Unix seconds.</p>
+
+<h2 id="captures-and-activity">Captures and activity</h2>
+<dl class="tool-list">
+  <div><dt><code>search_memory</code></dt><dd>Requires <code>query</code>. Optional <code>app</code>, <code>since</code>, <code>until</code>, and <code>limit</code>. Returns snippets and snapshot IDs. Default limit 10, maximum 20.</dd></div>
+  <div><dt><code>get_snapshots</code></dt><dd>Requires <code>ids</code> with up to 10 snapshot IDs. Returns text capped at 20,000 characters per snapshot, with a truncation flag.</dd></div>
+  <div><dt><code>read_session</code></dt><dd>Requires <code>app</code>, <code>start</code>, and <code>end</code>. Optional <code>limit</code>. Returns captures for one app in chronological order, capped at 2,000 characters each. Default limit 10, maximum 20.</dd></div>
+  <div><dt><code>get_recent_activity</code></dt><dd>Optional <code>limit</code>. Returns recent snapshots and focus activity from the last two hours. Default limit 12 per list, maximum 20.</dd></div>
+</dl>
+<p>For example, call <code>search_memory</code> with the arguments below. Pass matching IDs to <code>get_snapshots</code> if you need more than the snippets.</p>
+<pre><code>{
+  "query": "Thursday review",
+  "app": "Safari",
+  "limit": 5
+}</code></pre>
+
+<h2 id="derived-memory">Derived memory</h2>
+<dl class="tool-list">
+  <div><dt><code>get_chronicle</code></dt><dd>Requires <code>level</code> (<code>hour</code>, <code>day</code>, <code>week</code>, <code>month</code>, or <code>year</code>). Optional <code>date</code> and <code>count</code>. Returns period summaries newest first. Default count 1, maximum 24.</dd></div>
+  <div><dt><code>get_working_memory</code></dt><dd>Optional <code>limit</code>. Returns recent threads by relevance. Default limit 12, maximum 20.</dd></div>
+  <div><dt><code>get_attention_context</code></dt><dd>Takes an empty object. Returns recent focus, relevant working memory, the latest hour summary, open items, and a memory digest when available.</dd></div>
+  <div><dt><code>search_wiki</code></dt><dd>Requires <code>query</code>. Optional <code>type</code> and <code>limit</code>. Returns matching pages and facts. Default limit 10, maximum 20.</dd></div>
+  <div><dt><code>get_wiki_page</code></dt><dd>Requires <code>slug</code>. Set <code>include_history</code> to <code>true</code> to include previous facts. Returns one page with its facts and source references.</dd></div>
+  <div><dt><code>list_wiki</code></dt><dd>Optional <code>type</code>, <code>sort</code> (<code>recent</code> or <code>mentions</code>), <code>limit</code>, and <code>offset</code>. Default and maximum limit 20.</dd></div>
+</dl>
+
+<p>Wiki tools accept <code>person</code>, <code>project</code>, <code>topic</code>, <code>tool</code>, or <code>org</code> as a <code>type</code> filter.</p>
+
+<h2 id="usage">Usage</h2>
+<p><code>get_usage</code> returns model call counts, token counts, and estimated costs. It takes optional <code>since</code> (default seven days ago) and <code>group_by</code> (<code>day</code>, <code>job_type</code>, or <code>model</code>, default <code>day</code>). The cost is an API-equivalent estimate. A null estimate means there is no price entry for the model.</p>

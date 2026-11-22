@@ -1,0 +1,27 @@
+<p class="lede">The bundled MCP server gives a connected AI client read-only access to Remora memory over local standard input and output.</p>
+<p>Use <strong>Settings › MCP</strong> to share screen memory with an AI client. Use <strong>Settings › Meeting sources</strong> to bring notes and transcripts into Remora from a meeting provider. Imported meetings are available in Meeting sources and, with your permission, in Remora chat. <a href="@ROOT@docs/meeting-sources/">Import meeting notes</a></p>
+
+<h2 id="connect-a-client">Connect a client</h2>
+<ol>
+  <li>Run the installed copy of Remora once so it can create its local database.</li>
+  <li>Open <strong>Settings › MCP</strong> and choose <strong>Connect</strong> for Claude Code, Claude Desktop, Cursor, or Codex.</li>
+  <li>Restart the client if prompted. Look for the server named <code>remora</code> in the client’s MCP settings.</li>
+</ol>
+<p>Use <strong>Update</strong> if the client points to another Remora copy. Use <strong>Disconnect…</strong> to remove Remora’s registration, then restart the client to reload its configuration. Where Remora edits a config file directly, it backs it up and changes only the Remora entry.</p>
+
+<h2 id="other-clients">Other clients</h2>
+<p>Use <strong>Other apps › Copy config</strong> to copy a snippet with the exact executable path. For a client that accepts JSON with an <code>mcpServers</code> object, merge the Remora entry into its existing configuration.</p>
+<pre><code>{
+  "mcpServers": {
+    "remora": {
+      "command": "/Applications/Remora.app/Contents/MacOS/remora-mcp"
+    }
+  }
+}</code></pre>
+<p>The example assumes a system-wide Applications install. Use the path from <strong>Copy config</strong> for a copy in your personal Applications folder. The server takes no arguments and can read an initialized database while the menu-bar app is closed.</p>
+
+<h2 id="query-memory">Query memory</h2>
+<p>Try asking your client “Use Remora to find when I last saw the Thursday review notes.” A client can search for snippets, then fetch the snapshots for matching IDs. See the <a href="@ROOT@docs/mcp-tools/">MCP tool reference</a> for inputs and limits.</p>
+
+<h2 id="trust-and-privacy">Trust and privacy</h2>
+<p>Remora applies current exclusions when serving memory. The server marks captured text as untrusted data. A connected client controls what it does with returned data, including whether it sends it to a model provider. Disconnect clients you no longer want to have access.</p>

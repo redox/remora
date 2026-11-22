@@ -1,0 +1,151 @@
+<main id="main">
+  <section class="hero">
+    <div class="landing-width hero-inner">
+      <div class="hero-copy">
+        <h1>A local memory <em>for your Mac.</em></h1>
+        <p>Rewrite in the apps you use, dictate on your Mac, and ask about what you’ve seen. Remora keeps your memory on your device.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="@ROOT@docs/installation/">Get Remora</a>
+          <a class="button secondary" href="@ROOT@docs/quickstart/">Read the quickstart</a>
+        </div>
+        <p class="platform">macOS 26 or later</p>
+      </div>
+      <figure class="demo" aria-label="Remora on a Mac desktop">
+        <figcaption>
+          <div class="demo-controls" role="group" aria-label="Choose an example" hidden>
+            <button type="button" data-demo="recall" aria-controls="demo-recall" aria-pressed="true">Recall</button>
+            <button type="button" data-demo="rewrite" aria-controls="demo-rewrite" aria-pressed="false">Rewrite</button>
+            <button type="button" data-demo="dictation" aria-controls="demo-dictation" aria-pressed="false">Dictate</button>
+          </div>
+        </figcaption>
+        <div class="demo-stage">
+          <img class="demo-backdrop" src="@ROOT@assets/shallow-water.webp" alt="" width="1440" height="960">
+          <div class="demo-menubar" aria-hidden="true">
+            <div class="demo-menus"><strong>Notes</strong><span>File</span><span>Edit</span><span>View</span><span>Window</span></div>
+            <span class="demo-notch"></span>
+            <div class="demo-status"><span class="demo-glyph"></span><span class="demo-wifi"></span><span class="demo-battery"></span><span><span class="demo-day">Tue </span>10:41 AM</span></div>
+          </div>
+          <div class="demo-panel demo-recall" id="demo-recall" data-demo-panel="recall">
+            <div class="demo-window" aria-hidden="true">
+              <div class="demo-titlebar">
+                <div class="window-controls"><i></i><i></i><i></i></div>
+                <span>Zine print run</span>
+              </div>
+              <div class="demo-document">
+                <p class="demo-note-title">Tuesday’s proof notes</p>
+                <p>The second proof kept the blue soft.</p>
+                <ul>
+                  <li>120 gsm warm-white uncoated stock</li>
+                  <li>Six copies for the illustrators</li>
+                  <li>Bring labels at pickup</li>
+                </ul>
+              </div>
+            </div>
+            <section class="demo-remora demo-chat" aria-label="Remora notch chat">
+              <div class="demo-toolbar">
+                <span class="demo-chat-name"><span class="demo-glyph" aria-hidden="true"></span>Remora</span>
+                <span class="demo-accessories" aria-hidden="true">··· ⌃</span>
+              </div>
+              <p class="demo-chat-question">Which paper made the blue look right?</p>
+              <p class="demo-chat-reply">The 120 gsm warm-white uncoated stock. In Tuesday’s proof notes, you said it kept the blue soft.</p>
+              <div class="demo-composer" aria-hidden="true"><span>Ask Remora</span><span class="demo-send">↑</span></div>
+            </section>
+          </div>
+          <div class="demo-panel demo-writing" id="demo-rewrite" data-demo-panel="rewrite" hidden>
+            <div class="demo-window">
+              <div class="demo-titlebar">
+                <div class="window-controls" aria-hidden="true"><i></i><i></i><i></i></div>
+                <span>Zine print run</span>
+              </div>
+              <div class="demo-document">
+                <p class="demo-note-title">Draft to Jo</p>
+                <section class="demo-remora demo-editor" aria-label="Remora Edit popover">
+                  <div class="demo-toolbar" aria-hidden="true">
+                    <span>Insert</span><span class="demo-selected">Edit</span><span>Record</span><span class="demo-dismiss">×</span>
+                  </div>
+                  <div class="demo-composer demo-edit-composer">
+                    <span class="demo-glyph" aria-hidden="true"></span>
+                    <span>Make this warmer and more direct</span>
+                    <span class="demo-selected">Rewrite selection</span>
+                  </div>
+                  <p class="demo-editor-note">Using ChatGPT plan</p>
+                </section>
+                <p><mark>hey jo could you pull 6 copies for the illustrators? i’ll bring labels when i pick up</mark></p>
+              </div>
+            </div>
+          </div>
+          <div class="demo-panel demo-writing" id="demo-dictation" data-demo-panel="dictation" hidden>
+            <div class="demo-window">
+              <div class="demo-titlebar">
+                <div class="window-controls" aria-hidden="true"><i></i><i></i><i></i></div>
+                <span>Zine print run</span>
+              </div>
+              <div class="demo-document">
+                <p class="demo-note-title">Pickup instructions</p>
+                <section class="demo-remora demo-editor" aria-label="Remora dictation in the Insert popover">
+                  <div class="demo-toolbar" aria-hidden="true">
+                    <span class="demo-selected">Insert</span><span>Edit</span><span>Record</span><span class="demo-dismiss">×</span>
+                  </div>
+                  <div class="demo-composer demo-edit-composer">
+                    <span class="demo-glyph" aria-hidden="true"></span>
+                    <span>um put the blue copies by the door so people can grab one on their way out</span>
+                    <span class="demo-selected">Insert at caret</span>
+                  </div>
+                  <p class="demo-editor-note">Tap right ⌥ to switch modes</p>
+                </section>
+                <p>After the final proof <span class="demo-caret" aria-hidden="true"></span></p>
+              </div>
+            </div>
+          </div>
+          <div class="demo-dock" aria-hidden="true">
+            <span class="demo-dock-files">⌑</span><span class="demo-dock-mail">✉</span><span class="demo-dock-notes">≡</span><span class="demo-dock-settings">⚙</span>
+          </div>
+        </div>
+      </figure>
+    </div>
+  </section>
+  <section class="landing-width capabilities" aria-labelledby="workflow">
+    <h2 id="workflow">Work in the apps you already use</h2>
+    <div class="feature-grid">
+      <article>
+        <p class="feature-symbol" aria-hidden="true">⌥</p>
+        <h3>Rewrite in place</h3>
+        <p>Double-tap right Option to rewrite selected text. With no selection, Remora continues your sentence or fills a gap at the cursor.</p>
+        <a href="@ROOT@docs/rewrite/">Rewrite and Edit mode</a>
+      </article>
+      <article>
+        <p class="feature-symbol" aria-hidden="true">↵</p>
+        <h3>Speak where you type</h3>
+        <p>Hold <kbd>right ⌥</kbd> to dictate in English or French. Review the live transcript, then insert your words or use them as an edit instruction.</p>
+        <a href="@ROOT@docs/dictation/">Voice dictation</a>
+      </article>
+      <article>
+        <p class="feature-symbol feature-chat" aria-hidden="true"><span></span><span></span><span></span></p>
+        <h3>Ask about your work</h3>
+        <p>Open the chat bar to recall a decision, find what you left open, or see where your time went.</p>
+        <a href="@ROOT@docs/chat/">Chat and recall</a>
+      </article>
+    </div>
+  </section>
+  <section class="privacy-band" aria-labelledby="local-memory">
+    <div class="landing-width privacy-inner">
+      <div>
+        <h2 id="local-memory">Your memory lives on your Mac.</h2>
+        <p>Remora reads text through macOS Accessibility and saves it in local SQLite. Tasks that use a cloud model send relevant excerpts directly to OpenAI under your ChatGPT plan.</p>
+        <a href="@ROOT@docs/privacy/">Read how data flows</a>
+      </div>
+      <div class="data-steps">
+        <div><strong>Capture</strong><span>Frontmost window text and copied text</span></div>
+        <div><strong>Store</strong><span>Local captures, summaries, and personal wiki</span></div>
+        <div><strong>Use</strong><span>Rewrite, chat, and optional read-only MCP access</span></div>
+      </div>
+    </div>
+  </section>
+  <section class="landing-width start-section">
+    <div>
+      <h2>Start with one rewrite</h2>
+      <p>Install Remora, grant Accessibility, and try the rewrite key in the onboarding practice field.</p>
+    </div>
+    <a class="button primary" href="@ROOT@docs/installation/">Installation guide</a>
+  </section>
+</main>

@@ -1,0 +1,27 @@
+<p class="lede">Pause capture for a while, exclude a context going forward, forget specific captures, or erase Remora’s local memory.</p>
+
+<h2 id="pause-capture">Pause capture</h2>
+<p>Open the menu-bar <strong>Pause</strong> menu or use <strong>Settings › Privacy</strong>. Choose 15 minutes, one hour, until 08:00 tomorrow, or indefinitely. Choose <strong>Resume</strong> to resume early. The capture indicator shows the current state.</p>
+<p>A rewrite while paused can still use field text in an otherwise allowed window. See <a href="@ROOT@docs/privacy/#how-model-routing-works">model routing</a>.</p>
+<p>Pause also suspends meeting sync and meeting searches from chat. You can still browse existing imports in <strong>Settings › Meeting sources</strong>. <a href="@ROOT@docs/meeting-sources/#manage-imports">Manage meeting imports</a></p>
+
+<h2 id="exclusion-rules">Exclusion rules</h2>
+<p>In <strong>Settings › Privacy</strong>, add one case-insensitive exclusion per entry. For the current window, the capture menu can also offer <strong>Never capture this app</strong> or <strong>Never capture this site</strong>.</p>
+<table>
+  <thead><tr><th scope="col">Rule example</th><th scope="col">Matches</th></tr></thead>
+  <tbody>
+    <tr><td><code>example.com</code></td><td>A domain and its subdomains.</td></tr>
+    <tr><td><code>app:Slack</code></td><td>An app name.</td></tr>
+    <tr><td><code>title:private notes</code></td><td>Window titles containing the text.</td></tr>
+    <tr><td><code>url:/account/</code></td><td>Page addresses containing the text.</td></tr>
+    <tr><td><code>path:/personal/</code></td><td>Document paths containing the text.</td></tr>
+  </tbody>
+</table>
+<p>Some AI chat apps and sites and terminal apps are seeded as removable exclusions. Built-in protections for sensitive contexts apply independently. Adding an exclusion stops new capture for matching contexts and hides matching past captures from retrieval. Previously derived memory can remain on disk.</p>
+
+<h2 id="forget-specific-captures">Forget specific captures</h2>
+<p>In chat, ask “Forget what you saw in Safari about the travel booking yesterday.” Review the proposed forget action before confirming it. Remora deletes the matching captures and removes memory that was derived only from them. Review your identity if it still mentions that context.</p>
+<p>Chat messages from before the forget stay visible until you clear the chat. Remora stops replaying those messages to the model in future turns.</p>
+
+<h2 id="delete-all-data">Delete all data</h2>
+<p>In <strong>Settings › Privacy</strong>, choose <strong>Delete all data…</strong> and type <code>yes</code>. This permanently deletes captures, activity history, summaries, wiki, identity, chat history, reminders, and imported meetings. Remora also clears delivered notifications, disconnects meeting sources, and turns off chat access to imports. Exclusions and other preferences are kept.</p>

@@ -1,0 +1,38 @@
+<p class="lede">Remora’s rewrite key works in a focused text field. Double-tap <kbd>right ⌥</kbd> by itself to write into that field. Tap once to open the writing popover.</p>
+
+<h2 id="choose-what-to-rewrite">Choose what to rewrite</h2>
+<table>
+  <thead><tr><th scope="col">Field state</th><th scope="col">What Remora does</th></tr></thead>
+  <tbody>
+    <tr><td>The field starts with <code>/q</code> and a question</td><td>Answers the question and replaces it with the answer.</td></tr>
+    <tr><td>There is a selection</td><td>Rewrites the selection.</td></tr>
+    <tr><td>There is no selection</td><td>Drafts from available context and inserts at the caret, keeping the existing text.</td></tr>
+    <tr><td>No text field has focus</td><td>Opens chat when the current app and context allow it.</td></tr>
+  </tbody>
+</table>
+<p>A <strong>Writing…</strong> badge appears near the caret. Press <kbd>Esc</kbd> or click the indicator to cancel. Remora waits for the complete result before it edits the field. Use <kbd>⌘ Z</kbd> if the host app supports undo.</p>
+
+<h2 id="draft-at-the-caret">Continue text at the cursor</h2>
+<p>Place the caret (the text cursor) where you want to continue a sentence or fill a gap, then double-tap <kbd>right ⌥</kbd> without selecting anything. Remora uses the text before and after the caret to draft just the new words. In an empty field, it drafts from available context, such as the email thread you’re replying to.</p>
+<p>If the caret moves while Remora drafts, or if Remora can’t locate it in a field that already contains text, the write is skipped.</p>
+
+<h2 id="edit-mode">Edit mode</h2>
+<ol>
+  <li>Select the text you want to change and tap <kbd>right ⌥</kbd> to open the writing popover in <strong>Edit</strong>.</li>
+  <li>In the popover, enter an instruction such as <code>Make this more direct</code> or <code>Translate to French</code>.</li>
+  <li>Press <kbd>Return</kbd> or choose <strong>Rewrite selection</strong>. The popover stays open so you can refine the new text. Press <kbd>Esc</kbd> or click outside to close it.</li>
+</ol>
+<p>With no selection, tap <kbd>right ⌥</kbd> once to open the popover and again to switch to <strong>Edit</strong>. Enter an instruction and choose <strong>Apply as edit</strong> to edit the field. Use <kbd>⇧ Return</kbd> to add a line to an instruction and <strong>Undo</strong> or <kbd>⌘ Z</kbd> to undo the last edit while the popover is open.</p>
+<p>With <a href="@ROOT@docs/dictation/">dictation</a> enabled, hold <kbd>right ⌥</kbd> to speak an instruction, then release to review it. Select <strong>Edit</strong> before pressing <kbd>Return</kbd> to apply the instruction.</p>
+
+<h2 id="insert-text">Insert text</h2>
+<p>With no selection, tap <kbd>right ⌥</kbd> to open the popover in <strong>Insert</strong>. Type or dictate a draft, then choose <strong>Insert at caret</strong> or press <kbd>Return</kbd>. If text was selected when you opened the popover, switch to <strong>Insert</strong> and choose <strong>Replace selection</strong>.</p>
+
+<h2 id="ask-in-a-field">Ask in a field</h2>
+<p>At the start of an empty field, type a question after <code>/q</code> and double-tap the rewrite key.</p>
+<pre><code>/q What did we decide about the Thursday review?</code></pre>
+<p>Remora uses available context to answer in place. For follow-up questions, use <a href="@ROOT@docs/chat/">chat</a>.</p>
+
+<h2 id="privacy-and-permissions">Privacy and permissions</h2>
+<p>Secure fields and password managers refuse the rewrite key. Private, excluded, or unverifiable contexts use the on-device model for supported field operations. If it is unavailable, the operation stops. While capture is paused, a cloud rewrite can use the field alone. See the <a href="@ROOT@docs/privacy/#how-model-routing-works">routing table</a> for details.</p>
+<p>Change the rewrite key, fallback chord, sounds, and popover gestures in <strong>Settings › Shortcuts</strong>.</p>

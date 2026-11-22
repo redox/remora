@@ -1,0 +1,15 @@
+.build/
+build/
+*.xcodeproj/
+.DS_Store
+DerivedData/
+.swiftpm/
+.superpowers/
+.claude/*
+!.claude/skills/
+dist/
+generated_images/
+Config/Local.xcconfig
+docs/private/
+/docs/superpowers/
+.public-denylist

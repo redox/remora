@@ -1,0 +1,23 @@
+<p class="lede">Remora captures allowed text while you work and turns it into summaries, wiki facts, and open items. Chat, rewrites, and connected clients can draw on that memory.</p>
+
+<h2 id="memory-objects">What memory contains</h2>
+<table>
+  <thead><tr><th scope="col">Object</th><th scope="col">What it contains</th></tr></thead>
+  <tbody>
+    <tr><td>Captures</td><td>Text from allowed windows and clipboard items, with available time and app metadata.</td></tr>
+    <tr><td>Chronicles</td><td>Summaries organized into periods. Browse by day in Settings or request a period in chat or over MCP.</td></tr>
+    <tr><td>Wiki</td><td>Pages about people, projects, topics, tools, and organizations. Facts retain source references when available.</td></tr>
+    <tr><td>Working memory</td><td>Recent threads, commitments, and items that may need attention.</td></tr>
+    <tr><td>Identity</td><td>A profile for chat and rewrites. Edit it in <strong>Settings › Identity</strong> to correct what Remora knows about you.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="browse-memory">Browse memory</h2>
+<p>Open <strong>Settings › Memory</strong> and use <strong>Browse</strong> to switch between the wiki and chronicles. In chat, ask for a recent summary or use a title, person, or app name to narrow the search.</p>
+
+<h2 id="time-rules">Track time by project</h2>
+<p>Use <strong>Time rules</strong> in <strong>Settings › Memory</strong> to associate activity with a project. Remora uses recorded focus time and the rules to build a time ledger. Ask chat “How much time did I spend on the website project this week?”</p>
+
+<h2 id="retention-and-background-work">Retention and background work</h2>
+<p>Raw captures are kept for 30 days by default. Older captures become eligible for deletion once summarized, except when cited by a wiki fact or open item. Derived memory stays until you delete it.</p>
+<p><strong>Settings › Memory</strong> controls background processing, raw capture retention, and the language used for generated memory. To stop collecting new text as well, <a href="@ROOT@docs/data-controls/#pause-capture">pause capture</a>. Background model work has a daily token budget and backs off when your ChatGPT plan reaches its usage limit.</p>

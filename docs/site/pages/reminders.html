@@ -1,0 +1,24 @@
+<p class="lede">Create reminders in chat. Remora posts them as chat messages and can deliver them as macOS notifications.</p>
+
+<h2 id="set-a-reminder">Set a reminder</h2>
+<table>
+  <thead><tr><th scope="col">Type</th><th scope="col">Example</th><th scope="col">Schedule</th></tr></thead>
+  <tbody>
+    <tr><td>One-off</td><td>“Remind me to call Sam tomorrow at 9.”</td><td>One date and time, up to two years ahead.</td></tr>
+    <tr><td>Recurring</td><td>“Remind me every Monday at 10 to send the report.”</td><td>Repeats at a local wall-clock time.</td></tr>
+    <tr><td>Interval</td><td>“Remind me every 30 minutes to stand up.”</td><td>At least five minutes between firings.</td></tr>
+    <tr><td>Prompt</td><td>“Every weekday at 16:00, summarize what I worked on today.”</td><td>Runs a read-only chat task. For interval schedules, at least 60 minutes between firings.</td></tr>
+  </tbody>
+</table>
+<p>Ask “What reminders are active?” to list them, or “Cancel my Monday report reminder” to remove one. Up to 50 reminders can be active. A reminder missed during sleep fires once after wake and then resumes its schedule. Prompt reminders depend on model availability and background budget.</p>
+
+<h2 id="briefs-and-nudges">Briefs and nudges</h2>
+<ul>
+  <li><strong>Morning brief at 08:00.</strong> Summarizes yesterday and suggests what to focus on today. A missed brief can arrive before noon.</li>
+  <li><strong>Evening wrap at 16:00.</strong> Recaps progress and open work. A missed wrap can arrive before midnight.</li>
+  <li><strong>Nudges from 09:00 to 19:00.</strong> Surface an item that may need attention. Remora sends up to three per day, at least 90 minutes apart.</li>
+</ul>
+<p>These times are local. Briefs and nudges need background memory and enough eligible evidence. They use the background model budget.</p>
+
+<h2 id="notification-controls">Notification controls</h2>
+<p>Use <strong>Settings › Notifications</strong> to turn proactive messages on or off or send a test notification. The proactive switch controls briefs and nudges. Your reminders can still notify when it is off. macOS notification permissions control whether alerts appear outside chat.</p>
