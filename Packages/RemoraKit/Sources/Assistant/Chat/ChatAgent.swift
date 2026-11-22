@@ -412,11 +412,11 @@ final class OneShot: Sendable {
     private let s = Mutex(S())
 
     func resolve(_ v: Bool) {
-        let waiter: CheckedContinuation<Bool, Never>? = s.withLock {
-            guard $0.value == nil else { return nil }
-            $0.value = v
-            defer { $0.waiter = nil }
-            return $0.waiter
+        let waiter: CheckedContinuation<Bool, Never>? = s.withLock { state in
+            guard state.value == nil else { return nil }
+            state.value = v
+            defer { state.waiter = nil }
+            return state.waiter
         }
         waiter?.resume(returning: v)
     }
