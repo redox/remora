@@ -2,7 +2,7 @@
 
 Remora is a native macOS assistant that remembers what you see on screen and helps you write.
 
-![Remora chat beneath the MacBook notch, answering a question over a Notes window](docs/images/remora-desktop.png)
+![Remora chat beneath the MacBook notch, recalling an SSO requirement from a customer pilot call](docs/images/remora-desktop.png)
 
 It reads the text of the window you are working in through the Accessibility API, keeps it in a local
 database on your Mac, and has a language model organize it in the background into summaries, a
