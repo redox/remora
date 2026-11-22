@@ -325,6 +325,11 @@ move fails. Only installed copies can register the login item and MCP clients. O
 capture and permissions, offers sign-in, and provides a practice field before optional dictation
 and notification setup. [Contributing](../CONTRIBUTING.md)
 
+**Show the install action in Finder.** The DMG opens in a compact icon view with Remora on the
+left, Applications on the right, and a Retina background that shows the direction of the drag.
+The release packages a Finder layout and background so the build runner can create the same
+installer without a desktop session. [Releasing](releasing.md)
+
 **Ship signed releases with verified updates.** Remora is MIT-licensed. Releases use a Developer
 ID signature, notarized DMG, and a Sparkle feed on GitHub Releases. The feed and EdDSA public key
 are configuration, and the updater lives outside database initialization so updates work if the

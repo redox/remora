@@ -242,6 +242,26 @@ source=no usable signature"
   done
   eq "DRY_RUN made no calls" "none" "$([ -s "$tmp/calls.log" ] && cat "$tmp/calls.log" || echo none)"
 
+  # The disk image must receive the Finder layout, artwork, and both drag targets.
+  local dmg_stub="$tmp/dmg-stub" dmg_app="$tmp/Remora.app" dmg_output="$tmp/Remora.dmg"
+  mkdir -p "$dmg_stub" "$dmg_app"
+  printf 'app payload\n' > "$dmg_app/fixture"
+  cat > "$dmg_stub/hdiutil" <<'SH'
+#!/bin/bash
+set -e
+[[ "$#" -eq 11 && "$1 $2 $3 $4" = "create -volname Remora -srcfolder" ]]
+[[ "$6 $7 $8 $9 ${10}" = "-fs APFS -format ULFO -ov" && "${11}" = "$EXPECTED_DMG" ]]
+cmp "$DMG_ASSETS/FinderLayout.dsstore" "$5/.DS_Store"
+cmp "$DMG_ASSETS/Background.tiff" "$5/.background.tiff"
+cmp "$DMG_APP/fixture" "$5/Remora.app/fixture"
+[[ "$(readlink "$5/Applications")" = /Applications ]]
+: > "$EXPECTED_DMG"
+SH
+  chmod +x "$dmg_stub/hdiutil"
+  # shellcheck disable=SC2016
+  PATH="$dmg_stub:$PATH" DMG_ASSETS="$ROOT/scripts/dmg" DMG_APP="$dmg_app" EXPECTED_DMG="$dmg_output" \
+    t "DMG packages the drag-to-install layout" 0 bash -c 'source "$1"; install_trap; make_dmg "$2" "$3"; test -f "$3"' _ "$ROOT/scripts/release.sh" "$dmg_app" "$dmg_output"
+
   # trap: temp dirs removed, mounts detached, partial DMG removed, exit code kept
   local td="$tmp/trapdir" pd="$tmp/partial.dmg"
   mkdir -p "$td"; : > "$pd"
@@ -359,6 +379,18 @@ verify_signed_bundle() { # <path> : strict verify plus hardened runtime and team
   printf '%s\n' "$info" | grep -E '^CodeDirectory' | grep -q 'runtime' || die "$p: hardened runtime flag missing"
 }
 
+make_dmg() {
+  local app="$1" output="$2" staging
+  staging="$(mktemp -d -t remora-dmg)"
+  track_tmp "$staging"
+  ditto "$app" "$staging/Remora.app"
+  ln -s /Applications "$staging/Applications"
+  # Finder reads the icon positions and the volume-relative background alias from this template.
+  cp "$ROOT/scripts/dmg/FinderLayout.dsstore" "$staging/.DS_Store"
+  cp "$ROOT/scripts/dmg/Background.tiff" "$staging/.background.tiff"
+  hdiutil create -volname Remora -srcfolder "$staging" -fs APFS -format ULFO -ov "$output"
+}
+
 cmd_build() {
   local dry=0 suffix="" tool
   if is_dry; then dry=1; fi
@@ -450,13 +482,9 @@ cmd_build() {
   "$PLIST_BUDDY" -c 'Print :CFBundleIconName' "$plist" >/dev/null 2>&1 || echo "warning: No app icon yet"
 
   note "DMG"
-  rm -rf dist/dmg-root && mkdir dist/dmg-root
-  track_tmp "$ROOT/dist/dmg-root"
-  ditto "$APP" dist/dmg-root/Remora.app
-  ln -s /Applications dist/dmg-root/Applications
   local DMG="dist/Remora-$V$suffix.dmg"
   PARTIAL_DMG="$DMG"
-  hdiutil create -volname Remora -srcfolder dist/dmg-root -fs APFS -format ULFO -ov "$DMG"
+  make_dmg "$APP" "$DMG"
   run_watched "${CODESIGN_TIMEOUT:-120}" codesign --sign "$ID" --timestamp "$DMG"
   codesign --verify --strict "$DMG"
   PARTIAL_DMG=""

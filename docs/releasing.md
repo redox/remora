@@ -89,9 +89,10 @@ and push `main` from there. Use the public checkout for release tags.
    universal app and DMG, notarizes and staples the DMG, checks Gatekeeper, and signs the
    Sparkle update. It uploads a `remora-release-<attempt>` artifact containing `Remora-<version>.dmg`
    and `appcast/appcast.xml`.
-3. Download the artifact from the successful run. Open the DMG on a fresh macOS account,
-   drag Remora to Applications and launch it with Gatekeeper enabled. For later releases,
-   test an update from the previous version using a test copy and feed.
+3. Download the artifact from the successful run. Open the DMG on a fresh macOS account and
+   check the arrow, drag instruction, and both icon labels in Finder. Drag Remora to Applications
+   and launch it with Gatekeeper enabled. For later releases, test an update from the previous
+   version using a test copy and feed.
 4. From the public checkout, tag the exact commit built by the workflow. Set `RUN_ID` to the
    successful Actions run ID, `V` to its marketing version and `FILES` to the unpacked artifact.
 
@@ -118,6 +119,12 @@ If you generated the Sparkle key under `remora`, use `REMORA_SPARKLE_ACCOUNT=rem
 `make appcast` or `make release-all`. The default account is Sparkle's `ed25519`.
 
 The Sparkle version is pinned in `project.yml` (`exactVersion`); `make release` fails if the embedded framework differs.
+
+The installer artwork lives in [`scripts/dmg`](../scripts/dmg). `Background.tiff` contains 580 × 346
+and 1160 × 692 pixel representations. `FinderLayout.dsstore` sets a 580 × 378 point Finder window
+with 96-point icons and room for the drag instruction when Finder shows the status bar.
+Keep the artwork's volume-relative name (`/.background.tiff`) and the `Remora` volume name in sync
+with the Finder layout. Mount a freshly built DMG after an artwork or layout change.
 
 1. Bump `Config/Version.xcconfig`: `MARKETING_VERSION` (x.y.z) and `CURRENT_PROJECT_VERSION` (an integer greater than every build in the published appcast). Commit.
 2. For a signing rehearsal, use `make release DRY_RUN=1`. It still signs with the real Developer
