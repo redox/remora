@@ -12,7 +12,7 @@ ci-build: generate
 	xcodebuild -project Remora.xcodeproj -scheme Remora -configuration Debug -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
 
 test:
-	swift test --package-path Packages/RemoraKit
+	swift test --package-path Packages/RemoraKit $(SWIFT_TEST_FLAGS)
 
 preview:
 	python3 docs/site/build.py
