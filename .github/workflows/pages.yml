@@ -27,13 +27,13 @@ jobs:
           REMORA_SITE_REPOSITORY: ${{ github.server_url }}/${{ github.repository }}
         run: python3 docs/site/build.py
       - name: Upload website
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event.repository.has_pages
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist/site
 
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event.repository.has_pages
     needs: build
     runs-on: ubuntu-latest
     permissions:
