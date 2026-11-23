@@ -43,3 +43,10 @@ private func call(model: String = "gpt-6-luna", backend: String = "siwc", input:
     #expect(try UsageRepricer.backfill(store: s, prices: .builtIn, batch: 2) == 5)
     #expect(try s.unpricedWithTokens(limit: 10).isEmpty)
 }
+
+@Test func unpriceableRowsDoNotStarvePriceableOnesAfterThem() throws {
+    let s = LLMCallStore(try .inMemory())
+    for _ in 0..<3 { _ = try s.insert(call(model: "no-such-model")) }
+    for _ in 0..<2 { _ = try s.insert(call()) }
+    #expect(try UsageRepricer.backfill(store: s, prices: .builtIn, batch: 2) == 2)
+}

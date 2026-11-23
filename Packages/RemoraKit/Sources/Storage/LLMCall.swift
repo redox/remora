@@ -151,26 +151,30 @@ public struct LLMCallStore: Sendable {
         let observation = ValueObservation
             .tracking { d in try Self.fetchCalls(d, since: since, until: nil, limit: limit) }
             .removeDuplicates()
-        let c = observation.start(in: db.reader, scheduling: .async(onQueue: DispatchQueue(label: "dev.remora.llm-call-observation")),
+        let queue = DispatchQueue(label: "dev.remora.llm-call-observation")
+        let c = observation.start(in: db.reader, scheduling: .async(onQueue: queue),
                                   onError: onError, onChange: onChange)
         return LLMCallObservation(c)
     }
 
-    /// Calls with no cost that did use tokens, oldest first so a backfill is deterministic.
-    public func unpricedWithTokens(limit: Int) throws -> [LLMCall] {
+    /// Calls with no cost that did use tokens, oldest first. Page with `afterID` (the last id seen),
+    /// so rows that can never be priced do not hide the ones after them.
+    public func unpricedWithTokens(limit: Int, afterID: Int64 = 0) throws -> [LLMCall] {
         try db.reader.read { d in
             try LLMCall.fetchAll(d, sql: """
-                SELECT * FROM llm_calls WHERE est_cost_usd IS NULL AND input_tokens + output_tokens > 0
+                SELECT * FROM llm_calls WHERE est_cost_usd IS NULL AND input_tokens + output_tokens > 0 AND id > ?
                 ORDER BY id LIMIT ?
-                """, arguments: [limit])
+                """, arguments: [afterID, limit])
         }
     }
 
-    /// Never overwrites a cost that is already there.
-    public func setCostIfUnpriced(id: Int64, usd: Double) throws {
+    /// Never overwrites a cost that is already there. Returns whether a row was updated.
+    @discardableResult
+    public func setCostIfUnpriced(id: Int64, usd: Double) throws -> Bool {
         try db.writer.write { d in
             try d.execute(sql: "UPDATE llm_calls SET est_cost_usd = ? WHERE id = ? AND est_cost_usd IS NULL",
                           arguments: [usd, id])
+            return d.changesCount > 0
         }
     }
 

@@ -7,23 +7,23 @@ import os
 public enum UsageRepricer {
     private static let log = Logger(subsystem: "dev.remora", category: "llm")
 
-    /// Returns how many rows were priced. Stops when none is left or a batch prices nothing (the
-    /// remaining rows have an unknown backend or model, so asking again would loop forever).
+    /// Returns how many rows were priced. Pages by id, so rows that can never be priced (unknown
+    /// backend or model) are skipped once instead of hiding the priceable rows after them.
     public static func backfill(store: LLMCallStore, prices: PriceTable, batch: Int = 500) throws -> Int {
         var updated = 0
+        var lastID: Int64 = 0
         while true {
-            let rows = try store.unpricedWithTokens(limit: batch)
-            var pricedInBatch = 0
+            let rows = try store.unpricedWithTokens(limit: batch, afterID: lastID)
+            guard let last = rows.last?.id else { break }
+            lastID = last
             for row in rows {
                 guard let id = row.id, let backend = LLMBackend(rawValue: row.backend) else { continue }
                 let usage = LLMUsage(inputTokens: row.inputTokens, cachedInputTokens: row.cachedInputTokens,
                                      outputTokens: row.outputTokens, reasoningTokens: row.reasoningTokens)
                 guard let usd = prices.cost(model: row.model, usage: usage, backend: backend) else { continue }
-                try store.setCostIfUnpriced(id: id, usd: usd)
-                pricedInBatch += 1
+                if try store.setCostIfUnpriced(id: id, usd: usd) { updated += 1 }
             }
-            updated += pricedInBatch
-            if pricedInBatch == 0 || rows.count < batch { break }
+            if rows.count < batch { break }
         }
         if updated > 0 { log.info("repriced \(updated, privacy: .public) calls") }
         return updated
