@@ -36,9 +36,10 @@ public struct TickReport: Sendable, Equatable {
 /// Runs background memory jobs one at a time.
 ///
 /// A tick plans (enqueues the planner's specs), then repeatedly picks the next due job among the
-/// kinds whose run condition holds and that the gate lets run (memory on, account, usage backoff), runs it with the data generation read before it started, and records the
-/// result. Up to 1 job per tick while the user is active (idle < 60 s), up to 20 when idle. Every write after
-/// a run is generation-checked, so a job straddling "Delete all data" leaves nothing behind.
+/// kinds whose run condition holds and that the gate lets run (memory on, account, usage backoff),
+/// runs it with the data generation read before it started, and records the result. Up to 1 job
+/// per tick while the user is active (idle < 60 s), up to 20 when idle. Every write after a run
+/// is generation-checked, so a job straddling "Delete all data" leaves nothing behind.
 /// Overlapping ticks are no-ops.
 public actor MemoryScheduler {
     static let activeIdleThreshold: TimeInterval = 60

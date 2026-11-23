@@ -192,7 +192,7 @@ public struct DigestRebuildRunner: JobRunner {
 }
 
 /// What a forget (chat `forget_snapshots`, Settings) runs afterwards: marks the digest dirty, then
-/// rebuilds only the digest through `runNow` (gate, budget and backoff apply; when they deny it,
+/// rebuilds only the digest through `runNow` (gate and backoff apply; when they deny it,
 /// the pending job and the dirty mark make a later tick or compaction rebuild it).
 public enum ForgetFollowUp {
     @discardableResult

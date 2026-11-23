@@ -74,7 +74,6 @@ func validateRejectsForbidden(_ key: String) {
     #expect(JobType.hourChronicle.rawValue == "hour_chronicle" && JobType.allCases.count == 25)
 }
 
-/// Storage counts the background budget by job-type string (it cannot import LLM).
 @Test func newJobTypesRoute() {
     #expect(JobType.chatFold.defaultTier == .small && !JobType.chatFold.isBackground
             && JobType.reminderPrompt.defaultTier == .large && JobType.reminderPrompt.isBackground)

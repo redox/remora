@@ -246,17 +246,15 @@ private func answerFake(_ text: String) -> FakeLLMClient {
         #expect(try SettingsStore(e2.db).value([PendingPrompt].self, forKey: ReminderDispatcher.pendingKey) == nil)
     }
     @Test func promptRemindersStayUnderTheBackoff() async throws {
-        for (gate, copy) in [(ReminderPromptGate.backoff, "usage limit reached")] {
-            let e = try env("2026-11-20 08:00")
-            let agent = FakeAgent(llm: service(answerFake("x"), db: e.db))
-            _ = try await e.engine.create(ReminderDraft(text: "Summarize my day", action: .prompt,
-                                                        schedule: .once(local("2026-11-20 09:00")), origin: .user))
-            e.clock.set(local("2026-11-20 09:00"))
-            let d = ReminderDispatcher(engine: e.engine, inbox: makeInbox(e.db, e.log), agent: agent, calendar: { paris },
-                                       now: { e.clock.now() }, promptGate: { _ in gate })
-            #expect(await d.fire().map(\.body) == ["Couldn't run “Summarize my day”: \(copy)"])
-            #expect(agent.seen.withLock { $0.isEmpty })
-        }
+        let e = try env("2026-11-20 08:00")
+        let agent = FakeAgent(llm: service(answerFake("x"), db: e.db))
+        _ = try await e.engine.create(ReminderDraft(text: "Summarize my day", action: .prompt,
+                                                    schedule: .once(local("2026-11-20 09:00")), origin: .user))
+        e.clock.set(local("2026-11-20 09:00"))
+        let d = ReminderDispatcher(engine: e.engine, inbox: makeInbox(e.db, e.log), agent: agent, calendar: { paris },
+                                   now: { e.clock.now() }, promptGate: { _ in .backoff })
+        #expect(await d.fire().map(\.body) == ["Couldn't run “Summarize my day”: usage limit reached"])
+        #expect(agent.seen.withLock { $0.isEmpty })
     }
 
     @Test func defaultPromptGateReadsTheBackoff() async throws {

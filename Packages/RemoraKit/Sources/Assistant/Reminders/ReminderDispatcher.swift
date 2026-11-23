@@ -243,7 +243,6 @@ public struct ReminderDispatcher: Sendable {
         return String(describing: type(of: error))
     }
 
-
     /// User copy for a failed prompt reminder.
     static func copy(for error: any Error) -> String {
         switch error as? LLMError {

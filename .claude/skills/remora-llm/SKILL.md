@@ -1,6 +1,6 @@
 ---
 name: remora-llm
-description: Use before changing how Remora calls models — Sign in with ChatGPT auth, Responses API requests, model tiers and routing, a new job type or background job, prompts, chat tools and actions, prompt reminders, cost accounting, budgets and usage-limit handling. Covers SIWC request rules, adding a job end to end, untrusted prompt sections, tool trust levels and testing with FakeLLMClient.
+description: Use before changing how Remora calls models — Sign in with ChatGPT auth, Responses API requests, model tiers and routing, a new job type or background job, prompts, chat tools and actions, prompt reminders, cost accounting and usage-limit handling. Covers SIWC request rules, adding a job end to end, untrusted prompt sections, tool trust levels and testing with FakeLLMClient.
 ---
 
 # Models, prompts and chat tools
@@ -40,13 +40,12 @@ the design and its linked Sign in with ChatGPT documentation.
 
 1. Add a `JobType` case with its raw value (snake_case) and `defaultTier`.
 2. If it runs in the background, add a `JobKind` (`Storage/MemoryRecords.swift`) and its policy
-   (`Memory/Scheduler/JobKind+Policy.swift`: when it may run, whether it may use the cloud at the
-   soft budget level), and register its runner in `MemoryRunners.make` or `ProactiveRunners.make`.
+   (`Memory/Scheduler/JobKind+Policy.swift`: when it may run, whether it may use the cloud), and register its runner in `MemoryRunners.make` or `ProactiveRunners.make`.
    `RunnerCoverageTests.everyJobKindHasExactlyOneRunner` fails otherwise: a kind without a runner
    would sit pending forever.
-3. Background work is gated by `BudgetGate` (daily background token budget: `normal`, `soft` at
-   80 %, `exhausted` at 100 %) and the usage-limit backoff. Never let background work exhaust the
-   user's ChatGPT allowance. User-initiated work (rewrite, chat) is not budget-gated.
+3. Usage-limit backoff (`MemorySettings.backoff`) is the only throttle on background work; there
+   is no daily budget. Background jobs must pause on a usage-limit error and never retry in a
+   loop. User-initiated work (rewrite, chat) is never held by the backoff.
 4. Write the result through `DataGeneration.write(expected:)` (see the database skill).
 5. Every call is recorded in `llm_calls` with tokens and an estimated cost from `PriceTable`
    (built-in prices, overridable by `model-prices.json` in the app's support folder). Keep
@@ -77,7 +76,7 @@ the design and its linked Sign in with ChatGPT documentation.
   `ActionChange` so the app refreshes, and never removes an exclusion or turns privacy settings
   down without a confirmation.
 - Prompt reminders run `ChatAgent.answer` with read-only tools and no confirmation UI, under the
-  background budget.
+  usage-limit backoff.
 
 ## Testing
 
