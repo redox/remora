@@ -85,13 +85,14 @@ are a second line of defense after capture policy. Logs carry events, counts, en
 error codes, with no user content or credentials.
 [Redaction code](../Packages/RemoraKit/Sources/Redaction) · [Privacy guidance](../.claude/skills/remora-privacy/SKILL.md)
 
-**Make capture status visible where it can be changed.** The menu-bar mark shows a filled dot
-when the active window is eligible, a ring when it is excluded, and distinct pause and permission
+**Make capture status visible where it can be changed.** The menu-bar mark shows a filled sea-glass
+dot when the active window is eligible, a ring when it is excluded, and distinct pause and permission
 states. An app or window switch can show a brief label. The optional title-bar badge is off by
 default and uses a small non-activating panel, hidden during moves, full screen, and detected
-screen sharing. Both surfaces offer exclusion and pause controls. Status reflects capture policy
-and tells the user where capture is allowed. Screen-sharing detection is best effort from window
-metadata so it can work without Screen Recording permission.
+screen sharing. It uses the same Remora mark as the menu bar, tinted sea-glass for eligible windows
+and gray for excluded windows. Both surfaces offer exclusion and pause controls. Status reflects
+capture policy and tells the user where capture is allowed. Screen-sharing detection is best effort
+from window metadata so it can work without Screen Recording permission.
 
 ## Models and usage
 

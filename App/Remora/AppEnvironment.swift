@@ -233,11 +233,10 @@ final class AppEnvironment {
         return "Capturing"
     }
 
-    /// SF Symbol for the menu bar: fish = capturing, pause.circle = paused,
-    /// exclamationmark.triangle = needs Accessibility.
+    /// The Remora mark for active capture, with dedicated symbols for pause and permissions.
     var menuBarSymbol: String {
         if !permissions.accessibilityGranted { return "exclamationmark.triangle" }
-        return isCapturing ? "fish" : "pause.circle"
+        return isCapturing ? RemoraBrand.glyphName : "pause.circle"
     }
 
     var isPaused: Bool { pausedUntil != nil || pauseUnreadable }

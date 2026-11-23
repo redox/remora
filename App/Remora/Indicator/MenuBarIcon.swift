@@ -3,8 +3,8 @@ import Indicator
 
 /// The menu-bar image: the status symbol plus an optional capture dot.
 ///
-/// Default (D3): a non-template image, Remora mark tinted with `labelColor` and a 6 pt dot (orange
-/// = capturing, ring = not capturing), colours resolved at draw time.
+/// Default (D3): a non-template image with a `labelColor` Remora mark and a 6 pt capture dot.
+/// The dot is sea-glass when capturing and a gray ring otherwise. Colours are resolved at draw time.
 /// Fallback (D3): set `useTemplateFallback` to true for a template image (system tints it),
 /// with a filled dot vs. a ring and no colour.
 @MainActor
@@ -26,8 +26,7 @@ enum MenuBarIcon {
 
     private static func make(symbol: String, dot: IndicatorDot?) -> NSImage {
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
-        // Preserve the pause and permission symbols; only the ordinary fish becomes our mark.
-        let base = symbol == "fish" ? RemoraBrand.menuImage()
+        let base = symbol == RemoraBrand.glyphName ? RemoraBrand.glyphImage(size: height)
             : NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
                 .withSymbolConfiguration(config) ?? NSImage()
         guard let dot else {
@@ -37,6 +36,7 @@ enum MenuBarIcon {
         let symbolSize = base.size
         // Copied to locals: AppKit may run the handler off the main actor.
         let template = useTemplateFallback
+        let captureColor = template ? NSColor.black : RemoraBrand.accentColor
         let (height, dotSize, dotGap) = (Self.height, Self.dotSize, Self.dotGap)
         let width = symbolSize.width + dotGap + dotSize
         let image = NSImage(size: NSSize(width: width, height: height), flipped: false) { @Sendable rect in
@@ -50,7 +50,7 @@ enum MenuBarIcon {
                                  width: dotSize, height: dotSize)
             switch dot {
             case .capturing:
-                (template ? NSColor.black : NSColor.systemOrange).setFill()
+                captureColor.setFill()
                 NSBezierPath(ovalIn: dotRect).fill()
             case .notCapturing:
                 (template ? NSColor.black : NSColor.secondaryLabelColor).setStroke()

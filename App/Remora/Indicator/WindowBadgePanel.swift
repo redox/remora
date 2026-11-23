@@ -9,6 +9,7 @@ final class WindowBadgePanel: NSPanel {
 
     private let imageView = NSImageView()
     private let background = BadgeBackground()
+    private let glyph = RemoraBrand.glyphImage(size: 14)
 
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
@@ -46,17 +47,21 @@ final class WindowBadgePanel: NSPanel {
     /// Icons for the visible statuses; other statuses leave the image unchanged (the badge is
     /// hidden for them).
     func setStatus(_ s: IndicatorStatus) {
-        let symbol: String, color: NSColor, label: String
+        let image: NSImage?, color: NSColor, label: String
         switch s {
-        case .capturing: (symbol, color, label) = ("fish.fill", .systemOrange, "Remora is capturing this window")
-        case .notCapturing: (symbol, color, label) = ("fish", .secondaryLabelColor, "Remora is not capturing this window")
-        case .paused: (symbol, color, label) = ("pause.fill", .secondaryLabelColor, "Remora capture is paused")
+        case .capturing:
+            (image, color, label) = (glyph, RemoraBrand.accentColor, "Remora is capturing this window")
+        case .notCapturing:
+            (image, color, label) = (glyph, .secondaryLabelColor, "Remora is not capturing this window")
+        case .paused:
+            label = "Remora capture is paused"
+            color = .secondaryLabelColor
+            image = NSImage(systemSymbolName: "pause.fill", accessibilityDescription: label)?
+                .withSymbolConfiguration(.init(pointSize: 10, weight: .semibold))
         case .pending, .unknown, .noAccessibility: return
         }
-        let config = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
-            .applying(.init(paletteColors: [color]))
-        imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)?
-            .withSymbolConfiguration(config)
+        imageView.image = image
+        imageView.contentTintColor = color
         imageView.setAccessibilityLabel(label)
     }
 }

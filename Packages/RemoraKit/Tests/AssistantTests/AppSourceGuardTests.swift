@@ -159,6 +159,26 @@ import Testing
         #expect(!view.contains("var bar = BarSettings()"))
     }
 
+    @Test func captureIndicatorsUseRemoraArtworkWithoutAGenericFishFallback() throws {
+        let badge = try source("App/Remora/Indicator/WindowBadgePanel.swift")
+        let brand = try source("App/Remora/Appearance/RemoraBrand.swift")
+        let menuBar = try source("App/Remora/Indicator/MenuBarIcon.swift")
+        #expect(badge.contains("RemoraBrand.glyphImage("))
+        #expect(menuBar.contains("symbol == RemoraBrand.glyphName"))
+        #expect(!badge.contains("\"fish"))
+        #expect(!brand.contains("\"fish"))
+        #expect(!menuBar.contains("\"fish"))
+    }
+
+    @Test func captureIndicatorsUseTheBrandAccent() throws {
+        let badge = try source("App/Remora/Indicator/WindowBadgePanel.swift")
+        let menuBar = try source("App/Remora/Indicator/MenuBarIcon.swift")
+        #expect(badge.contains("RemoraBrand.accentColor"))
+        #expect(menuBar.contains("RemoraBrand.accentColor"))
+        #expect(!badge.contains(".systemOrange"))
+        #expect(!menuBar.contains(".systemOrange"))
+    }
+
     @Test func jobRoutingHeaderUsesTheFullRowToToggleItsDisclosure() throws {
         let view = try source("App/Remora/Settings/AccountSettingsView.swift")
         #expect(view.contains("DisclosureGroup(isExpanded: $isJobRoutingExpanded)"))
