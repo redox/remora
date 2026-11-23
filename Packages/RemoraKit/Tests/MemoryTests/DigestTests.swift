@@ -80,7 +80,7 @@ private func text(_ r: LLMRequest) -> String {
     let digest = try #require(try await env.pipeline.rebuild(context: digestContext()))
     #expect(digest.body.count == 8_000 && digest.body.contains("### Current focus"))
     #expect(try MemoryDigestStore(env.db).latest()?.body == digest.body)
-    let call = try #require(try LLMCallStore(env.db).recent(limit: 5).first)
+    let call = try #require(try LLMCallStore(env.db).calls(since: .distantPast, limit: 5).first)
     #expect(call.jobType == "memory_digest" && call.model == "gpt-6.1-terra")
     #expect(digest.llmCallID == call.id)
     let request = try #require(env.fake.requests.first)

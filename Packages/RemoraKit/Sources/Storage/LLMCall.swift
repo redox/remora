@@ -123,29 +123,23 @@ public struct LLMCallStore: Sendable {
         }
     }
 
-    /// Newest first.
-    public func recent(limit: Int) throws -> [LLMCall] {
-        try db.reader.read { d in
-            try LLMCall.fetchAll(d, sql: "SELECT * FROM llm_calls ORDER BY started_at DESC, id DESC LIMIT ?",
-                                 arguments: [limit])
-        }
-    }
-
-    /// Rows with `since <= started_at < until` (no upper bound when nil), newest first.
-    public func calls(since: Date, until: Date? = nil, limit: Int) throws -> [LLMCall] {
+    /// Rows with `since <= started_at < until` (no upper bound when nil), newest first; every row
+    /// when `limit` is nil.
+    public func calls(since: Date, until: Date? = nil, limit: Int?) throws -> [LLMCall] {
         try db.reader.read { d in try Self.fetchCalls(d, since: since, until: until, limit: limit) }
     }
 
-    private static func fetchCalls(_ d: Database, since: Date, until: Date?, limit: Int) throws -> [LLMCall] {
+    private static func fetchCalls(_ d: Database, since: Date, until: Date?, limit: Int?) throws -> [LLMCall] {
+        // SQLite reads a negative LIMIT as no limit.
         try LLMCall.fetchAll(d, sql: """
             SELECT * FROM llm_calls WHERE started_at >= ? AND (? IS NULL OR started_at < ?)
             ORDER BY started_at DESC, id DESC LIMIT ?
-            """, arguments: [since, until, until, limit])
+            """, arguments: [since, until, until, limit ?? -1])
     }
 
-    /// Delivers the newest `limit` calls since `since` now and after every change, skipping
-    /// identical snapshots. Callbacks run on a background queue, never the main queue.
-    public func observeCalls(since: Date, limit: Int,
+    /// Delivers the newest `limit` calls (all when nil) since `since` now and after every change,
+    /// skipping identical snapshots. Callbacks run on a background queue, never the main queue.
+    public func observeCalls(since: Date, limit: Int?,
                              onChange: @escaping @Sendable ([LLMCall]) -> Void,
                              onError: @escaping @Sendable (Error) -> Void) -> LLMCallObservation {
         let observation = ValueObservation
@@ -168,13 +162,19 @@ public struct LLMCallStore: Sendable {
         }
     }
 
-    /// Never overwrites a cost that is already there. Returns whether a row was updated.
+    /// One transaction for the whole batch, so a live observation re-fetches once, not per row.
+    /// Never overwrites a cost that is already there. Returns how many rows were updated.
     @discardableResult
-    public func setCostIfUnpriced(id: Int64, usd: Double) throws -> Bool {
-        try db.writer.write { d in
-            try d.execute(sql: "UPDATE llm_calls SET est_cost_usd = ? WHERE id = ? AND est_cost_usd IS NULL",
-                          arguments: [usd, id])
-            return d.changesCount > 0
+    public func setCostsIfUnpriced(_ costs: [(id: Int64, usd: Double)]) throws -> Int {
+        guard !costs.isEmpty else { return 0 }
+        return try db.writer.write { d in
+            var updated = 0
+            for c in costs {
+                try d.execute(sql: "UPDATE llm_calls SET est_cost_usd = ? WHERE id = ? AND est_cost_usd IS NULL",
+                              arguments: [c.usd, c.id])
+                updated += d.changesCount
+            }
+            return updated
         }
     }
 

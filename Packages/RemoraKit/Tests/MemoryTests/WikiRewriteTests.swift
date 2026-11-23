@@ -101,7 +101,7 @@ private func promptText(_ r: LLMRequest) -> String {
     let marc = try stored(env.db, "marc-dupont")
     #expect(!marc.isDirty && marc.summary.hasPrefix("Marc Dupont is a colleague") && marc.updatedAt == wikiNow)
     #expect(try !stored(env.db, "oslo-offsite").isDirty)
-    let calls = try LLMCallStore(env.db).recent(limit: 10)
+    let calls = try LLMCallStore(env.db).calls(since: .distantPast, limit: 10)
     #expect(calls.count == 2 && calls.allSatisfy { $0.jobType == "wiki_writeup" && $0.model == "gpt-6.1-terra" })
     #expect(marc.llmCallID != nil && calls.contains { $0.id == marc.llmCallID })
 }

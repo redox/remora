@@ -57,7 +57,7 @@ private func fixtureEnv(_ db: AppDatabase? = nil) throws -> PipelineEnv {
     #expect(c.metadata.entitiesDone)
     #expect(c.metadata.entities == ["oslo-offsite", "marc-dupont"])
 
-    let calls = try LLMCallStore(env.db).recent(limit: 10)
+    let calls = try LLMCallStore(env.db).calls(since: .distantPast, limit: 10)
     let b = try #require(calls.first { $0.jobType == "entity_extraction" })
     #expect(b.artifactTable == "wiki_pages" && b.artifactID == nil)
     #expect(rows.allSatisfy { $0.llmCallID == b.id })

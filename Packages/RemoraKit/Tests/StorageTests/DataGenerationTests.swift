@@ -99,12 +99,12 @@ import Testing
         #expect(try SettingsStore(db).value(String.self, forKey: "memory.language", in: d) == "fr")
         try StyleNoteStore(db).upsert(surface: "mail", notes: "short", llmCallID: callID, at: memoryT0, in: d)
     }
-    let row = try #require(try calls.recent(limit: 1).first)
+    let row = try #require(try calls.calls(since: .distantPast, limit: 1).first)
     #expect(row.artifactTable == "wiki_pages" && row.artifactID == nil)
     #expect(try SettingsStore(db).value(String.self, forKey: "memory.language") == "fr")
     #expect(try StyleNoteStore(db).note(for: "mail") == "short")
     // The non-`in:` forms still work and forward.
     try calls.setArtifact(callID: callID, table: "chronicle", id: 9)
-    let again = try #require(try calls.recent(limit: 1).first)
+    let again = try #require(try calls.calls(since: .distantPast, limit: 1).first)
     #expect(again.artifactTable == "chronicle" && again.artifactID == 9)
 }

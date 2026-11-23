@@ -23,7 +23,7 @@ import Testing
          try String.fetchAll(d, sql: "SELECT name FROM sqlite_master WHERE type = 'index'"))
     }
     #expect(try SnapshotStore(db).recent(limit: 5).count == 1)
-    #expect(try LLMCallStore(db).recent(limit: 5).count == 1)
+    #expect(try LLMCallStore(db).calls(since: .distantPast, limit: 5).count == 1)
     for t in derivedMemoryTables + ["time_rules", "chronicle_fts", "wiki_pages_fts", "wiki_facts_fts"] {
         #expect(tables.contains(t), "missing table \(t)")
     }

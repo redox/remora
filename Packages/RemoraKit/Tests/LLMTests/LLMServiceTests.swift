@@ -26,7 +26,7 @@ private func env(siwc: FakeLLMClient, onDevice: FakeLLMClient = FakeLLMClient(ba
     return Env(db: db, settings: settings, svc: svc)
 }
 
-private func rows(_ e: Env) throws -> [LLMCall] { try LLMCallStore(e.db).recent(limit: 20).reversed() }
+private func rows(_ e: Env) throws -> [LLMCall] { try LLMCallStore(e.db).calls(since: .distantPast, limit: 20).reversed() }
 
 @Test func completedCallWritesRow() async throws {
     let e = try env(siwc: FakeLLMClient(script: [.delta("Bon"), .delta("jour"), .complete(usage)]))

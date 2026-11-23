@@ -81,7 +81,7 @@ private func text(_ r: LLMRequest) -> String {
     let env = try stEnv()
     try rewrite(env.db, surface: "slack", count: 3)
     _ = try await env.pipeline.run(try stJob(env.db), context: stContext())
-    let call = try #require(try LLMCallStore(env.db).recent(limit: 5).first)
+    let call = try #require(try LLMCallStore(env.db).calls(since: .distantPast, limit: 5).first)
     #expect(call.jobType == "style_consolidation" && call.model == "gpt-6.1-terra")
     #expect(try StyleNoteStore(env.db).row(for: "slack")?.llmCallID == call.id)
     let mark = try SettingsStore(env.db).value(Date.self, forKey: JobPlanner.lastStyleRunKey)

@@ -42,7 +42,7 @@ private func qEnv(siwc: FakeLLMClient = .bySchema(["query_terms": qJSON], usage:
     let text = request.input.map { if case .user(let s) = $0 { s } else { "" } }.joined()
     #expect(text.contains("<terms>") && text.contains("réunion"))
     #expect(request.instructions.contains("untrusted"))
-    #expect(try LLMCallStore(env.db).recent(limit: 1).first?.jobType == "query_expansion")
+    #expect(try LLMCallStore(env.db).calls(since: .distantPast, limit: 1).first?.jobType == "query_expansion")
 }
 
 @Test func expansionStaysOnDeviceWhenCloudDenied() async throws {

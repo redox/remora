@@ -55,9 +55,9 @@ private var utc: Calendar { var c = Calendar(identifier: .gregorian); c.timeZone
     let s = LLMCallStore(try .inMemory())
     let a = try s.insert(.fixture(at: Date(timeIntervalSince1970: 1_000)))
     let b = try s.insert(.fixture(at: Date(timeIntervalSince1970: 2_000)))
-    #expect(try s.recent(limit: 5).map(\.id) == [b.id, a.id])
+    #expect(try s.calls(since: .distantPast, limit: 5).map(\.id) == [b.id, a.id])
     try s.setArtifact(callID: a.id!, table: "inline_outputs", id: 7)
-    let back = try #require(try s.recent(limit: 5).last)
+    let back = try #require(try s.calls(since: .distantPast, limit: 5).last)
     #expect(back.artifactTable == "inline_outputs" && back.artifactID == 7)
 }
 
@@ -109,7 +109,27 @@ private final class Box: @unchecked Sendable {   // test-only; guarded by the lo
     _ = try s.insert(.fixture(input: 0, output: 0, cost: nil))
     _ = try s.insert(.fixture(input: 10, output: 5, cost: 1))
     #expect(try s.unpricedWithTokens(limit: 10).map(\.id) == [a.id])
-    try s.setCostIfUnpriced(id: a.id!, usd: 0.5)
-    try s.setCostIfUnpriced(id: a.id!, usd: 9)
+    #expect(try s.setCostsIfUnpriced([(id: a.id!, usd: 0.5)]) == 1)
+    #expect(try s.setCostsIfUnpriced([(id: a.id!, usd: 9)]) == 0)
     #expect(try s.calls(since: .distantPast, limit: 10).first { $0.id == a.id }?.estCostUSD == 0.5)
+}
+
+@Test func batchedCostsAreWrittenInOneTransactionAndNeverOverwrite() throws {
+    let s = LLMCallStore(try .inMemory())
+    let a = try s.insert(.fixture(cost: nil)), b = try s.insert(.fixture(cost: 2)), c = try s.insert(.fixture(cost: nil))
+    #expect(try s.setCostsIfUnpriced([(id: a.id!, usd: 0.1), (id: b.id!, usd: 9), (id: c.id!, usd: 0.3)]) == 2)
+    #expect(try s.setCostsIfUnpriced([]) == 0)
+    let costs = try s.calls(since: .distantPast, limit: nil).map(\.estCostUSD)
+    #expect(Set(costs.compactMap { $0 }) == [0.1, 2, 0.3])
+}
+
+@Test func unlimitedObservationDeliversEveryCallInRange() async throws {
+    let s = LLMCallStore(try .inMemory())
+    for i in 0..<5 { _ = try s.insert(.fixture(input: i)) }
+    let box = Box()
+    let obs = s.observeCalls(since: .distantPast, limit: nil, onChange: { box.add($0) }, onError: { _ in })
+    defer { obs.cancel() }
+    for _ in 0..<200 where box.all.isEmpty { try await Task.sleep(for: .milliseconds(25)) }
+    #expect(box.all.first?.count == 5)
+    #expect(try s.calls(since: .distantPast, limit: 2).count == 2)
 }

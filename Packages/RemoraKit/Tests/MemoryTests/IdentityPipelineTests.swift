@@ -72,7 +72,7 @@ private func text(_ r: LLMRequest) -> String {
     #expect(try await env.pipeline.run(try idJob(env.db), context: idContext()) == .done)
     let current = try #require(try IdentityStore(env.db).current())
     #expect(current.source == .llm && current.body == llmIdentity)
-    let call = try #require(try LLMCallStore(env.db).recent(limit: 5).first)
+    let call = try #require(try LLMCallStore(env.db).calls(since: .distantPast, limit: 5).first)
     #expect(call.jobType == "identity" && call.model == "gpt-6.1-terra")
     #expect(current.llmCallID == call.id && call.artifactTable == "identity" && call.artifactID == current.id)
 }

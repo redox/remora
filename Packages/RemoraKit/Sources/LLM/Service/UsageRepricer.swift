@@ -16,13 +16,16 @@ public enum UsageRepricer {
             let rows = try store.unpricedWithTokens(limit: batch, afterID: lastID)
             guard let last = rows.last?.id else { break }
             lastID = last
+            var costs: [(id: Int64, usd: Double)] = []
             for row in rows {
                 guard let id = row.id, let backend = LLMBackend(rawValue: row.backend) else { continue }
                 let usage = LLMUsage(inputTokens: row.inputTokens, cachedInputTokens: row.cachedInputTokens,
                                      outputTokens: row.outputTokens, reasoningTokens: row.reasoningTokens)
                 guard let usd = prices.cost(model: row.model, usage: usage, backend: backend) else { continue }
-                if try store.setCostIfUnpriced(id: id, usd: usd) { updated += 1 }
+                costs.append((id: id, usd: usd))
             }
+            // One write per page: the Usage pane's live observation re-fetches once per page.
+            updated += try store.setCostsIfUnpriced(costs)
             if rows.count < batch { break }
         }
         if updated > 0 { log.info("repriced \(updated, privacy: .public) calls") }

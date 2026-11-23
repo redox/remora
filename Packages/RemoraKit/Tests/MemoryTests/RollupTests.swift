@@ -70,7 +70,7 @@ private func seedThreeHours(_ db: AppDatabase) throws -> [Chronicle] {
      try seed(db, .hour, at: date(2026, 11, 20, 16), summary: "Wrote the Oslo deck in Keynote.", snapshots: [4])]
 }
 
-private func calls(_ db: AppDatabase) throws -> [LLMCall] { try LLMCallStore(db).recent(limit: 50).reversed() }
+private func calls(_ db: AppDatabase) throws -> [LLMCall] { try LLMCallStore(db).calls(since: .distantPast, limit: 50).reversed() }
 
 @Test func dayRollupFromHoursMarksWeekAndMonthDirty() async throws {
     let env = try rollupEnv()

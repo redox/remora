@@ -104,7 +104,7 @@ private func seeded() throws -> AppDatabase {
     try DataReset.deleteAllCapturedData(in: db)
     #expect(try InlineOutputStore(db).recent(limit: 5).isEmpty)
     #expect(try StyleNoteStore(db).note(for: "mail") == nil)
-    #expect(try LLMCallStore(db).recent(limit: 5).count == 1)
+    #expect(try LLMCallStore(db).calls(since: .distantPast, limit: 5).count == 1)
 }
 
 @Test func deleteAllWipesDerivedAndBumpsGeneration() throws {
@@ -147,7 +147,7 @@ private func seeded() throws -> AppDatabase {
     #expect(try settings.value([String: Int].self, forKey: "memory.retention") == ["days": 7])
     for key in cleared { #expect(try settings.value(Date.self, forKey: key) == nil, "\(key)") }
     #expect(try DataGeneration.current(db) == before + 1)
-    #expect(try LLMCallStore(db).recent(limit: 5).count == 1)
+    #expect(try LLMCallStore(db).calls(since: .distantPast, limit: 5).count == 1)
 }
 
 @Test func failedDeleteKeepsDerivedMemoryAndGeneration() throws {
@@ -173,7 +173,7 @@ private func seeded() throws -> AppDatabase {
 
     for t in assistantTables { #expect(try rowCount(db, t) == 0, "\(t)") }
     #expect(try DataGeneration.current(db) == before + 1)
-    #expect(try LLMCallStore(db).recent(limit: 5).count == 1)
+    #expect(try LLMCallStore(db).calls(since: .distantPast, limit: 5).count == 1)
     #expect(try ExclusionStore(db).all() == ["app:Keep"])
 }
 

@@ -84,7 +84,7 @@ private func seedItems(_ db: AppDatabase, _ n: Int) throws {
     let request = try #require(env.siwc.requests.first)
     #expect(env.siwc.requests.count == 1 && request.model == "gpt-6-luna")
     #expect(request.format == .jsonSchema(name: "working_memory", schema: WorkingMemoryOutput.schema, strict: true))
-    let call = try #require(try LLMCallStore(env.db).recent(limit: 5).first)
+    let call = try #require(try LLMCallStore(env.db).calls(since: .distantPast, limit: 5).first)
     #expect(call.jobType == "working_memory" && call.backend == "siwc" && call.model == "gpt-6-luna")
     #expect(call.artifactTable == "working_memory" && call.artifactID == nil)
 
@@ -109,7 +109,7 @@ private func seedItems(_ db: AppDatabase, _ n: Int) throws {
     #expect(try await env.pipeline.run(try wmJob(env.db), context: wmContext(cloudAllowed: false)) == .done)
     #expect(env.siwc.requests.isEmpty)
     let request = try #require(onDevice.requests.first)
-    let call = try #require(try LLMCallStore(env.db).recent(limit: 5).first)
+    let call = try #require(try LLMCallStore(env.db).calls(since: .distantPast, limit: 5).first)
     #expect(call.backend == "on_device" && call.jobType == "working_memory")
 
     // F-31: ≤ 3,500 chars of snapshot text and ≤ 10 current items on the on-device path.

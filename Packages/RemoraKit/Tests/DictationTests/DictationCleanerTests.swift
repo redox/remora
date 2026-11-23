@@ -32,7 +32,7 @@ private func env(onDevice: [FakeLLMClient.Step] = [], siwc: [FakeLLMClient.Step]
     let e = try env(onDevice: [.delta("Je pense qu'on peut y aller demain."), .complete(usage)])
     let out = try await e.cleaner.process(raw: frRaw, locale: .fr, cleanupEnabled: true, cloudAllowed: false)
     #expect(out == .init(text: "Je pense qu'on peut y aller demain.", cleaned: true, notice: nil))
-    let rows = try LLMCallStore(e.db).recent(limit: 5)
+    let rows = try LLMCallStore(e.db).calls(since: .distantPast, limit: 5)
     #expect(rows.count == 1 && rows[0].jobType == "dictation_cleanup" && rows[0].backend == "on_device")
     // The prompt holds the transcript only.
     #expect(e.onDevice.requests.count == 1)

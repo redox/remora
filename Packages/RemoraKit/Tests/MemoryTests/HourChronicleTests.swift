@@ -8,7 +8,7 @@ import Synchronization
 import Testing
 @testable import Memory
 
-private func calls(_ db: AppDatabase) throws -> [LLMCall] { try LLMCallStore(db).recent(limit: 50).reversed() }
+private func calls(_ db: AppDatabase) throws -> [LLMCall] { try LLMCallStore(db).calls(since: .distantPast, limit: 50).reversed() }
 
 @Test func hourChronicleWritesRowWithProvenanceAndCall() async throws {
     let env = try pipelineEnv()
