@@ -119,18 +119,27 @@ public struct PriceTable: Codable, Sendable, Equatable {
         return (try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys])) ?? raw
     }
 
+    /// The prices that apply to a request with `inputTokens` of input: the long-context prices for the
+    /// whole request above the threshold. nil without an entry, without input and output prices, or
+    /// with a negative price. Shared by `cost` and the usage explanation so they cannot diverge.
+    public func rates(model: String, inputTokens: Int) -> ModelPrice? {
+        guard let base = models[model] else { return nil }
+        var p = base
+        if let long = base.longContext, inputTokens > long.aboveInputTokens {
+            p = ModelPrice(inputPer1M: long.inputPer1M, cachedInputPer1M: long.cachedInputPer1M, outputPer1M: long.outputPer1M)
+        }
+        guard let input = p.inputPer1M, let output = p.outputPer1M,
+              input >= 0, output >= 0, (p.cachedInputPer1M ?? 0) >= 0 else { return nil }
+        return p
+    }
+
     /// On-device is free (0). Otherwise nil without an entry or without input and output prices;
     /// reasoning tokens are already part of the output count. Input above the long-context size
     /// bills the whole request at the long-context prices.
     public func cost(model: String, usage: LLMUsage, backend: LLMBackend) -> Double? {
         if backend == .onDevice { return 0 }
-        guard let base = models[model] else { return nil }
-        var p = base
-        if let long = base.longContext, usage.inputTokens > long.aboveInputTokens {
-            p = ModelPrice(inputPer1M: long.inputPer1M, cachedInputPer1M: long.cachedInputPer1M, outputPer1M: long.outputPer1M)
-        }
-        guard let input = p.inputPer1M, let output = p.outputPer1M,
-              input >= 0, output >= 0, (p.cachedInputPer1M ?? 0) >= 0 else { return nil }
+        guard let p = rates(model: model, inputTokens: usage.inputTokens),
+              let input = p.inputPer1M, let output = p.outputPer1M else { return nil }
         let cached = Double(max(0, min(usage.cachedInputTokens, usage.inputTokens)))
         let fresh = Double(usage.inputTokens) - cached
         return (fresh * input + cached * (p.cachedInputPer1M ?? input) + Double(usage.outputTokens) * output) / 1e6
