@@ -18,7 +18,7 @@
 <p>Optional <a href="@ROOT@docs/dictation/#transcript-cleanup">transcript cleanup</a> can use a model after transcription. Background memory and chat can send relevant allowed excerpts to OpenAI. On request, routine discovery can include window titles, app or site names, dates, and focus times in the chat request.</p>
 
 <h2 id="dictation-audio">Dictation audio</h2>
-<p>The live transcript uses Mac speech recognition. Drafting and editing use the reviewed text. If you save an API key for <a href="@ROOT@docs/dictation/#openai-transcription">OpenAI transcription</a>, choosing <strong>Insert transcript</strong> with an eligible, unchanged transcript sends the completed recording and a language hint to <code>api.openai.com/v1/audio/transcriptions</code> under that API project. Paused, private, excluded, and unverifiable contexts use Mac speech recognition. Remora keeps audio in memory, discards it when the draft is dismissed, and stores the key separately in the macOS Keychain.</p>
+<p>The live transcript uses Mac speech recognition. Drafting and editing use the reviewed text. If you save an API key for <a href="@ROOT@docs/dictation/#openai-transcription">OpenAI transcription</a>, choosing <strong>Insert transcript</strong> with an eligible, unchanged transcript sends the completed recording to <code>api.openai.com/v1/audio/transcriptions</code> under that API project. OpenAI detects the language from the audio. Paused, private, excluded, and unverifiable contexts use Mac speech recognition. Remora keeps audio in memory, discards it when the draft is dismissed, and stores the key separately in the macOS Keychain.</p>
 
 <h2 id="where-data-is-kept">Where data is kept</h2>
 <ul>

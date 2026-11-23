@@ -28,7 +28,7 @@ public actor DictationCleaner {
     private enum Race: Sendable { case done(LLMResult), failed(any Error), timedOut }
 
     /// Throws only `CancellationError`.
-    public func process(raw: String, locale: DictationLocale, cleanupEnabled: Bool,
+    public func process(raw: String, locale: DictationLocale?, cleanupEnabled: Bool,
                         cloudAllowed: Bool) async throws -> CleanupOutcome {
         let words = raw.split(whereSeparator: \.isWhitespace).count
         guard cleanupEnabled, words >= Self.minWords else { return .init(text: raw, cleaned: false, notice: nil) }

@@ -41,14 +41,12 @@ public struct OpenAITranscription: Sendable {
         return identity
     }
 
-    public func transcribe(_ wav: Data, locale: DictationLocale, key: String) async throws -> String {
+    public func transcribe(_ wav: Data, key: String) async throws -> String {
         guard let key = Self.normalizedKey(key) else { throw Failure.invalidKey }
         guard !wav.isEmpty, wav.count <= Self.maximumAudioBytes else { throw Failure.invalidAudio }
         try Task.checkCancellation()
         let boundary = UUID().uuidString
-        let language = locale == .fr ? "fr" : "en"
         var body = Data(("--\(boundary)\r\nContent-Disposition: form-data; name=\"model\"\r\n\r\ngpt-transcribe\r\n" +
-                         "--\(boundary)\r\nContent-Disposition: form-data; name=\"languages[]\"\r\n\r\n\(language)\r\n" +
                          "--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"dictation.wav\"\r\n" +
                          "Content-Type: audio/wav\r\n\r\n").utf8)
         body.append(wav)

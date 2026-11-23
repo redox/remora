@@ -11,6 +11,13 @@ import Testing
         #expect(rewrite.contains("bar.model.notice = notice.writingNotice"))
     }
 
+    @Test func writingPopoverOffersLanguageSwitchingOnlyWithMacTranscription() throws {
+        let panel = try source("App/Remora/Rewrite/EditBarPanel.swift")
+        #expect(panel.contains("if actions?.showsDictationLanguage() == true, let locale = model.recordingLocale"))
+        let controller = try source("App/Remora/Rewrite/RewriteController.swift")
+        #expect(controller.contains("showsDictationLanguage: { [weak dictation] in dictation?.hasTranscriptionKey == false }"))
+    }
+
     @Test func insertSubmitsTheReviewedPromptForDrafting() throws {
         let panel = try source("App/Remora/Rewrite/EditBarPanel.swift")
         #expect(panel.contains("actions?.submit(model.instruction, model.submission)"))

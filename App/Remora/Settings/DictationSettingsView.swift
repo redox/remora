@@ -49,7 +49,7 @@ struct DictationSettingsView: View {
                 Text("For hands-free dictation, tap the key to open the popover and choose Record.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
-            Section("Language") {
+            Section("Mac speech language") {
                 Picker("Default language", selection: binding(\.defaultLocale)) {
                     ForEach(DictationLocale.allCases, id: \.self) { Text($0.name).tag($0) }
                 }
@@ -86,7 +86,7 @@ struct DictationSettingsView: View {
                         }
                     }
                 }
-                Text("Saving a key allows OpenAI to transcribe eligible recordings when you choose Insert transcript. The live preview and fallback use this Mac. Your key stays in the macOS Keychain.")
+                Text("Save a key to let OpenAI detect the language and transcribe eligible recordings when you choose Insert transcript. The live preview and fallback use this Mac. Your key stays in the macOS Keychain.")
                     .font(.footnote).foregroundStyle(.secondary)
                 if let transcriptionKeyError { Text(transcriptionKeyError).foregroundStyle(.red) }
             }

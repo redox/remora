@@ -230,8 +230,9 @@ writing for style learning. [Insertion guidance](../.claude/skills/remora-access
 Apple's SpeechAnalyzer and SpeechTranscriber show live words using one locale per session.
 English and French are selectable, with the last-used locale per app as a convenience. Running
 one locale keeps latency and resource use down at the cost of an explicit switch for bilingual
-speech. The command bar shows the language before recording and shows Listening once microphone
-audio starts arriving. This gives Bluetooth inputs time to connect before the user starts speaking.
+speech. The command bar offers the language switch when OpenAI transcription is off and shows
+Listening once microphone audio starts arriving. This gives Bluetooth inputs time to connect before
+the user starts speaking.
 Recording errors appear in the command bar so the user can retry in place. Release or Stop leaves
 the text in the command bar. Insert transcript can clean up an unchanged draft, and edits to the
 preview are kept as typed. Draft and insert and Edit use the reviewed text as an instruction.
@@ -241,10 +242,11 @@ excluded from stored instructions.
 **Make cloud transcription a separate opt-in.** A user-supplied project key enables
 `gpt-transcribe` for an eligible unchanged recording after the user chooses Insert transcript. This
 uses the project's transcription endpoint and billing because the ChatGPT sign-in route is
-for text inference. Only bounded audio and a language hint are sent. The foreground context must
-remain verifiable and allowed throughout. Pause, secure input, and context switches prevent an
-upload. Drafting and editing use the reviewed text. Apple's transcript is available if the
-request fails.
+for text inference. OpenAI detects the language from the bounded audio. Cleanup preserves each
+part of the resulting transcript in its original language. The Mac's locale still controls the
+live preview and fallback. The foreground context must remain verifiable and allowed throughout.
+Pause, secure input, and context switches prevent an upload. Drafting and editing use the reviewed
+text. Apple's transcript is available if the request fails.
 [Dictation privacy](../PRIVACY.md#dictation)
 
 **Save selected excerpts as deliberate notes.** **Remember this** opens an editable preview before
@@ -371,7 +373,7 @@ unsigned Debug build. [Verification guidance](../.claude/skills/remora-verify/SK
 | Area | Manual checks |
 | --- | --- |
 | Capture and insertion | Safari, Chrome, Arc if installed, Mail, Messages, Notes, Slack, VS Code/Cursor, Terminal, and web composers such as Gmail and LinkedIn. Submit a typed Insert prompt at a caret and over a selection. In an excluded app, verify that Insert shows Prompt only and can draft with Apple Intelligence unavailable. Exercise private windows, secure fields, pause, pasteboard restoration, undo, and the onboarding practice field. |
-| Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Draft and insert, Insert transcript, Edit, cancel, and a mode switch followed immediately by Return. In an excluded app, speak a prompt and verify that Return drafts the result. Check that Listening appears when the microphone is ready and a silent recording shows an inline notice. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
+| Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Draft and insert, Insert transcript, Edit, cancel, and a mode switch followed immediately by Return. Verify that OpenAI transcription hides the EN/FR button and detects the language on Insert transcript. The button returns when OpenAI transcription is off. In an excluded app, speak a prompt and verify that Return drafts the result. Check that Listening appears when the microphone is ready and a silent recording shows an inline notice. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
 | Chat and indicators | Real notch and secondary displays, hide and show the menu bar, hover and pin, IME, trackpad scroll, min size with 150% text, caption and badge placement, light and dark appearance, and accessibility display options. Send from older history and check that the question is visible before the reply. Scroll up mid-reply, then choose **Latest** and check that the view follows the rest of the reply. Open chat from a notification and check the selected message. Return must never approve a card. |
 | Notifications and MCP | In the installed app, use Settings › Notifications › Send a test notification and check for the Remora app icon in the banner and Notification Center. Verify the permission prompt, wake catch-up, reminders with proactive messages off, sharing suppression, and delete-all cleanup. Test Connect and Update in real clients. For meeting sources, use test accounts and synthetic meetings to exercise authorization, resync, pause, forget, and disconnect. |
 | Distribution | Fresh macOS account, install and move, permissions, signed DMG and Gatekeeper, and an update from a real appcast. |

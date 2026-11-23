@@ -15,11 +15,11 @@
 <p>For hands-free dictation, tap <kbd>right ⌥</kbd> to open the popover. Choose <strong>Record</strong> to start and <strong>Stop</strong> to review the transcript. Tap the key or choose a mode in the popover before submitting.</p>
 
 <h2 id="choose-a-language">Choose a language</h2>
-<p>Remora uses one language at a time. Pin a language in the menu bar or use the language button in the popover. With <strong>Automatic</strong> selected, Remora uses the last language you dictated in that app, then the default from Settings. Choose English (US) or French (France).</p>
+<p>Mac speech recognition uses one language at a time. Pin English (US) or French (France) in the menu bar. The popover also offers a language button when OpenAI transcription is off. With <strong>Automatic</strong> selected, Remora uses the last language you dictated in that app, then the default from Settings.</p>
 
 <h2 id="openai-transcription">Use OpenAI for the final transcript</h2>
 <p>To enable it, open <strong>Settings › Dictation › OpenAI transcription</strong>, enter an OpenAI project API key with write access to <code>/v1/audio/transcriptions</code>, and choose <strong>Save and enable</strong>. The key is stored in the macOS Keychain. Use a project in your linked API organization to draw on its credits.</p>
-<p>Your Mac generates the live preview. For eligible recordings, Remora sends the audio and a language hint to <code>gpt-transcribe</code> when you choose <strong>Insert transcript</strong> with the unchanged transcript. Remora uses the Mac transcript if the upload fails, the window changes, capture is paused, or the window is private, excluded, or unverifiable. Drafting and editing use the reviewed text. <a href="@ROOT@docs/privacy/#dictation-audio">Dictation audio and privacy</a></p>
+<p>Your Mac generates the live preview. For eligible recordings, Remora sends the audio to <code>gpt-transcribe</code> when you choose <strong>Insert transcript</strong> with the unchanged transcript. OpenAI detects the language from the audio. Remora uses the Mac transcript if the upload fails, the window changes, capture is paused, or the window is private, excluded, or unverifiable. Drafting and editing use the reviewed text. <a href="@ROOT@docs/privacy/#dictation-audio">Dictation audio and privacy</a></p>
 <p>Choose <strong>Remove key</strong> to disable cloud transcription. You can also delete the <code>dev.remora.dictation-transcription</code> item for account <code>openai</code> in Keychain Access.</p>
 
 <h2 id="transcript-cleanup">Transcript cleanup</h2>

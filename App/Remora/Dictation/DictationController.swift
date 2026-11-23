@@ -375,7 +375,7 @@ final class DictationController {
 
         let wav = r.wav
         r.wav = nil
-        let transcript = await finalTranscript(wav, local: raw, locale: locale, r)
+        let cloudTranscript = await transcribeWithOpenAI(wav, r)
         guard isCurrent(r), !Task.isCancelled else { return nil }
         let updatedRoute = await cleanupRoute(field: field, r)
         guard isCurrent(r), !Task.isCancelled else { return nil }
@@ -387,7 +387,8 @@ final class DictationController {
         phase = .cleaning
         let cleaned: CleanupOutcome
         do {
-            cleaned = try await cleaner.process(raw: transcript, locale: locale, cleanupEnabled: settings.cleanupEnabled,
+            cleaned = try await cleaner.process(raw: cloudTranscript ?? raw, locale: cloudTranscript == nil ? locale : nil,
+                                                cleanupEnabled: settings.cleanupEnabled,
                                                 cloudAllowed: route.cloudAllowed && updatedRoute.cloudAllowed)
         } catch {
             end(r, notice: nil)
@@ -399,21 +400,21 @@ final class DictationController {
         return InsertionText(text: cleaned.text, locale: locale, notice: notice)
     }
 
-    private func finalTranscript(_ wav: Data?, local: String, locale: DictationLocale, _ r: Run) async -> String {
+    private func transcribeWithOpenAI(_ wav: Data?, _ r: Run) async -> String? {
         guard let wav, let start = r.cloudContext, let key = try? TranscriptionKeychain.load(),
-              await transcriptionContext(r) == start, r.cloudContext == start else { return local }
+              await transcriptionContext(r) == start, r.cloudContext == start else { return nil }
         phase = .transcribing
         let client = openAITranscription
-        let request = Task { try await client.transcribe(wav, locale: locale, key: key) }
+        let request = Task { try await client.transcribe(wav, key: key) }
         r.cloudRequest = request
         let result = await request.result
         r.cloudRequest = nil
-        guard r.cloudContext == start, await transcriptionContext(r) == start, r.cloudContext == start else { return local }
+        guard r.cloudContext == start, await transcriptionContext(r) == start, r.cloudContext == start else { return nil }
         switch result {
         case .success(let text): return text
         case .failure:
-            if !local.isEmpty { r.notice = .openAITranscriptionUnavailable }
-            return local
+            r.notice = .openAITranscriptionUnavailable
+            return nil
         }
     }
 

@@ -84,9 +84,9 @@ is kept in memory for the session and is never written to disk by Remora.
 privacy rules above. Those actions keep the audio on your Mac.
 
 If you save a project API key in **Settings › Dictation › OpenAI transcription**, Remora can send
-the completed recording and selected language to `api.openai.com/v1/audio/transcriptions` with
-`gpt-transcribe` after you choose **Insert transcript** with the unchanged transcript. The request uses that API
-project and contains only the audio and language hint.
+the completed recording to `api.openai.com/v1/audio/transcriptions` with `gpt-transcribe` after you
+choose **Insert transcript** with the unchanged transcript. The request uses that API project, and
+OpenAI detects the language from the audio.
 Cloud transcription requires a verifiable, allowed window throughout the dictation. Dictation
 audio stays local while capture is paused or if privacy checks fail. Dismissing the draft discards
 its audio.

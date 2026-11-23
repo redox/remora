@@ -20,7 +20,7 @@ the code that enforces them.
   [Meeting sources design](../../../docs/design.md#mcp-and-meeting-sources)
 - Speech-to-text defaults to Apple's local recognizer. Saving a project key in Dictation settings
   enables `POST /v1/audio/transcriptions` at `api.openai.com` after **Insert transcript** is chosen with an
-  eligible, unchanged transcript. Send audio and a language hint only. Require an observed,
+  eligible, unchanged transcript. Send only the audio for automatic language detection. Require an observed,
   verifiable context and freshly loaded exclusions before upload. Capture pause keeps audio local.
   Draft and insert and Edit use the reviewed transcript as text.
   Embeddings and the on-device tier use Apple frameworks.

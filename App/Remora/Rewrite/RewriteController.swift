@@ -442,6 +442,7 @@ final class RewriteController {
                  actions: EditBarPanel.Actions(
                     submit: { [weak self] in self?.submitDraft($0, submission: $1) },
                     record: { [weak self] in self?.toggleRecording() },
+                    showsDictationLanguage: { [weak dictation] in dictation?.hasTranscriptionKey == false },
                     switchLanguage: { [weak self] in self?.switchRecordingLanguage() },
                     undo: { [weak self] in self?.undoRound() ?? false },
                     remember: { [weak self] in self?.previewNote() },

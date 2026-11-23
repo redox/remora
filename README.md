@@ -77,10 +77,10 @@ OpenAI transcription** and choose **Save and enable**. The key needs write acces
 `POST /v1/audio/transcriptions`. Use a key from your linked API organization to draw on its credits.
 Remora stores the key in Keychain. **Remove key** switches back to Mac transcription.
 
-Remora sends eligible recordings after you choose **Insert transcript** with the unchanged
-transcript. If the request fails, it uses the Mac transcript. Private, paused, excluded or
-unverified contexts use Mac speech recognition. Drafting and editing from speech use the reviewed
-text. Audio is held in memory. Transcript cleanup uses its own model setting.
+OpenAI detects the language in eligible recordings after you choose **Insert transcript** with
+the unchanged transcript. If the request fails, Remora uses the Mac transcript. Private, paused,
+excluded or unverified contexts use Mac speech recognition. Drafting and editing from speech use
+the reviewed text. Audio is held in memory. Transcript cleanup uses its own model setting.
 
 ## Privacy
 

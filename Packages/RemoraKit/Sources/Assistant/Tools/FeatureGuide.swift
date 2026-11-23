@@ -155,10 +155,11 @@ public enum FeatureGuide {
             to put the words into the field. Switch to Edit to apply a spoken instruction to existing text. \
             Esc discards the draft. For hands-free dictation, choose Record and Stop.
 
-            Pick English or French using the menu bar or the popover's language button while \
-            recording; otherwise Remora uses the last language in that app or your default. If \
-            you enable cleanup or save an OpenAI transcription key, eligible unmodified dictation \
-            can be processed after you choose Insert transcript. Drafting and editing use the reviewed text.
+            For Mac speech recognition, pick English or French in the menu bar or let Remora use \
+            the last language in that app or your default. The popover also offers a language button \
+            when OpenAI transcription is off. With a saved key, OpenAI detects the language in eligible \
+            unchanged recordings after you choose Insert transcript. Cleanup can also run after that \
+            choice. Drafting and editing use the reviewed text.
             """),
         GuideSection(id: "chat-bar", title: "Chat bar", body: """
             A slim bar docked at a screen edge, under the notch by default. Hovering expands it (can be \

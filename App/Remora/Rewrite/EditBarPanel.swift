@@ -84,6 +84,7 @@ final class EditBarPanel {
     struct Actions {
         var submit: @MainActor (String, EditVoiceRoute.Submission) -> Void
         var record: @MainActor () -> Void
+        var showsDictationLanguage: @MainActor () -> Bool
         var switchLanguage: @MainActor () -> Void
         /// Returns false when there is nothing to undo (⌘Z then goes to the text field).
         var undo: @MainActor () -> Bool
@@ -379,7 +380,7 @@ struct EditBarView: View {
             .disabled(model.isWorking || !model.allowsEdit)
             .help(model.triggerName.map { "Tap \($0) to switch modes" } ?? "Switch modes")
 
-            if let locale = model.recordingLocale {
+            if actions?.showsDictationLanguage() == true, let locale = model.recordingLocale {
                 Button {
                     actions?.switchLanguage()
                 } label: {

@@ -46,6 +46,19 @@ private func env(onDevice: [FakeLLMClient.Step] = [], siwc: [FakeLLMClient.Step]
     #expect(e.siwc.requests[0].model == "gpt-6-luna")
 }
 
+@Test func cleanupPreservesTheLanguagesInAnAutomaticallyTranscribedRecording() async throws {
+    let raw = "Um, please review this proposal before the meeting on Friday. Merci pour ton aide."
+    let cleaned = "Please review this proposal before the meeting on Friday. Merci pour ton aide."
+    let e = try env(onDevice: [.delta(cleaned), .complete(usage)])
+    let out = try await e.cleaner.process(raw: raw, locale: nil, cleanupEnabled: true, cloudAllowed: false)
+    let request = try #require(e.onDevice.requests.first)
+
+    #expect(out == .init(text: cleaned, cleaned: true, notice: nil))
+    #expect(request.input == [.user("<transcript>\n\(raw)\n</transcript>")])
+    #expect(request.instructions.contains("Keep each part of the transcript in its original language"))
+    #expect(!request.instructions.contains("The transcript is in"))
+}
+
 @Test func shortTranscriptSkipsLLM() async throws {
     let e = try env()
     let out = try await e.cleaner.process(raw: "Oui, merci.", locale: .fr, cleanupEnabled: true, cloudAllowed: true)

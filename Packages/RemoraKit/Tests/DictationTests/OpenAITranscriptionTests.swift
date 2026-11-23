@@ -7,13 +7,13 @@ import Testing
 struct OpenAITranscriptionTests {
     private let path = "/v1/audio/transcriptions"
 
-    @Test func usesOnlyTheTranscriptionEndpointWithTheProjectKey() async throws {
+    @Test func sendsAudioWithoutALanguageHint() async throws {
         let transport = FakeHTTPTransport()
         transport.enqueue(path, .json(200, ["text": " Bonjour ! "]))
         let client = OpenAITranscription(transport: transport)
         let audio = Data([1, 2, 3, 4])
 
-        #expect(try await client.transcribe(audio, locale: .fr, key: "sk-test") == "Bonjour !")
+        #expect(try await client.transcribe(audio, key: "sk-test") == "Bonjour !")
 
         let request = try #require(transport.requests.first)
         #expect(transport.requests.count == 1)
@@ -24,7 +24,7 @@ struct OpenAITranscriptionTests {
         let body = try #require(request.httpBody)
         #expect(body.range(of: audio) != nil)
         #expect(body.range(of: Data("name=\"model\"\r\n\r\ngpt-transcribe".utf8)) != nil)
-        #expect(body.range(of: Data("name=\"languages[]\"\r\n\r\nfr".utf8)) != nil)
+        #expect(body.range(of: Data("name=\"language".utf8)) == nil)
     }
 
     @Test(arguments: [401, 429, 503]) func requestFailuresAreNotRetried(_ status: Int) async {
@@ -33,7 +33,7 @@ struct OpenAITranscriptionTests {
         let client = OpenAITranscription(transport: transport)
 
         await #expect(throws: OpenAITranscription.Failure.httpStatus(status)) {
-            try await client.transcribe(Data([0]), locale: .en, key: "sk-test")
+            try await client.transcribe(Data([0]), key: "sk-test")
         }
         #expect(transport.requests.count == 1)
     }
@@ -43,7 +43,7 @@ struct OpenAITranscriptionTests {
         let client = OpenAITranscription(transport: transport)
 
         await #expect(throws: OpenAITranscription.Failure.invalidKey) {
-            try await client.transcribe(Data([0]), locale: .en, key: "sk-test\nheader")
+            try await client.transcribe(Data([0]), key: "sk-test\nheader")
         }
         #expect(transport.requests.isEmpty)
     }
