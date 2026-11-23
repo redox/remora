@@ -69,3 +69,47 @@ private var utc: Calendar { var c = Calendar(identifier: .gregorian); c.timeZone
     try db.writer.write { _ = try LLMCall.deleteOne($0, key: call.id!) }
     #expect(try InlineOutputStore(db).recent(limit: 1).first?.llmCallID == nil)
 }
+
+@Test func callsInRangeAreNewestFirstAndLimited() throws {
+    let s = LLMCallStore(try .inMemory())
+    let t0 = Date(timeIntervalSince1970: 1_700_000_000)
+    for i in 0..<5 { _ = try s.insert(.fixture(input: i, at: t0.addingTimeInterval(Double(i) * 10))) }
+    let all = try s.calls(since: t0.addingTimeInterval(10), limit: 10)
+    #expect(all.map(\.inputTokens) == [4, 3, 2, 1])
+    #expect(try s.calls(since: t0, limit: 2).map(\.inputTokens) == [4, 3])
+    #expect(try s.calls(since: t0, until: t0.addingTimeInterval(30), limit: 10).map(\.inputTokens) == [2, 1, 0])
+}
+
+private final class Box: @unchecked Sendable {   // test-only; guarded by the lock
+    private let lock = NSLock()
+    private var snaps: [[LLMCall]] = []
+    func add(_ s: [LLMCall]) { lock.lock(); snaps.append(s); lock.unlock() }
+    var all: [[LLMCall]] { lock.lock(); defer { lock.unlock() }; return snaps }
+}
+
+@Test func observationDeliversNewCalls() async throws {
+    let s = LLMCallStore(try .inMemory())
+    let box = Box()
+    let obs = s.observeCalls(since: .distantPast, limit: 10, onChange: { box.add($0) }, onError: { _ in })
+    defer { obs.cancel() }
+    func wait(for count: Int) async throws {
+        for _ in 0..<200 where box.all.count < count { try await Task.sleep(for: .milliseconds(25)) }
+    }
+    try await wait(for: 1)
+    #expect(box.all.first?.isEmpty == true)
+    _ = try s.insert(.fixture(input: 7))
+    try await wait(for: 2)
+    #expect(box.all.count >= 2)
+    #expect(box.all.last?.map(\.inputTokens) == [7])
+}
+
+@Test func unpricedRowsWithTokensAreListedAndCostIsSetOnce() throws {
+    let s = LLMCallStore(try .inMemory())
+    let a = try s.insert(.fixture(input: 10, output: 5, cost: nil))
+    _ = try s.insert(.fixture(input: 0, output: 0, cost: nil))
+    _ = try s.insert(.fixture(input: 10, output: 5, cost: 1))
+    #expect(try s.unpricedWithTokens(limit: 10).map(\.id) == [a.id])
+    try s.setCostIfUnpriced(id: a.id!, usd: 0.5)
+    try s.setCostIfUnpriced(id: a.id!, usd: 9)
+    #expect(try s.calls(since: .distantPast, limit: 10).first { $0.id == a.id }?.estCostUSD == 0.5)
+}
