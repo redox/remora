@@ -2,7 +2,7 @@
 
 Releases are Developer ID signed, notarized DMGs published on GitHub Releases. Sparkle reads
 `appcast.xml` from the latest release. GitHub Actions builds the universal installer for macOS 26
-or later. The maintainer tests the resulting installer and publishes the release.
+or later, publishes it, and refreshes the website download.
 
 ## Set up GitHub signing
 
@@ -80,32 +80,22 @@ and push `main` from there. Use the public checkout for release tags.
 
 ## Build on GitHub and publish
 
-1. Set `MARKETING_VERSION` (x.y.z) and `CURRENT_PROJECT_VERSION` in `Config/Version.xcconfig`.
-   Each new release needs a build number greater than every published build. After the first
-   release, use `gh release download -R redox/remora -p appcast.xml -O -` to check the latest
-   appcast's `<sparkle:version>` and compare with any newer builds published as prereleases.
-   Push the release commit to `main` and let the regular CI checks finish.
-2. In GitHub Actions, select **Build release DMG → Run workflow** on `main`. The job signs the
-   universal app and DMG, notarizes and staples the DMG, checks Gatekeeper, and signs the
-   Sparkle update. It uploads a `remora-release-<attempt>` artifact containing `Remora-<version>.dmg`
-   and `appcast/appcast.xml`.
-3. Download the artifact from the successful run. Open the DMG on a fresh macOS account and
-   check the arrow, drag instruction, and both icon labels in Finder. Drag Remora to Applications
-   and launch it with Gatekeeper enabled. For later releases, test an update from the previous
-   version using a test copy and feed.
-4. From the public checkout, tag the exact commit built by the workflow. Set `RUN_ID` to the
-   successful Actions run ID, `V` to its marketing version and `FILES` to the unpacked artifact.
+Set `MARKETING_VERSION` (x.y.z) and `CURRENT_PROJECT_VERSION` in `Config/Version.xcconfig`, then
+push to `main`. A successful CI run on the current `main` commit triggers **Build release DMG**.
+The workflow skips versions that already have a published release and checks that new build numbers
+exceed all published Sparkle builds, including prereleases.
 
-   ```sh
-   SHA=$(gh run view "$RUN_ID" -R redox/remora --json headSha --jq .headSha)
-   git fetch origin main
-   git tag -s "v$V" "$SHA" -m "Remora $V"
-   git push origin "v$V"
-   gh release create "v$V" "$FILES/Remora-$V.dmg" "$FILES/appcast/appcast.xml" \
-     -R redox/remora --title "Remora $V" --generate-notes --verify-tag --latest
-   ```
+The workflow signs the universal app and DMG, notarizes and staples the DMG, checks Gatekeeper, and
+signs the Sparkle update. GitHub then creates the version tag at the exact commit built and publishes
+`Remora-<version>.dmg` and `appcast.xml` as **Latest**. That makes the update available on Sparkle's
+next check. The final job starts the **Website** workflow and waits for the updated download link
+to deploy.
 
-Publishing as Latest makes the update available to installed copies on their next check.
+The `remora-release-<attempt>` artifact remains available to test Finder layout, a fresh install, and
+an update from the previous release on a test copy. If publication or the website deployment fails,
+rerun the failed jobs in GitHub Actions. If `main` advances during signing, the signing run for the
+new commit can finish publication after its CI passes. To retry an unpublished version from current
+`main` after CI passed, you can also select **Build release DMG → Run workflow**.
 
 ## Local release
 
@@ -140,8 +130,15 @@ with the Finder layout. Mount a freshly built DMG after an artwork or layout cha
 
 Outputs: `dist/stage/Remora.app`, `dist/Remora-<version>.dmg`, `dist/notary-<version>.json`, `dist/appcast/appcast.xml`.
 
-Follow the same installer checks and publishing steps for a local build. Use the local build
-commit for `SHA`, and upload `dist/Remora-$V.dmg` and `dist/appcast/appcast.xml`.
+To publish a local build, verify the installer in Finder with Gatekeeper enabled. In the public
+checkout, set `SHA` to the commit built and `V` to its marketing version, then run:
+
+```sh
+git tag -s "v$V" "$SHA" -m "Remora $V"
+git push origin "v$V"
+gh release create "v$V" "dist/Remora-$V.dmg" dist/appcast/appcast.xml \
+  -R redox/remora --title "Remora $V" --generate-notes --verify-tag --latest
+```
 
 ## Pulling a bad release
 
