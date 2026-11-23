@@ -213,7 +213,7 @@ public enum FeatureGuide {
             Each message is written, then checked against your captured evidence and the clock, and \
             rewritten once or not sent. They arrive in the chat and as a macOS notification (a brief \
             that lands while you are sharing your screen stays in the chat, without a notification). \
-            They need background memory (Settings › Memory) and use the daily background budget. \
+            They need background memory (Settings › Memory) and pause with the usage limit. \
             Turning proactive messages off stops briefs and nudges only; reminders still arrive in the \
             chat and still notify.
             """),
@@ -230,8 +230,8 @@ public enum FeatureGuide {
             Background memory can be turned off; its language (English or French) and how long raw \
             captures are kept (30 days by default; older captures are deleted once summarized unless a \
             wiki fact or open item cites them) are set there too, with a wiki browser and chronicles by \
-            day. Background work stays under a daily token budget and backs off when your plan's usage \
-            limit is reached.
+            day. Background memory pauses when your plan's usage limit is reached and tries again \
+            later.
             """),
         GuideSection(id: "identity", title: "Identity", body: """
             A short profile of you (role, projects, people you work with, how you write) that Remora \
@@ -295,9 +295,8 @@ public enum FeatureGuide {
             Remora uses your ChatGPT plan through Sign in with ChatGPT (Settings › Account). Settings › \
             Usage shows calls and tokens per day, job and model, with an estimated cost: API-equivalent \
             list prices, not a bill. Your real allowance is at chatgpt.com/settings/usage. Background \
-            memory has a daily token budget (750,000 by default) and pauses for a while when the plan's \
-            usage limit is reached; the chat is never blocked by the budget. Each answer's details show \
-            the model, tokens and estimated cost.
+            memory pauses when the plan's usage limit is reached and tries again later. Each answer's \
+            details show the model, tokens and estimated cost.
             """),
         GuideSection(id: "settings", title: "Settings", body: """
             Settings pages:

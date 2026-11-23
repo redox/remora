@@ -27,20 +27,17 @@ public struct TickReport: Sendable, Equatable {
     public var ran: [JobKind]
     /// A usage limit hit this tick, or due cloud jobs are waiting for the backoff.
     public var postponedForLimit: Bool
-    /// Due cloud jobs are waiting for the daily budget.
-    public var stoppedForBudget: Bool
 
-    public init(ran: [JobKind] = [], postponedForLimit: Bool = false, stoppedForBudget: Bool = false) {
-        self.ran = ran; self.postponedForLimit = postponedForLimit; self.stoppedForBudget = stoppedForBudget
+    public init(ran: [JobKind] = [], postponedForLimit: Bool = false) {
+        self.ran = ran; self.postponedForLimit = postponedForLimit
     }
 }
 
 /// Runs background memory jobs one at a time.
 ///
 /// A tick plans (enqueues the planner's specs), then repeatedly picks the next due job among the
-/// kinds whose run condition holds and that the gate lets run (memory on, account, usage backoff,
-/// budget), runs it with the data generation read before it started, and records the result. Up
-/// to 1 job per tick while the user is active (idle < 60 s), up to 20 when idle. Every write after
+/// kinds whose run condition holds and that the gate lets run (memory on, account, usage backoff), runs it with the data generation read before it started, and records the
+/// result. Up to 1 job per tick while the user is active (idle < 60 s), up to 20 when idle. Every write after
 /// a run is generation-checked, so a job straddling "Delete all data" leaves nothing behind.
 /// Overlapping ticks are no-ops.
 public actor MemoryScheduler {
@@ -60,7 +57,6 @@ public actor MemoryScheduler {
     private let jobTimeout: Duration?
     private let store: JobStore
     private let settings: MemorySettings
-    private let budget: BudgetGate
     private let clock: @Sendable () -> Date
 
     private var busy = false
@@ -78,7 +74,6 @@ public actor MemoryScheduler {
         self.jobTimeout = jobTimeout; clock = now
         store = JobStore(db)
         settings = MemorySettings(SettingsStore(db))
-        budget = BudgetGate(db: db, calendar: calendar)
     }
 
     /// At app launch: jobs left `running` go back to `pending`.
@@ -97,7 +92,7 @@ public actor MemoryScheduler {
     }
 
     /// "Run now" (F-9): enqueues or requeues `(kind, periodKey)` and runs that one job, ignoring its
-    /// run condition but never the budget, the usage backoff or memory being off. Waits for a
+    /// run condition but never the usage backoff or memory being off. Waits for a
     /// running tick to finish first.
     public func runNow(kind: JobKind, periodKey: String, signals s: SchedulerSignals) async -> TickReport {
         while busy { await waitUntilIdle() }
@@ -185,7 +180,7 @@ public actor MemoryScheduler {
     static func gated(_ plan: JobPlan, memoryEnabled: Bool) -> JobPlan {
         guard !memoryEnabled else { return plan }
         let specs = plan.specs.filter {
-            SchedulerGate.decide($0.kind, memoryEnabled: false, accountReady: true, backoffAllows: true, level: .normal)
+            SchedulerGate.decide($0.kind, memoryEnabled: false, accountReady: true, backoffAllows: true)
                 != .deny(.disabled)
         }
         return JobPlan(specs: specs, watermark: plan.watermark, requeues: plan.requeues)
@@ -220,7 +215,7 @@ public actor MemoryScheduler {
         case none
     }
 
-    /// Job times (picking, `markRunning`, `JobContext.now`, the budget day, backoff checks) come
+    /// Job times (picking, `markRunning`, `JobContext.now`, backoff checks) come
     /// from the clock when the job starts; retry, postpone and backoff times from the clock when it
     /// ends. The clock is anchored to `signals.now`: time = `s.now` + clock time elapsed since the
     /// tick began, so a long tick does not compress delays and the tick's own time base is kept.
@@ -233,9 +228,9 @@ public actor MemoryScheduler {
         var probeSpent = false
         let language = settings.language()
 
-        func gate(backoffAllows: Bool, level: BudgetLevel) -> (JobKind) -> SchedulerGate.Decision {
+        func gate(backoffAllows: Bool) -> (JobKind) -> SchedulerGate.Decision {
             { SchedulerGate.decide($0, memoryEnabled: s.memoryEnabled, accountReady: s.accountReady,
-                                   backoffAllows: backoffAllows, level: level) }
+                                   backoffAllows: backoffAllows) }
         }
 
         while report.ran.count < limit, !stopRequested {
@@ -245,13 +240,8 @@ public actor MemoryScheduler {
                 Self.log.error("data generation unreadable; no job runs")
                 break
             }
-            let level: BudgetLevel
-            do { level = try budget.level(now: now) } catch {
-                Self.log.error("budget unreadable; cloud jobs held")
-                level = .exhausted
-            }
 
-            let decide = gate(backoffAllows: !probeSpent && backoff.allowsProbe(at: now), level: level)
+            let decide = gate(backoffAllows: !probeSpent && backoff.allowsProbe(at: now))
             let pick: Pick
             do {
                 if let only {
@@ -306,9 +296,7 @@ public actor MemoryScheduler {
 
         if only == nil, !stopRequested {
             let now = currentTime()
-            let level = (try? budget.level(now: now)) ?? .exhausted
-            addHeldFlags(&report, s, now: now,
-                         gate: gate(backoffAllows: !probeSpent && backoff.allowsProbe(at: now), level: level))
+            addHeldFlags(&report, s, now: now, gate: gate(backoffAllows: !probeSpent && backoff.allowsProbe(at: now)))
         }
         return report
     }
@@ -337,25 +325,22 @@ public actor MemoryScheduler {
               job.status == .pending, job.nextRunAt <= now else { return .none }
         switch gate(kind) {
         case .run(let allowed): return .run(job, cloudAllowed: allowed)
-        case .deny(.budget): report.stoppedForBudget = true
         case .deny(.backoff): report.postponedForLimit = true
         case .deny: break
         }
         return .none
     }
 
-    /// Flags due jobs that the budget or the backoff (not their run condition) kept waiting.
+    /// Flags due jobs that the backoff (not their run condition) kept waiting.
     private func addHeldFlags(_ report: inout TickReport, _ s: SchedulerSignals, now: Date,
                               gate: (JobKind) -> SchedulerGate.Decision) {
-        var budgetHeld: Set<JobKind> = [], limitHeld: Set<JobKind> = []
+        var limitHeld: Set<JobKind> = []
         for kind in runners.keys where kind.runCondition.holds(s) {
             switch gate(kind) {
-            case .deny(.budget): budgetHeld.insert(kind)
             case .deny(.backoff): limitHeld.insert(kind)
             default: break
             }
         }
-        if (try? store.nextDue(now: now, kinds: budgetHeld)) != nil { report.stoppedForBudget = true }
         if (try? store.nextDue(now: now, kinds: limitHeld)) != nil { report.postponedForLimit = true }
     }
 

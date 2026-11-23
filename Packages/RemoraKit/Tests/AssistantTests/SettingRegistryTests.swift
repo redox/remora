@@ -20,10 +20,14 @@ private func set(_ db: AppDatabase, _ name: String, _ value: String) throws {
 @Suite struct SettingRegistryTests {
     @Test func registryIsExactAllowlist() {
         #expect(SettingRegistry.entries.map(\.name).sorted() == [
-            "auto_hide_bar", "background_memory", "bar_position", "daily_background_budget", "dictation",
+            "auto_hide_bar", "background_memory", "bar_position", "dictation",
             "dim_bar_when_unfocused", "memory_language", "open_on_hover", "proactive_messages",
             "raw_capture_retention", "sounds", "text_size", "window_badge",
         ])
+    }
+
+    @Test func theDailyBackgroundBudgetIsNoLongerASetting() {
+        #expect(SettingRegistry.entry("daily_background_budget") == nil)
     }
 
     @Test func privacyRelevantSettingsNeedConfirmation() {
@@ -40,7 +44,7 @@ private func set(_ db: AppDatabase, _ name: String, _ value: String) throws {
         let before = try db.reader.read { d in try String.fetchOne(d, sql: "SELECT value FROM settings WHERE key = ?",
                                                                    arguments: [BarSettings.key]) }
         for (name, value) in [("text_size", "175"), ("text_size", "125"), ("bar_position", "middle"),
-                              ("sounds", "maybe"), ("raw_capture_retention", "45"), ("daily_background_budget", "50"),
+                              ("sounds", "maybe"), ("raw_capture_retention", "45"),
                               ("memory_language", "de")] {
             #expect(throws: SettingValueError.self) { try set(db, name, value) }
         }
@@ -58,7 +62,6 @@ private func set(_ db: AppDatabase, _ name: String, _ value: String) throws {
         #expect(try get(db, "proactive_messages") == "on")
         #expect(try get(db, "background_memory") == "on")
         #expect(try get(db, "raw_capture_retention") == "30")
-        #expect(try get(db, "daily_background_budget") == "750000")
         #expect(try get(db, "window_badge") == "off")
         #expect(try get(db, "text_size") == "100")
 
@@ -74,7 +77,6 @@ private func set(_ db: AppDatabase, _ name: String, _ value: String) throws {
         try set(db, "memory_language", "fr")
         try set(db, "background_memory", "off")
         try set(db, "raw_capture_retention", "forever")
-        try set(db, "daily_background_budget", "2000000")
 
         #expect(try s.value(Bool.self, forKey: "proactive.enabled") == false)
         let bar = try #require(try s.value(BarSettings.self, forKey: BarSettings.key))
@@ -87,7 +89,6 @@ private func set(_ db: AppDatabase, _ name: String, _ value: String) throws {
         #expect(memory.language() == .fr)
         #expect(!memory.enabled())
         #expect(memory.retention() == .forever)
-        #expect(memory.dailyTokenBudget() == 2_000_000)
     }
 
     @Test func changingOneFieldKeepsTheOthers() throws {

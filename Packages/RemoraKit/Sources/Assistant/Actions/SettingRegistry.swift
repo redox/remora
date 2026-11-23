@@ -40,7 +40,6 @@ public struct SettingRegistry: Sendable {
     /// Settings › Notifications "Proactive messages" (pinned key; default on).
     public static let proactiveEnabledKey = "proactive.enabled"
     public static let retentionDays = [7, 14, 30, 60, 90, 180, 365]
-    public static let budgetRange = 100_000...5_000_000
 
     public static let entries: [Entry] = [
         onOff("proactive_messages", .reversible,
@@ -98,16 +97,6 @@ public struct SettingRegistry: Sendable {
                  }
              },
              write: { s, d, v in try MemorySettings(s).setRetention(v, in: d) }),
-        make("daily_background_budget",
-             values: "\(budgetRange.lowerBound) to \(budgetRange.upperBound) tokens per day", risk: .reversible,
-             parse: { Int($0).flatMap { budgetRange.contains($0) ? $0 : nil } },
-             lenient: { Int($0).flatMap { $0 > 0 ? $0 : nil } },
-             format: { String($0) },
-             read: { s, d in
-                 let v = (try? s.value(Int.self, forKey: MemorySettings.dailyTokenBudgetKey, in: d)) ?? nil
-                 return v.flatMap { $0 > 0 ? $0 : nil } ?? MemorySettings.defaultDailyTokenBudget
-             },
-             write: { s, d, v in try MemorySettings(s).setDailyTokenBudget(v, in: d) }),
     ]
 
     public static func entry(_ name: String) -> Entry? { entries.first { $0.name == name } }

@@ -10,7 +10,7 @@ import Storage
 
 /// Runs background memory: ticks `MemoryScheduler` every 60 s, after wake (system and screens)
 /// and on sign-in, with signals from `SchedulerSignals.make` (F-46). Ticks never overlap. Also
-/// serves Settings › Memory, Identity and the Usage budget section.
+/// serves Settings › Memory, Identity and the Usage screen.
 ///
 /// - Memory turned off, sign-out (account ready → not ready) and system sleep: the running job is
 ///   cancelled through `MemoryScheduler.cancelCurrent`, so it goes back to pending without an
@@ -19,7 +19,7 @@ import Storage
 ///   the idle watcher.
 /// - The user returns while a tick planned on idle signals runs idle-gated work: cancelled
 ///   (`IdleReturn.shouldCancel`, T2-M5).
-/// - "Run now" buttons use `MemoryScheduler.runNow` (F-9): run condition waived, budget, backoff
+/// - "Run now" buttons use `MemoryScheduler.runNow` (F-9): run condition waived, backoff
 ///   and memory-off never.
 /// - The vector cache is warmed off the rewrite path: 30 s after launch and after embeddings or
 ///   compaction, only with memory on and the model downloaded (`MemoryLifecycle`).
@@ -34,8 +34,6 @@ final class MemoryController {
 
     private(set) var counts: [JobStatus: Int] = [:]
     private(set) var lastCompaction: CompactionReport?
-    private(set) var budgetUsed = 0
-    private(set) var budget = MemorySettings.defaultDailyTokenBudget
     private(set) var backoffUntil: Date?
     private(set) var dbSize: (main: Int64, wal: Int64) = (0, 0)
     /// Old raw captures held back until memory summarises them (F-36).
@@ -280,7 +278,6 @@ final class MemoryController {
     private static func notRunMessage(_ r: TickReport, kind: JobKind, _ s: SchedulerSignals) -> String {
         if !s.memoryEnabled, kind != .compaction { return "Turn on background memory first." }
         if r.postponedForLimit { return "Paused by the ChatGPT usage limit. Try again later." }
-        if r.stoppedForBudget { return "Today's background budget is used up." }
         if !s.accountReady, kind != .compaction { return "Continue with ChatGPT first." }
         return "Nothing to run right now."
     }
@@ -310,11 +307,6 @@ final class MemoryController {
         refreshStatus(full: true)
     }
 
-    func setDailyBudget(_ n: Int) {
-        write { try settings.setDailyTokenBudget(n) }
-        budget = settings.dailyTokenBudget()
-    }
-
     /// A chat action changed a memory setting in storage: show it, and stop a running job when
     /// memory was turned off.
     func settingsChangedElsewhere() {
@@ -335,7 +327,6 @@ final class MemoryController {
         enabled = settings.enabled()
         language = settings.language()
         retention = settings.retention()
-        budget = settings.dailyTokenBudget()
     }
 
     // MARK: - Embedding model
@@ -383,7 +374,6 @@ final class MemoryController {
     private struct Status: Sendable {
         var counts: [JobStatus: Int]
         var report: CompactionReport?
-        var used: Int
         var backoff: UsageBackoff
         var sizes: (main: Int64, wal: Int64)
         var awaiting: Int?
@@ -398,7 +388,7 @@ final class MemoryController {
     }
 
     private func runRefresh(full: Bool) {
-        let db = db, calendar = calendar, retention = settings.retention()
+        let db = db, retention = settings.retention()
         Task { [weak self] in
             let status = await Task.detached(priority: .utility) { () -> Status? in
                 let now = Date.now
@@ -416,7 +406,6 @@ final class MemoryController {
                     return Status(
                         counts: try JobStore(db).counts(),
                         report: try? settings.value(CompactionReport.self, forKey: CompactionPipeline.lastReportKey),
-                        used: try BudgetGate(db: db, calendar: calendar).usedToday(now: now),
                         backoff: MemorySettings(settings).backoff(),
                         sizes: DatabaseStats.fileSizes(AppDatabase.defaultURL),
                         awaiting: awaiting)
@@ -433,7 +422,6 @@ final class MemoryController {
             statusUnreadable = false
             counts = status.counts
             lastCompaction = status.report
-            budgetUsed = status.used
             backoffUntil = status.backoff.until.flatMap { $0 > .now ? $0 : nil }
             dbSize = status.sizes
             if let awaiting = status.awaiting {
@@ -441,7 +429,6 @@ final class MemoryController {
             } else if full, case .forever = retention {
                 awaitingSummary = 0
             }
-            budget = settings.dailyTokenBudget()
         }
     }
 }

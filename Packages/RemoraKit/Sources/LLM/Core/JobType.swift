@@ -41,8 +41,8 @@ public enum JobType: String, Codable, Sendable, CaseIterable {
         }
     }
 
-    /// Background jobs count against the daily background budget; foreground ones (the user
-    /// is waiting) never do. Storage mirrors this set as `BackgroundUsage.foregroundJobTypes`.
+    /// Background jobs yield to the usage-limit backoff; foreground ones (the user is waiting)
+    /// never do.
     public var isBackground: Bool {
         switch self {
         case .rewrite, .editMode, .chat, .dictationCleanup, .queryExpansion, .chatFold: false

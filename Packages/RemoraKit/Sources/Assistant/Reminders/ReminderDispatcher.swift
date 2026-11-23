@@ -22,18 +22,14 @@ struct PendingPrompt: Codable, Sendable, Equatable {
 }
 
 /// Whether a `prompt` reminder may call the model now. Prompt reminders are background usage:
-/// they stay under Plan 4's daily budget and its usage-limit backoff.
+/// they stay under the usage-limit backoff, the only throttle on background cloud work.
 public enum ReminderPromptGate: Sendable, Equatable {
     case allow
-    /// The daily background budget is spent (`BudgetLevel.exhausted`, or unreadable: fail closed).
-    case budget
     /// A usage limit was hit and the backoff has not elapsed.
     case backoff
 
-    /// The background jobs' own rules: `BudgetGate` and `MemorySettings.backoff`.
-    public static func current(db: AppDatabase, calendar: Calendar, now: Date) -> ReminderPromptGate {
-        let level = (try? BudgetGate(db: db, calendar: calendar).level(now: now)) ?? .exhausted
-        if level == .exhausted { return .budget }
+    /// The background jobs' own rule: `MemorySettings.backoff`.
+    public static func current(db: AppDatabase, now: Date) -> ReminderPromptGate {
         if !MemorySettings(SettingsStore(db)).backoff().allowsProbe(at: now) { return .backoff }
         return .allow
     }
@@ -75,7 +71,7 @@ public struct ReminderDispatcher: Sendable {
                 promptGate: (@Sendable (Date) -> ReminderPromptGate)? = nil) {
         self.engine = engine; self.inbox = inbox; self.agent = agent; self.calendar = calendar; self.now = now
         let db = inbox.database
-        self.promptGate = promptGate ?? { at in ReminderPromptGate.current(db: db, calendar: calendar(), now: at) }
+        self.promptGate = promptGate ?? { at in ReminderPromptGate.current(db: db, now: at) }
     }
 
     private var db: AppDatabase { inbox.database }
@@ -191,12 +187,10 @@ public struct ReminderDispatcher: Sendable {
                                        callIDs: callIDs, reminderID: id, expectedGeneration: generation, at: now())
     }
 
-    /// The prompt's answer, or the "Couldn't run" copy: the budget and the backoff are checked
+    /// The prompt's answer, or the "Couldn't run" copy: the backoff is checked
     /// before any model call.
     private func promptAnswer(_ text: String) async -> (body: String, callIDs: [Int64]) {
         switch promptGate(now()) {
-        case .budget:
-            return ("Couldn't run “\(text)”: \(Self.budgetCopy)", [])
         case .backoff:
             return ("Couldn't run “\(text)”: \(Self.copy(for: LLMError.usageLimit))", [])
         case .allow:
@@ -249,7 +243,6 @@ public struct ReminderDispatcher: Sendable {
         return String(describing: type(of: error))
     }
 
-    static let budgetCopy = "daily background budget reached"
 
     /// User copy for a failed prompt reminder.
     static func copy(for error: any Error) -> String {

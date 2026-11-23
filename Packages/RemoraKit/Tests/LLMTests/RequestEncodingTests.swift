@@ -84,10 +84,9 @@ func validateRejectsForbidden(_ key: String) {
     for j in [JobType.nudgeTriage, .evidenceCheck, .chatFold] { #expect(j.defaultTier == .small, "\(j)") }
 }
 
-@Test func backgroundSetMatchesStorage() {
-    #expect(Set(JobType.allCases.filter { !$0.isBackground }.map(\.rawValue)) == BackgroundUsage.foregroundJobTypes)
+@Test func backgroundJobsAreTheOnesThatYieldToUsageBackoff() {
     #expect(JobType.hourChronicle.isBackground && JobType.memoryDigest.isBackground && !JobType.rewrite.isBackground)
-    #expect(BackgroundUsage.foregroundJobTypes.contains("chat_fold") && !BackgroundUsage.foregroundJobTypes.contains("reminder_prompt"))
+    #expect(!JobType.chatFold.isBackground && JobType.reminderPrompt.isBackground)
 }
 
 @Test func errorStatusAndRetryability() {

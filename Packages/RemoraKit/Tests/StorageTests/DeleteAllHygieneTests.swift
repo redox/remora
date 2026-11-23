@@ -119,7 +119,6 @@ private func seeded() throws -> AppDatabase {
     }
     try settings.setValue("fr", forKey: "memory.language")
     try settings.setValue(false, forKey: "memory.enabled")
-    try settings.setValue(500_000, forKey: "memory.dailyTokenBudget")
     try settings.setValue(["days": 7], forKey: "memory.retention")
     let cleared = ["memory.plannerWatermark", "memory.wm.lastSnapshotAt", "memory.compaction.last",
                    "memory.backoff", "memory.lastStyleRunAt"]
@@ -145,7 +144,6 @@ private func seeded() throws -> AppDatabase {
     #expect(rules.map(\.source) == ["user"])
     #expect(try settings.value(String.self, forKey: "memory.language") == "fr")
     #expect(try settings.value(Bool.self, forKey: "memory.enabled") == false)
-    #expect(try settings.value(Int.self, forKey: "memory.dailyTokenBudget") == 500_000)
     #expect(try settings.value([String: Int].self, forKey: "memory.retention") == ["days": 7])
     for key in cleared { #expect(try settings.value(Date.self, forKey: key) == nil, "\(key)") }
     #expect(try DataGeneration.current(db) == before + 1)

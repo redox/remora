@@ -9,11 +9,10 @@ import Testing
     #expect(m.enabled() == true)
     #expect(m.language() == .en)
     #expect(m.retention() == .days(30))
-    #expect(m.dailyTokenBudget() == 750_000)
     #expect(m.backoff() == UsageBackoff())
 
     for key in [MemorySettings.enabledKey, MemorySettings.languageKey, MemorySettings.retentionKey,
-                MemorySettings.dailyTokenBudgetKey, MemorySettings.backoffKey] {
+                MemorySettings.backoffKey] {
         try db.writer.write {
             try $0.execute(sql: "INSERT OR REPLACE INTO settings (key, value) VALUES (?, '{')", arguments: [key])
         }
@@ -21,14 +20,10 @@ import Testing
     #expect(m.enabled() == true)
     #expect(m.language() == .en)
     #expect(m.retention() == .days(30))
-    #expect(m.dailyTokenBudget() == 750_000)
     #expect(m.backoff() == UsageBackoff())
     // Valid JSON, unknown language: still the default.
     try SettingsStore(db).setValue("de", forKey: MemorySettings.languageKey)
     #expect(m.language() == .en)
-    // A non-positive budget is unusable: the default.
-    try SettingsStore(db).setValue(0, forKey: MemorySettings.dailyTokenBudgetKey)
-    #expect(m.dailyTokenBudget() == 750_000)
 }
 
 @Test func memorySettingsRoundTrip() throws {
@@ -37,11 +32,10 @@ import Testing
     try m.setEnabled(false)
     try m.setLanguage(.fr)
     try m.setRetention(.forever)
-    try m.setDailyTokenBudget(100_000)
     var b = UsageBackoff(); b.recordLimit(at: memoryT0)
     try m.setBackoff(b)
     #expect(m.enabled() == false && m.language() == .fr && m.retention() == .forever)
-    #expect(m.dailyTokenBudget() == 100_000 && m.backoff() == b)
+    #expect(m.backoff() == b)
     #expect(MemoryLanguage.en.name == "English" && MemoryLanguage.fr.name == "French")
     // Stored under the pinned keys, as JSON.
     #expect(try SettingsStore(db).value(String.self, forKey: "memory.language") == "fr")
@@ -69,7 +63,3 @@ import Testing
     #expect(RetentionSetting.days(clamping: 90) == .days(90))
 }
 
-@Test func backgroundForegroundSetIsPinned() {
-    #expect(BackgroundUsage.foregroundJobTypes == ["rewrite", "edit_mode", "chat", "dictation_cleanup", "query_expansion",
-                                                    "chat_fold"])
-}

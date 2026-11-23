@@ -245,9 +245,8 @@ private func answerFake(_ text: String) -> FakeLLMClient {
         #expect(agent2.seen.withLock { $0.count } == 1)
         #expect(try SettingsStore(e2.db).value([PendingPrompt].self, forKey: ReminderDispatcher.pendingKey) == nil)
     }
-    @Test func promptRemindersStayUnderTheBudgetAndTheBackoff() async throws {
-        for (gate, copy) in [(ReminderPromptGate.budget, "daily background budget reached"),
-                             (.backoff, "usage limit reached")] {
+    @Test func promptRemindersStayUnderTheBackoff() async throws {
+        for (gate, copy) in [(ReminderPromptGate.backoff, "usage limit reached")] {
             let e = try env("2026-11-20 08:00")
             let agent = FakeAgent(llm: service(answerFake("x"), db: e.db))
             _ = try await e.engine.create(ReminderDraft(text: "Summarize my day", action: .prompt,
@@ -260,18 +259,25 @@ private func answerFake(_ text: String) -> FakeLLMClient {
         }
     }
 
-    @Test func defaultPromptGateReadsTheBudgetAndTheBackoff() async throws {
+    @Test func defaultPromptGateReadsTheBackoff() async throws {
         let db = try AppDatabase.inMemory()
         let now = local("2026-11-20 09:00")
-        #expect(ReminderPromptGate.current(db: db, calendar: paris, now: now) == .allow)
+        #expect(ReminderPromptGate.current(db: db, now: now) == .allow)
         try MemorySettings(SettingsStore(db)).setBackoff(UsageBackoff(step: 1, until: now.addingTimeInterval(600)))
-        #expect(ReminderPromptGate.current(db: db, calendar: paris, now: now) == .backoff)
-        #expect(ReminderPromptGate.current(db: db, calendar: paris, now: now.addingTimeInterval(601)) == .allow)
+        #expect(ReminderPromptGate.current(db: db, now: now) == .backoff)
+        #expect(ReminderPromptGate.current(db: db, now: now.addingTimeInterval(601)) == .allow)
         try MemorySettings(SettingsStore(db)).setBackoff(UsageBackoff())
-        // A background call that spends the whole daily budget (calls are stamped with the real clock).
-        try MemorySettings(SettingsStore(db)).setDailyTokenBudget(10)
-        _ = try await service(answerFake("x"), db: db).complete(.reminderPrompt, instructions: "x", input: [.user("x")])
-        #expect(ReminderPromptGate.current(db: db, calendar: .current, now: Date()) == .budget)
+    }
+
+    @Test func promptReminderIgnoresBackgroundTokenUse() async throws {
+        let db = try AppDatabase.inMemory()
+        let now = local("2026-11-20 09:00")
+        _ = try LLMCallStore(db).insert(LLMCall(startedAt: now.addingTimeInterval(-60), durationMs: 100,
+                                                backend: "siwc", model: "gpt-6-luna", jobType: "hour_chronicle",
+                                                status: .completed, inputTokens: 2_000_000))
+        #expect(ReminderPromptGate.current(db: db, now: now) == .allow)
+        try MemorySettings(SettingsStore(db)).setBackoff(UsageBackoff(step: 1, until: now.addingTimeInterval(600)))
+        #expect(ReminderPromptGate.current(db: db, now: now) == .backoff)
     }
 
     @Test func recoveryDropsCancelledRemindersAndUnreadableLists() async throws {

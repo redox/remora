@@ -82,7 +82,7 @@ public enum DataReset {
     static let assistantTables = ["chat_turns", "chat_summaries", "inbox_messages", "nudge_decisions", "reminders"]
 
     /// Memory settings that point into deleted data (watermarks, last runs, backoff). The user's
-    /// choices (`memory.enabled/language/retention/dailyTokenBudget`) are kept.
+    /// choices (`memory.enabled/language/retention`) are kept.
     static let derivedMemorySettings = [
         "memory.plannerWatermark", "memory.wm.lastSnapshotAt", "memory.compaction.last", "memory.backoff",
         "memory.lastStyleRunAt", "memory.style.consumed", "memory.plannerWatermarkHeld",

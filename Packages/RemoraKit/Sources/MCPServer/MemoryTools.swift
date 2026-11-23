@@ -47,7 +47,7 @@ public struct MemoryTools: Sendable {
 
     /// `embedder` is made on the first `search_wiki` and kept for the process; by default the
     /// on-device model, never downloading assets. Not ready within `embedderTimeout`: FTS only.
-    /// `calendar`: chronicle periods and the background budget's day (local ISO 8601).
+    /// `calendar`: chronicle periods (local ISO 8601).
     public init(databaseURL: URL,
                 embedder: @escaping @Sendable () -> (any Embedder)? = { NLEmbedder(requestAssetsIfMissing: false) },
                 embedderTimeout: Duration = .seconds(3), calendar: Calendar = MemoryTools.localCalendar) {
@@ -287,16 +287,10 @@ public struct MemoryTools: Sendable {
         ])
     }
 
-    /// Today's background tokens against the daily budget (Plan 4), and the usage-limit backoff
-    /// while it is active.
+    /// The usage-limit backoff while it is active: the only throttle on background cloud work.
     private func backgroundUsage(_ db: AppDatabase, now: Date) throws -> JSONValue {
-        let used = try BackgroundUsage.today(db, now: now, calendar: calendar)
-        let settings = MemorySettings(SettingsStore(db))
-        let budget = settings.dailyTokenBudget()
-        let until = settings.backoff().until.flatMap { $0 > now ? $0 : nil }
+        let until = MemorySettings(SettingsStore(db)).backoff().until.flatMap { $0 > now ? $0 : nil }
         return .object([
-            "today_tokens": .int(used), "daily_budget": .int(budget),
-            "share": .double((Double(used) / Double(max(budget, 1)) * 10_000).rounded() / 10_000),
             "backoff_until": until.map { .int(Self.seconds($0)) } ?? .null,
         ])
     }

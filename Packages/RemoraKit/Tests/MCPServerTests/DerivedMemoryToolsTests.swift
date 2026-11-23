@@ -404,10 +404,11 @@ private struct StuckEmbedder: Embedder {
     #expect(MemoryTools.memoryNeedsUpdate == "Remora needs to be updated and launched once.")
     // get_usage still works on v3 and reports the background block with defaults.
     let usage = try object(await t.call("get_usage", arguments: [:]))
-    #expect((usage["background"] as? [String: Any])?["daily_budget"] as? Int == 750_000)
+    let bg = try #require(usage["background"] as? [String: Any])
+    #expect(Set(bg.keys) == ["backoff_until"])
 }
 
-@Test func usageIncludesBackgroundShare() async throws {
+@Test func usageBackgroundBlockReportsOnlyTheBackoff() async throws {
     let (url, db) = try memoryDB()
     let now = Date()
     try llmCall(db, model: "gpt-6-luna", cost: 0.001, input: 1_000, cached: 200, output: 300, job: "hour_chronicle")
@@ -415,14 +416,11 @@ private struct StuckEmbedder: Embedder {
     try llmCall(db, model: "apple", cost: 0, input: 9_000, cached: 0, output: 900, job: "working_memory",
                 backend: "on_device")
     let settings = MemorySettings(SettingsStore(db))
-    try settings.setDailyTokenBudget(10_000)
     let until = now.addingTimeInterval(3_600)
     try settings.setBackoff(UsageBackoff(step: 1, until: until))
     let o = try object(await tools(url).call("get_usage", arguments: [:]))
     let bg = try #require(o["background"] as? [String: Any])
-    #expect(bg["today_tokens"] as? Int == 1_100)
-    #expect(bg["daily_budget"] as? Int == 10_000)
-    #expect(bg["share"] as? Double == 0.11)
+    #expect(Set(bg.keys) == ["backoff_until"])
     #expect(bg["backoff_until"] as? Int == Int(until.timeIntervalSince1970))
     #expect(o["totals"] is [Any] && o["note"] is String)
 

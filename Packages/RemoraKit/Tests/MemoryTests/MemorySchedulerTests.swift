@@ -18,42 +18,14 @@ private func job(_ db: AppDatabase, _ kind: JobKind, _ key: String) throws -> Jo
     try #require(try JobStore(db).job(kind: kind, periodKey: key))
 }
 
-@Test func budgetExhaustedStopsCloudJobsOnly() async throws {
+@Test func wikiRunsWithCloudAfterHeavyBackgroundUse() async throws {
     let db = try AppDatabase.inMemory()
-    try seedUsage(db, tokens: 750_000)
-    try enqueue(db, .hour, "2026-11-20T10+0100", start: date(2026, 11, 20, 10))
-    try enqueue(db, .timeLedger, "2026-11-20T10+0100", start: date(2026, 11, 20, 10))
-    let runner = FakeRunner()
-    let report = await scheduler(db, runner).tick(signals(idle: 300))
-    #expect(report.ran == [.timeLedger] && runner.kinds == [.timeLedger])
-    #expect(report.stoppedForBudget && !report.postponedForLimit)
-    #expect(try job(db, .hour, "2026-11-20T10+0100").status == .pending)
-    #expect(try job(db, .timeLedger, "2026-11-20T10+0100").status == .done)
-}
-
-/// F-8: compaction and working memory still run past the budget, without the cloud.
-@Test func exhaustedBudgetRunsCompactionAndWorkingMemoryWithoutCloud() async throws {
-    let db = try AppDatabase.inMemory()
-    try seedUsage(db, tokens: 800_000)
-    try enqueue(db, .workingMemory, "2026-11-20T13+0100:50")
-    try enqueue(db, .compaction, "2026-11-20")
-    let runner = FakeRunner()
-    let report = await scheduler(db, runner).tick(signals(idle: 300))
-    #expect(report.ran == [.workingMemory, .compaction])
-    #expect(runner.calls.allSatisfy { !$0.context.cloudAllowed })
-}
-
-@Test func softBudgetKeepsHourButHoldsWiki() async throws {
-    let db = try AppDatabase.inMemory()
-    try seedUsage(db, tokens: 650_000)
-    try enqueue(db, .hour, "2026-11-20T10+0100", start: date(2026, 11, 20, 10))
+    try seedUsage(db, tokens: 2_000_000)
     try enqueue(db, .wikiRewrite, "2026-11-20T09+0100")
-    try enqueue(db, .compaction, "2026-11-20")
     let runner = FakeRunner()
     let report = await scheduler(db, runner).tick(signals(idle: 300))
-    #expect(report.ran == [.hour, .compaction] && report.stoppedForBudget)
-    #expect(runner.calls.allSatisfy { $0.context.cloudAllowed })   // compaction: budget < 100 %
-    #expect(try job(db, .wikiRewrite, "2026-11-20T09+0100").status == .pending)
+    #expect(report.ran == [.wikiRewrite])
+    #expect(runner.calls.allSatisfy { $0.context.cloudAllowed })
 }
 
 @Test(arguments: [LLMError.notSignedIn, .needsSignIn, .planUsageDisabled, .notEligible, .unauthorized, .forbidden,
@@ -425,7 +397,7 @@ private struct StubPlanner: JobPlanning {
     #expect(try JobStore(db).counts() == [.done: 1, .pending: 1])
 }
 
-/// F-9: "Run now" waives the run condition, never the budget or the backoff.
+/// F-9: "Run now" waives the run condition, never the backoff.
 @Test func runNowWaivesRunConditionOnly() async throws {
     let db = try AppDatabase.inMemory()
     let runner = FakeRunner()
@@ -439,12 +411,8 @@ private struct StubPlanner: JobPlanning {
     let again = await s.runNow(kind: .compaction, periodKey: "2026-11-20", signals: signals(idle: 5))
     #expect(again.ran == [.compaction])
 
-    // Identity past the budget: held, still pending.
-    try seedUsage(db, tokens: 750_000)
-    let held = await s.runNow(kind: .identity, periodKey: "2026-W47", signals: signals(idle: 5))
-    #expect(held.ran.isEmpty && held.stoppedForBudget)
-    #expect(try job(db, .identity, "2026-W47").status == .pending)
-
+    // Heavy background use never holds a job: only the backoff does.
+    try seedUsage(db, tokens: 2_000_000)
     // Backoff: held too.
     var b = UsageBackoff(); b.recordLimit(at: t0)
     try MemorySettings(SettingsStore(db)).setBackoff(b)
@@ -688,4 +656,50 @@ private final class RecordingPlannerData: PlannerData, @unchecked Sendable {
     #expect(planned.contains { ($0.periodStart ?? .distantFuture) <= t0 })   // the first hour missed while off
     #expect(try SettingsStore(db).value(Date.self, forKey: MemoryScheduler.heldWatermarkKey) == nil)
     #expect(data.froms.withLock { $0.last } == date(2026, 11, 20, 13))
+}
+
+@Test func runConditionsAndCloudUseMatchPinnedValues() {
+    let anytime: Set<JobKind> = [.workingMemory, .timeLedger, .hour, .dayRollup, .weekRollup, .monthRollup,
+                                 .yearRollup, .wikiRewrite, .morningBrief, .eveningWrap, .nudgeScan, .digestRebuild]
+    for k in JobKind.allCases {
+        let expected: RunCondition = anytime.contains(k) ? .anytime
+            : [.styleNotes, .identity, .routineScan].contains(k) ? .idle(120) : .idleOnPower
+        #expect(k.runCondition == expected, "\(k)")
+        #expect(k.mayUseCloud == ![.timeLedger, .embeddings, .routineScan].contains(k), "\(k)")
+    }
+    #expect(RunCondition.idle(120).holds(signals(idle: 120)) && !RunCondition.idle(120).holds(signals(idle: 119)))
+    #expect(RunCondition.idleOnPower.holds(signals(idle: 300, onPower: true)))
+    #expect(!RunCondition.idleOnPower.holds(signals(idle: 300, onPower: false)))
+    #expect(!RunCondition.idleOnPower.holds(signals(idle: 300, onPower: true, lowPower: true)))
+    #expect(!RunCondition.idleOnPower.holds(signals(idle: 30, onPower: true)))
+    #expect(RunCondition.anytime.holds(signals(idle: 0, onPower: false)))
+}
+
+/// F-8: working memory and compaction always pass; their cloud use needs memory on, an
+/// account and no backoff. Other cloud kinds are denied with a reason.
+@Test func gateDecisions() {
+    func decide(_ k: JobKind, enabled: Bool = true, account: Bool = true, backoff: Bool = true) -> SchedulerGate.Decision {
+        SchedulerGate.decide(k, memoryEnabled: enabled, accountReady: account, backoffAllows: backoff)
+    }
+    #expect(decide(.hour) == .run(cloudAllowed: true))
+    #expect(decide(.wikiRewrite) == .run(cloudAllowed: true))
+    #expect(decide(.hour, backoff: false) == .deny(.backoff))
+    #expect(decide(.hour, account: false) == .deny(.account))
+    #expect(decide(.hour, enabled: false) == .deny(.disabled))
+    for k in [JobKind.compaction, .workingMemory] {
+        #expect(decide(k) == .run(cloudAllowed: true))
+        #expect(decide(k, backoff: false) == .run(cloudAllowed: false))
+        #expect(decide(k, account: false) == .run(cloudAllowed: false))
+    }
+    #expect(decide(.compaction, enabled: false) == .run(cloudAllowed: false))
+    #expect(decide(.workingMemory, enabled: false) == .deny(.disabled))
+    #expect(decide(.timeLedger, enabled: false, account: false, backoff: false) == .run(cloudAllowed: false))
+    #expect(decide(.embeddings, account: false, backoff: false) == .run(cloudAllowed: false))
+    #expect(decide(.embeddings, enabled: false) == .deny(.disabled))
+    // Addendum B.8: memory off denies the proactive kinds (no memory, no evidence).
+    for k in [JobKind.morningBrief, .eveningWrap, .nudgeScan] {
+        #expect(decide(k, enabled: false) == .deny(.disabled), "\(k)")
+        #expect(decide(k) == .run(cloudAllowed: true), "\(k)")
+        #expect(k.mayUseCloud, "\(k)")
+    }
 }

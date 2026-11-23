@@ -61,34 +61,8 @@ struct UsageSettingsView: View {
                 Button("Refresh") { Task { await reload() } }
             }
             if let priceError { Text(priceError).font(.footnote).foregroundStyle(.orange) }
-            backgroundSection
             recentSection
         }
-    }
-
-    private var backgroundSection: some View {
-        let memory = env.memory
-        let pct = memory.budget > 0 ? Int((Double(memory.budgetUsed) / Double(memory.budget) * 100).rounded()) : 0
-        return GroupBox("Background memory") {
-            VStack(alignment: .leading, spacing: 6) {
-                if let until = memory.backoffUntil {
-                    Label("Background memory paused until \(until.formatted(date: Calendar.current.isDateInToday(until) ? .omitted : .abbreviated, time: .shortened)) (ChatGPT usage limit)",
-                          systemImage: "pause.circle.fill")
-                        .foregroundStyle(.orange)
-                }
-                Text("Today: \(memory.budgetUsed.formatted()) of \(memory.budget.formatted()) tokens (\(pct) %)")
-                    .monospacedDigit()
-                ProgressView(value: Double(min(memory.budgetUsed, memory.budget)), total: Double(max(memory.budget, 1)))
-                Stepper(value: Binding(get: { memory.budget }, set: { memory.setDailyBudget($0) }),
-                        in: 100_000...5_000_000, step: 50_000) {
-                    Text("Daily budget: \(memory.budget.formatted()) tokens").monospacedDigit()
-                }
-                Text("Background work stays within this daily budget so ChatGPT keeps working for you. Set Remora's app cap in ChatGPT › Settings › Usage.")
-                    .font(.footnote).foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .onAppear { memory.refreshStatus(full: true) }
     }
 
     private var recentSection: some View {

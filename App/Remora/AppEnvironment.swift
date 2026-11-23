@@ -467,7 +467,7 @@ final class AppEnvironment {
             if let s = try? settings.value(DictationSettings.self, forKey: DictationSettings.settingsKey) { dictation.update(s) }
         case "sounds":
             if let s = try? settings.value(ShortcutSettings.self, forKey: ShortcutSettings.settingsKey) { rewrite.updateShortcuts(s) }
-        case "memory_language", "background_memory", "raw_capture_retention", "daily_background_budget":
+        case "memory_language", "background_memory", "raw_capture_retention":
             memory.settingsChangedElsewhere()
         case "proactive_messages":
             proactive.reloadEnabled()  // the runners and planner read it fresh

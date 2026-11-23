@@ -76,13 +76,9 @@ import Testing
         #expect(try body("troubleshooting").contains("no capture in the last \(days) days"))
     }
 
-    @Test func historyBudgetAndRetentionMatchStorage() throws {
+    @Test func historyAndRetentionMatchStorage() throws {
         #expect(try body("chat-bar").contains("(\(ChatRetention.days) days)"))
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.locale = Locale(identifier: "en_US")
-        let budget = try #require(f.string(from: MemorySettings.defaultDailyTokenBudget as NSNumber))
-        #expect(try body("usage").contains("(\(budget) by default)"))
+        #expect(!(try body("usage").contains("budget")))
         guard case .days(let d) = MemorySettings.defaultRetention else { Issue.record("retention"); return }
         #expect(try body("memory").contains("\(d) days by default"))
     }

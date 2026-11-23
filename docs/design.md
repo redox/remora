@@ -127,15 +127,17 @@ input. Ordinary pause suppresses passive capture and contextual recall while pre
 field-only editing. The more restrictive rule wins when conditions overlap. The separate opt-in
 for audio transcription has a stricter gate. [Privacy guidance](../.claude/skills/remora-privacy/SKILL.md)
 
-**Account for every model call and reserve plan capacity for interactive work.** The background
-token budget defaults to 750,000 tokens per local day, excluding cached input. At 80%, routine
-cloud work yields to a small set of higher-priority jobs. At 100%, local work can continue,
-including the non-model parts of compaction. Usage-limit errors postpone background work
-with exponential backoff. The background budget leaves interactive rewrite and chat available
-subject to the user's actual plan. Remora estimates API-equivalent cost from a local, overridable
-price table and records model, token and status metadata in `llm_calls`. Linked artifacts can show
-their call provenance. The plan's real usage limit is set by ChatGPT.
-[Budget gate](../Packages/RemoraKit/Sources/Memory/Scheduler/BudgetGate.swift) · [Price table](../Packages/RemoraKit/Sources/LLM/Service/PriceTable.swift)
+**Account for every model call and let usage-limit backoff be the only throttle on background
+work.** Every call is recorded in `llm_calls` with model, token and status metadata and an
+API-equivalent cost estimate from a local, overridable price table. Linked artifacts can show
+their call provenance. Background cloud work has no budget of its own: its only throttle is
+usage-limit backoff, where a usage-limit error postpones background jobs with exponential
+backoff until a cloud call succeeds again. The user can cap Remora's share of the plan in
+ChatGPT › Settings › Usage. The trade-off is that background work can use the whole allowance,
+after which rewrite and chat also hit the limit until it resets; an earlier daily token budget was
+removed because it throttled memory far below what the plan allowed. The stored
+`memory.dailyTokenBudget` row, if any, is ignored.
+[Price table](../Packages/RemoraKit/Sources/LLM/Service/PriceTable.swift)
 
 ## Storage and memory
 
@@ -159,14 +161,14 @@ titles, and evidence quotes in their original language.
 **Use a persistent, idempotent job queue.** A job is keyed by kind and local period, so repeated
 planning converges and wake or restart can catch up. Sparse consecutive hours can merge within
 a day until the span reaches four hours or at least ten minutes of focus. This avoids spending a call on each
-brief visit. Backlog is handled oldest first under the budget. Idle and power gates keep heavy
+brief visit. Backlog is handled oldest first. Idle and power gates keep heavy
 work out of the user's way. Dirty parent summaries are requeued when children change. Weeks,
 months, and years trace their sources through child chronicles, which keeps provenance from
 repeating every raw ID at each level.
 Structured model responses are checked and capped in code. An hour can retain its summary
 while entity extraction retries independently. Commits recheck evidence that could have changed
 during inference. Automatic maintenance and **Run now** share the queue, so a manual run still
-respects privacy, account backoff, and budget.
+respects privacy and account backoff.
 [Scheduler](../Packages/RemoraKit/Sources/Memory/Scheduler) · [Pipelines](../Packages/RemoraKit/Sources/Memory/Pipelines)
 
 **Use two complementary kinds of search.** FTS5 handles exact terms and raw captures. Apple's
@@ -300,7 +302,7 @@ at three per day, at least 90 minutes apart. Briefs and nudges are generated, ch
 observations and the clock, and rewritten once or withheld. Screen sharing can suppress a
 system banner. Reminders are user-owned
 and can still notify when proactive messages are off. One-off, wall-clock recurring, and interval
-reminders catch up a missed occurrence once. Prompt reminders consume the background budget.
+reminders catch up a missed occurrence once. Prompt reminders wait out a usage-limit backoff.
 Notification permission is requested in context, and the content-free nudge rate limit survives
 delete-all.
 
