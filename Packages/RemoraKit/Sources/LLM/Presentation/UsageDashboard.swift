@@ -88,10 +88,19 @@ public enum UsageLabels {
         }
     }
 
-    /// "created <this>" wording for the table a call wrote to.
-    public static func artifact(table: String) -> String {
+    /// "Produced: <this>" wording for the table a call wrote to. Hour summaries and every rollup
+    /// write to `chronicle`, so the job type names the level.
+    public static func artifact(table: String, job: String) -> String {
         switch table {
-        case "chronicle": "an hour summary"
+        case "chronicle":
+            switch job {
+            case "hour_chronicle": "an hour summary"
+            case "day_rollup": "a day summary"
+            case "week_rollup": "a week summary"
+            case "month_rollup": "a month summary"
+            case "year_rollup": "a year summary"
+            default: "a chronicle summary"
+            }
         case "wiki_pages": "a wiki page"
         case "working_memory": "a working-memory note"
         case "memory_digest": "a memory digest"

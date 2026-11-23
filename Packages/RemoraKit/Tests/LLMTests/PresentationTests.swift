@@ -67,12 +67,24 @@ import Testing
     #expect(UsagePresentation.notice(backoffUntil: nil, lastLimitAt: nil, now: now) == nil)
 }
 
-@Test func footnotesFollowTheLoadedCalls() {
+@Test func footnotesFollowTheSummary() {
     var s = UsageSummary()
-    #expect(UsagePresentation.footnotes(s, loadedCalls: 10) == [UsagePresentation.caption])
+    #expect(UsagePresentation.footnotes(s) == [UsagePresentation.caption])
     s.unpricedCalls = 2
-    #expect(UsagePresentation.footnotes(s, loadedCalls: UsagePresentation.callLimit)
-        == [UsagePresentation.caption, "2 calls have no price yet.", "Showing the newest 5,000 calls."])
+    #expect(UsagePresentation.footnotes(s) == [UsagePresentation.caption, "2 calls have no price yet."])
+}
+
+@Test func onlyTheTableIsCappedAfterFiltering() {
+    func call(_ job: String, _ t: Double) -> LLMCall {
+        LLMCall(startedAt: Date(timeIntervalSince1970: t), durationMs: 1, backend: "siwc", model: "m", jobType: job, status: .completed)
+    }
+    let newestFirst = [call("chat", 5), call("rewrite", 4), call("chat", 3), call("chat", 2), call("rewrite", 1)]
+    let chat = UsagePresentation.tableCalls(newestFirst, filter: UsageFilter(job: "chat"), limit: 2)
+    #expect(chat.calls.map(\.startedAt.timeIntervalSince1970) == [5, 3])
+    #expect(chat.truncated)
+    let rewrite = UsagePresentation.tableCalls(newestFirst, filter: UsageFilter(job: "rewrite"), limit: 2)
+    #expect(rewrite.calls.count == 2 && !rewrite.truncated)
+    #expect(UsagePresentation.tableCalls(newestFirst, filter: UsageFilter()).calls.count == 5)
 }
 
 @Test func limitBannerOnlyWithin24Hours() {

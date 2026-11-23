@@ -4,6 +4,9 @@ import SwiftUI
 
 /// The live call log: filters above a sortable table, newest first. Accounting only, no content.
 struct UsageCallTable: View {
+    /// The filtered rows, already capped (`UsagePresentation.tableCalls`).
+    let table: (calls: [LLMCall], truncated: Bool)
+    /// Every call in the range, for the job and model menus.
     let calls: [LLMCall]
     let range: UsageRange
     @Binding var filter: UsageFilter
@@ -19,8 +22,7 @@ struct UsageCallTable: View {
     }
 
     var body: some View {
-        let rows = calls.compactMap { c in c.id.map { Row(call: c, id: $0) } }
-            .filter { filter.matches($0.call) }
+        let rows = table.calls.compactMap { c in c.id.map { Row(call: c, id: $0) } }
             .sorted(using: sortOrder)
         VStack(alignment: .leading, spacing: 6) {
             Text("Calls").font(.headline)
@@ -42,6 +44,9 @@ struct UsageCallTable: View {
                     .width(min: 48, ideal: 80)
             }
             .frame(height: 300)
+            if table.truncated {
+                Text(UsagePresentation.cappedNote).font(.footnote).foregroundStyle(.secondary)
+            }
         }
     }
 

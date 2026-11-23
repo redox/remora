@@ -142,8 +142,9 @@ removed because it throttled memory far below what the plan allowed. The stored
 **Show what the model calls are doing as a dashboard over a live call log.** Settings › Usage
 shows, for today, 7 days or 30 days, the estimated cost, calls, tokens and problems, a chart of
 cost per hour or day by category (writing, chat, memory, briefs and nudges), a breakdown by job
-or model that filters the log, and a live log of the newest 5,000 calls that updates as calls
-land. Selecting a call shows its tokens, effort, backend, duration, error code, what kind of item
+or model that filters the log, and a live log that updates as calls land. The pane observes
+every call in the range, so totals are exact; only the log table stops at the newest 5,000
+matching rows, and says so. Selecting a call shows its tokens, effort, backend, duration, error code, what kind of item
 it produced and the cost calculation at the current price table's rates. `llm_calls` holds
 accounting only, so the pane never shows prompt or output text. Every surface (this pane, MCP
 `usage`, provenance) reads the stored `est_cost_usd`, so they agree; calls recorded while their

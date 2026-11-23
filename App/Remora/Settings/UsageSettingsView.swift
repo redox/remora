@@ -40,6 +40,12 @@ struct UsageSettingsView: View {
             backfillUnpricedCalls()
         }
         .onChange(of: range) { selection = nil }
+        .onChange(of: filter) {
+            // A filter that hides the selected call also hides its detail.
+            if let selection, let call = calls.first(where: { $0.id == selection }), !filter.matches(call) {
+                self.selection = nil
+            }
+        }
     }
 
     private var content: some View {
@@ -75,7 +81,8 @@ struct UsageSettingsView: View {
                    showsCost: summary.costUSD > 0, filter: $filter)
         UsageBreakdownList(rows: UsageDashboard.breakdown(calls, by: breakdownKind), kind: $breakdownKind,
                            filter: $filter)
-        UsageCallTable(calls: calls, range: range, filter: $filter, selection: $selection)
+        UsageCallTable(table: UsagePresentation.tableCalls(calls, filter: filter), calls: calls, range: range,
+                       filter: $filter, selection: $selection)
         if let selection, let call = calls.first(where: { $0.id == selection }) {
             UsageCallDetail(call: call, prices: env.prices.table())
         }
@@ -85,7 +92,7 @@ struct UsageSettingsView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
-                    ForEach(UsagePresentation.footnotes(summary, loadedCalls: calls.count), id: \.self) { Text($0) }
+                    ForEach(UsagePresentation.footnotes(summary), id: \.self) { Text($0) }
                 }
                 .font(.footnote).foregroundStyle(.secondary)
                 Spacer()
@@ -96,13 +103,19 @@ struct UsageSettingsView: View {
     }
 
     /// Bridges the store's background-queue observation to the main actor. Cancelling the task
-    /// (range or day change, pane closed) ends the stream, which cancels the observation.
+    /// (range or day change, pane closed) ends the stream, which cancels the observation. Every
+    /// call in the range is observed, so the totals are exact; only the table is capped.
     private func observeCalls() async {
+        // A new range or day starts empty, so the previous range's totals never flash.
+        calls = []
+        loaded = false
+        loadFailed = false
         let since = range.interval(now: .now, calendar: calendar).start
         let store = LLMCallStore(env.db)
-        let snapshots = AsyncStream<[LLMCall]?> { continuation in
+        // Only the latest snapshot matters; older ones queued behind a slow render are dropped.
+        let snapshots = AsyncStream<[LLMCall]?>(bufferingPolicy: .bufferingNewest(1)) { continuation in
             let observation = store.observeCalls(
-                since: since, limit: UsagePresentation.callLimit,
+                since: since, limit: nil,
                 onChange: { continuation.yield($0) },
                 onError: { _ in continuation.yield(nil) })
             continuation.onTermination = { _ in observation.cancel() }
@@ -113,6 +126,9 @@ struct UsageSettingsView: View {
                 loadFailed = false
             } else {
                 Self.logger.error("usage observation failed")
+                // No stale rows behind the error: totals and footnotes would describe old data.
+                calls = []
+                selection = nil
                 loadFailed = true
             }
             loaded = true

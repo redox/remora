@@ -44,9 +44,8 @@ import Storage
     @Test func unknownJobTypeFallsBackToMemoryAndWords() {
         #expect(UsageCategory.of(jobType: "some_new_job") == .memory)
         #expect(UsageLabels.job("some_new_job") == "Some new job")
-        #expect(UsageLabels.artifact(table: "nope") == "a memory item")
-        #expect(UsageLabels.artifact(table: "chronicle") == "an hour summary")
-        #expect(UsageLabels.artifact(table: "wiki_pages") == "a wiki page")
+        #expect(UsageLabels.artifact(table: "nope", job: "x") == "a memory item")
+        #expect(UsageLabels.artifact(table: "wiki_pages", job: "wiki_writeup") == "a wiki page")
     }
 
     @Test func zeroTokenCallsCostNothing() {
@@ -266,5 +265,15 @@ import Storage
         #expect(UsageCost.detailLine(c, prices: table, locale: Self.posix)
             == "Cost: " + UsageCost.explanation(c, prices: table, locale: Self.posix)!)
         #expect(UsageCost.detailLine(c, prices: .empty, locale: Self.posix) == "Cost: the price table has no price for m.")
+    }
+
+    /// Rollups link to `chronicle` too, so the job type says which summary it was.
+    @Test func chronicleArtifactsAreNamedByTheirJob() {
+        #expect(UsageLabels.artifact(table: "chronicle", job: "hour_chronicle") == "an hour summary")
+        #expect(UsageLabels.artifact(table: "chronicle", job: "day_rollup") == "a day summary")
+        #expect(UsageLabels.artifact(table: "chronicle", job: "week_rollup") == "a week summary")
+        #expect(UsageLabels.artifact(table: "chronicle", job: "month_rollup") == "a month summary")
+        #expect(UsageLabels.artifact(table: "chronicle", job: "year_rollup") == "a year summary")
+        #expect(UsageLabels.artifact(table: "chronicle", job: "other") == "a chronicle summary")
     }
 }
