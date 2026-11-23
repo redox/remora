@@ -195,4 +195,13 @@ jobs:
         run: |
           run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/pages.yml/dispatches" \
             -H 'X-GitHub-Api-Version: 2026-03-10' -f ref=main --jq .workflow_run_id)
-          gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status
+          # Dispatch can return an ID before the run is visible to the Actions API.
+          for delay in 0 2 4 8 16 32; do
+            sleep "$delay"
+            if gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --json url --jq .url; then
+              gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status
+              exit 0
+            fi
+          done
+          echo "::error::The dispatched Pages run $run_id did not become visible."
+          exit 1
