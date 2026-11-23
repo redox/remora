@@ -139,6 +139,21 @@ removed because it throttled memory far below what the plan allowed. The stored
 `memory.dailyTokenBudget` row, if any, is ignored.
 [Price table](../Packages/RemoraKit/Sources/LLM/Service/PriceTable.swift)
 
+**Show what the model calls are doing as a dashboard over a live call log.** Settings › Usage
+shows, for today, 7 days or 30 days, the estimated cost, calls, tokens and problems, a chart of
+cost per hour or day by category (writing, chat, memory, briefs and nudges), a breakdown by job
+or model that filters the log, and a live log of the newest 5,000 calls that updates as calls
+land. Selecting a call shows its tokens, effort, backend, duration, error code, what kind of item
+it produced and the cost calculation at the current price table's rates. `llm_calls` holds
+accounting only, so the pane never shows prompt or output text. Every surface (this pane, MCP
+`usage`, provenance) reads the stored `est_cost_usd`, so they agree; calls recorded while their
+model had no price are backfilled with the current table at launch and whenever the pane opens,
+and a stored cost is never rewritten. The trade-off is that a call's cost uses the prices in force
+when it ran, or at its first backfill, so editing a price does not reprice history; the detail
+block's calculation, which uses today's rates, can then differ from the stored cost. "≥" and a
+footnote mark totals that still include unpriced calls.
+[Usage dashboard](../Packages/RemoraKit/Sources/LLM/Presentation/UsageDashboard.swift)
+
 ## Storage and memory
 
 **Keep the store inspectable and searchable with SQLite.** The database lives under
@@ -381,6 +396,7 @@ unsigned Debug build. [Verification guidance](../.claude/skills/remora-verify/SK
 | Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Draft and insert, Insert transcript, Edit, cancel, and a mode switch followed immediately by Return. Verify that OpenAI transcription hides the EN/FR button and detects the language on Insert transcript. The button returns when OpenAI transcription is off. In an excluded app, speak a prompt and verify that Return drafts the result. Check that Listening appears when the microphone is ready and a silent recording shows an inline notice. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
 | Chat and indicators | Real notch and secondary displays, hide and show the menu bar, hover and pin, IME, trackpad scroll, min size with 150% text, caption and badge placement, light and dark appearance, and accessibility display options. Send from older history and check that the question is visible before the reply. Scroll up mid-reply, then choose **Latest** and check that the view follows the rest of the reply. Open chat from a notification and check the selected message. Return must never approve a card. |
 | Notifications and MCP | In the installed app, use Settings › Notifications › Send a test notification and check for the Remora app icon in the banner and Notification Center. Verify the permission prompt, wake catch-up, reminders with proactive messages off, sharing suppression, and delete-all cleanup. Test Connect and Update in real clients. For meeting sources, use test accounts and synthetic meetings to exercise authorization, resync, pause, forget, and disconnect. |
+| Settings › Usage | With the pane open, rewrite or chat and check the new call appears without a refresh. Switch Today, 7 days and 30 days, click breakdown rows and legend entries to filter the log and click again to clear, sort by time and cost, and select a call to read the detail. During a usage-limit backoff, check the orange paused notice. Check light and dark appearance at the Settings window width. |
 | Distribution | Fresh macOS account, install and move, permissions, signed DMG and Gatekeeper, and an update from a real appcast. |
 
 The biggest open variables are Accessibility coverage across apps, multilingual speech accuracy,

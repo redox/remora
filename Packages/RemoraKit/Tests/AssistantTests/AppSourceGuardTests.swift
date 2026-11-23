@@ -189,15 +189,43 @@ import Testing
         #expect(modifiers.contains(".onTapGesture { withAnimation { isJobRoutingExpanded.toggle()"))
     }
 
-    @Test func usagePageCanScrollWhenRecentCallsExpand() throws {
+    @Test func usagePageScrollsAsAWholeWithAFixedHeightCallTable() throws {
         let view = try source("App/Remora/Settings/UsageSettingsView.swift")
         let body = try #require(view.range(of: "var body: some View {"))
-        let table = try #require(view.range(of: "Table(rows)"))
-        let caption = try #require(view.range(of: "Text(UsagePresentation.caption)"))
-        let scrolls = view[body.upperBound..<table.lowerBound].contains("ScrollView {")
-        let tableHasFixedHeight = view[table.upperBound..<caption.lowerBound].contains(".frame(height:")
-        #expect(scrolls)
-        #expect(tableHasFixedHeight)
+        #expect(view[body.upperBound...].contains("ScrollView {"))
+        let table = try source("App/Remora/Settings/Usage/UsageCallTable.swift")
+        #expect(table.contains("Table(") && table.contains(".frame(height:"))
+    }
+
+    /// The pane reads `llm_calls` through `LLMCallStore` only; GRDB stays in RemoraKit.
+    @Test func usagePaneDoesNotImportGRDB() throws {
+        let files = try usagePaneSources()
+        #expect(files.count >= 6)
+        for (name, text) in files { #expect(!text.contains("import GRDB"), "\(name)") }
+    }
+
+    /// The daily background budget is gone; the pane must not bring its wording back.
+    @Test func usagePaneNeverShowsDailyBudget() throws {
+        for (name, text) in try usagePaneSources() {
+            #expect(!text.contains("Daily budget") && !text.contains("daily budget"), "\(name)")
+            #expect(!text.contains("price table ships empty"), "\(name)")
+        }
+    }
+
+    /// Unpriced history is repriced off the main actor at launch and when the pane appears.
+    @Test func unpricedCallsAreBackfilledOffTheMainActor() throws {
+        let env = try source("App/Remora/AppEnvironment.swift")
+        #expect(env.contains("UsageRepricer.backfill(store: LLMCallStore(db), prices: prices.table())"))
+        let view = try source("App/Remora/Settings/UsageSettingsView.swift")
+        let detached = try #require(view.range(of: "Task.detached"))
+        #expect(view[detached.upperBound...].contains("UsageRepricer.backfill("))
+    }
+
+    private func usagePaneSources() throws -> [(String, String)] {
+        let dir = Self.repoRoot.appendingPathComponent("App/Remora/Settings/Usage")
+        let names = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasSuffix(".swift") }
+        return try [("UsageSettingsView.swift", source("App/Remora/Settings/UsageSettingsView.swift"))]
+            + names.sorted().map { ($0, try source("App/Remora/Settings/Usage/\($0)")) }
     }
 
     /// Peek includes the notch in its window; open does not. Interpolating the window frame

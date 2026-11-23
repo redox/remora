@@ -22,6 +22,14 @@ public enum UsageRange: String, CaseIterable, Identifiable, Sendable {
     }
 
     public var bucket: Calendar.Component { self == .today ? .hour : .day }
+
+    /// The chart's x axis: the range's start to the end of today, so today's later hours (or today's
+    /// bar) keep their place instead of the chart stretching to the last call.
+    public func chartDomain(now: Date, calendar: Calendar) -> DateInterval {
+        let start = interval(now: now, calendar: calendar).start
+        let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
+        return DateInterval(start: start, end: max(start, end))
+    }
 }
 
 public enum UsageCategory: String, CaseIterable, Identifiable, Sendable {
@@ -98,6 +106,49 @@ public enum UsageLabels {
         }
     }
 
+    /// "gpt-6-luna · low"; the model alone when the call used the model's default effort.
+    public static func model(_ c: LLMCall) -> String {
+        guard let effort = c.reasoningEffort, !effort.isEmpty else { return c.model }
+        return "\(c.model) · \(effort)"
+    }
+
+    /// "12.4k → 380": input then output, compact.
+    public static func tokens(_ c: LLMCall, locale: Locale = .current) -> String {
+        UsageDashboard.compactTokens(c.inputTokens, locale: locale) + " → "
+            + UsageDashboard.compactTokens(c.outputTokens, locale: locale)
+    }
+
+    /// "Input 12,410 (2,560 cached) · Output 380 (120 reasoning)".
+    public static func tokenBreakdown(_ c: LLMCall, locale: Locale = .current) -> String {
+        func n(_ v: Int) -> String { v.formatted(.number.grouping(.automatic).locale(locale)) }
+        return "Input \(n(c.inputTokens)) (\(n(c.cachedInputTokens)) cached) · "
+            + "Output \(n(c.outputTokens)) (\(n(c.reasoningTokens)) reasoning)"
+    }
+
+    public static func backend(_ raw: String) -> String {
+        switch LLMBackend(rawValue: raw) {
+        case .siwc: "ChatGPT"
+        case .onDevice: "On-device"
+        case .apiKey: "API key"
+        case nil: raw
+        }
+    }
+
+    /// "0.4 s" and "2.1 s" under ten seconds, "12 s" under a minute, then "1 min 5 s".
+    public static func duration(ms: Int, locale: Locale = .current) -> String {
+        let seconds = Double(max(0, ms)) / 1000
+        if seconds < 10 { return seconds.formatted(.number.precision(.fractionLength(1)).locale(locale)) + " s" }
+        let whole = Int(seconds.rounded())
+        if whole < 60 { return "\(whole) s" }
+        return "\(whole / 60) min \(whole % 60) s"
+    }
+
+    /// "Effort low · Backend ChatGPT · Duration 2.1 s" for the selected call.
+    public static func facts(_ c: LLMCall, locale: Locale = .current) -> String {
+        let effort = c.reasoningEffort.flatMap { $0.isEmpty ? nil : $0 } ?? "default"
+        return "Effort \(effort) · Backend \(backend(c.backend)) · Duration \(duration(ms: c.durationMs, locale: locale))"
+    }
+
     public static func status(_ c: LLMCall) -> String {
         if UsagePresentation.isUsageLimit(c) { return "Usage limit" }
         switch c.status {
@@ -136,6 +187,11 @@ public enum UsageCost {
         return parts.joined(separator: " + ") + " per 1M ≈ " + UsageDashboard.costText(total, lowerBound: false)
     }
 
+    /// The detail block's cost line, from the current price table.
+    public static func detailLine(_ c: LLMCall, prices: PriceTable, locale: Locale = .current) -> String {
+        "Cost: " + (explanation(c, prices: prices, locale: locale) ?? "the price table has no price for \(c.model).")
+    }
+
     /// At least two decimals, at most four: $0.25, $0.025, $2.00.
     private static func rate(_ v: Double, _ locale: Locale) -> String {
         "$" + v.formatted(.number.precision(.fractionLength(2...4)).locale(locale))
@@ -149,6 +205,38 @@ public struct UsageFilter: Equatable, Sendable {
     public var problemsOnly: Bool
     public init(category: UsageCategory? = nil, job: String? = nil, model: String? = nil, problemsOnly: Bool = false) {
         self.category = category; self.job = job; self.model = model; self.problemsOnly = problemsOnly
+    }
+
+    /// A breakdown row click: sets that job or model filter, or clears it when it is already set.
+    /// A job filter replaces the coarser category filter, which could otherwise hide the job.
+    public func toggling(_ kind: UsageBreakdownKind, key: String) -> UsageFilter {
+        var f = self
+        switch kind {
+        case .job:
+            f.job = job == key ? nil : key
+            if f.job != nil { f.category = nil }
+        case .model:
+            f.model = model == key ? nil : key
+        }
+        return f
+    }
+
+    /// A chart legend click: filters to that category, or clears it when it is already set.
+    public func toggling(category c: UsageCategory) -> UsageFilter {
+        selecting(category: category == c ? nil : c)
+    }
+
+    /// The log's category/job menu: category and job are one choice, so each clears the other.
+    public func selecting(category: UsageCategory?) -> UsageFilter {
+        var f = self
+        f.category = category; f.job = nil
+        return f
+    }
+
+    public func selecting(job: String?) -> UsageFilter {
+        var f = self
+        f.job = job; f.category = nil
+        return f
     }
 
     public func matches(_ c: LLMCall) -> Bool {
@@ -260,8 +348,18 @@ public enum UsageDashboard {
         return sign + f(v / 1_000_000) + "M"
     }
 
+    /// "3 limits · 1 failed"; "None" when there were no problems.
+    public static func problemsText(_ s: UsageSummary) -> String {
+        var parts: [String] = []
+        if s.usageLimits > 0 { parts.append("\(s.usageLimits) limit" + (s.usageLimits == 1 ? "" : "s")) }
+        if s.failures > 0 { parts.append("\(s.failures) failed") }
+        return parts.isEmpty ? "None" : parts.joined(separator: " · ")
+    }
+
     /// "$0.29" from one cent up, "$0.0031" below, "$0" for nothing; "≥ " when some calls are unpriced.
+    /// A lower bound below the smallest shown amount reads "≥ $0", never "≥ <$0.0001".
     public static func costText(_ usd: Double, lowerBound: Bool) -> String {
+        if lowerBound, usd < 0.00005 { return "≥ $0" }
         let text: String
         if usd <= 0 { text = "$0" }
         else if usd >= 0.01 { text = String(format: "$%.2f", usd) }

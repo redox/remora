@@ -1,54 +1,41 @@
 import Foundation
 import Storage
 
-/// Formatting for Settings › Usage. Pure, so it is unit-tested.
+/// Copy and notices for Settings › Usage. Pure, so it is unit-tested.
 public enum UsagePresentation {
     public static let caption = "Cost is an API-equivalent estimate, not a bill."
-    public static let priceNote = "Prices are API-equivalent estimates, and the price table ships empty: a model without an entry shows \"—\". Edit the price table to add per-1M-token prices."
+    public static let emptyRange = "No calls in this range."
+    public static let unreadable = "Usage could not be read."
 
-    public enum Grouping: String, Sendable, CaseIterable, Identifiable {
-        case day, job, model
-        public var id: String { rawValue }
-        public var title: String {
-            switch self { case .day: "By day"; case .job: "By job"; case .model: "By model" }
-        }
-        /// "By day" covers the last 14 days.
-        public static let dayWindow = 14
+    /// The pane loads at most this many calls per range, newest first, so 30 busy days stay fast.
+    public static let callLimit = 5_000
+    public static let cappedNote = "Showing the newest \(callLimit.formatted(.number.grouping(.automatic).locale(Locale(identifier: "en_US")))) calls."
+
+    /// The footnote behind a "≥" cost.
+    public static func unpricedNote(_ n: Int) -> String {
+        n == 1 ? "1 call has no price yet." : "\(n) calls have no price yet."
     }
 
-    /// `$0.0000`; "—" when no row is priced; "≥ $x" when some rows are unpriced (a lower bound).
-    public static func cost(_ t: UsageTotals) -> String {
-        guard let c = t.estCostUSD else { return "—" }
-        let s = String(format: "$%.4f", c)
-        return t.unpricedCalls > 0 ? "≥ \(s)" : s
+    /// Shown while background memory is backing off after a usage limit.
+    public static func pausedNotice(until: Date, timeZone: TimeZone = .current, locale: Locale = .current) -> String {
+        var style = Date.FormatStyle(date: .omitted, time: .shortened, locale: locale, timeZone: timeZone)
+        style.timeZone = timeZone
+        return "Background memory paused until \(until.formatted(style)): ChatGPT usage limit reached."
     }
 
-    public static func tokens(_ n: Int, locale: Locale = .current) -> String {
-        n.formatted(.number.grouping(.automatic).locale(locale))
+    /// The pane's one notice: an active background backoff wins over a recent usage limit.
+    public static func notice(backoffUntil: Date?, lastLimitAt: Date?, now: Date, timeZone: TimeZone = .current,
+                              locale: Locale = .current) -> String? {
+        if let until = backoffUntil, until > now { return pausedNotice(until: until, timeZone: timeZone, locale: locale) }
+        return limitBanner(lastLimitAt: lastLimitAt, now: now, timeZone: timeZone, locale: locale)
     }
 
-    /// "1,200 (400 cached)".
-    public static func input(_ t: UsageTotals, locale: Locale = .current) -> String {
-        "\(tokens(t.inputTokens, locale: locale)) (\(tokens(t.cachedInputTokens, locale: locale)) cached)"
-    }
-    /// "300 (120 reasoning)".
-    public static func output(_ t: UsageTotals, locale: Locale = .current) -> String {
-        "\(tokens(t.outputTokens, locale: locale)) (\(tokens(t.reasoningTokens, locale: locale)) reasoning)"
-    }
-
-    /// "dictation_cleanup" -> "Dictation cleanup"; other keys (dates, model slugs) are unchanged.
-    public static func label(_ key: String, grouping: Grouping) -> String {
-        guard grouping == .job else { return key }
-        let words = key.replacingOccurrences(of: "_", with: " ")
-        return words.prefix(1).uppercased() + words.dropFirst()
-    }
-
-    /// The window start for a grouping (midnight `dayWindow - 1` days ago for days; 30 days otherwise).
-    public static func since(_ g: Grouping, now: Date, calendar: Calendar = .current) -> Date {
-        switch g {
-        case .day: return calendar.date(byAdding: .day, value: -(Grouping.dayWindow - 1), to: calendar.startOfDay(for: now)) ?? now
-        case .job, .model: return calendar.date(byAdding: .day, value: -30, to: now) ?? now
-        }
+    /// The caption, then "N calls have no price yet." behind a "≥" cost, then the row-cap note.
+    public static func footnotes(_ s: UsageSummary, loadedCalls: Int) -> [String] {
+        var notes = [caption]
+        if s.unpricedCalls > 0 { notes.append(unpricedNote(s.unpricedCalls)) }
+        if loadedCalls >= callLimit { notes.append(cappedNote) }
+        return notes
     }
 
     /// "Usage limit reached at 3:05 PM" while `lastLimitAt` is within 24 hours (and not in the future).
@@ -62,34 +49,6 @@ public enum UsagePresentation {
         return "Usage limit reached at \(at.formatted(style))"
     }
 
-    // MARK: Recent calls
-
-    public enum CallFilter: String, Sendable, CaseIterable, Identifiable {
-        case all, usageLimit, failed
-        public var id: String { rawValue }
-        public var title: String {
-            switch self { case .all: "All"; case .usageLimit: "Usage limit"; case .failed: "Failed" }
-        }
-    }
-
     /// A call counts as a usage-limit hit by its stored status or its error code.
     public static func isUsageLimit(_ c: LLMCall) -> Bool { c.status == .limit || c.errorCode == "usage_limit" }
-
-    public static func matches(_ c: LLMCall, _ f: CallFilter) -> Bool {
-        switch f {
-        case .all: return true
-        case .usageLimit: return isUsageLimit(c)
-        case .failed: return c.status == .failed && !isUsageLimit(c)
-        }
-    }
-
-    public static func statusLabel(_ c: LLMCall) -> String {
-        if isUsageLimit(c) { return "Usage limit reached" }
-        switch c.status {
-        case .completed: return "OK"
-        case .failed: return "Failed"
-        case .limit: return "Usage limit reached"
-        case .cancelled: return "Cancelled"
-        }
-    }
 }

@@ -1,113 +1,146 @@
 import AppKit
 import LLM
+import Memory
 import os
 import Storage
 import SwiftUI
 
+/// Settings › Usage: a dashboard over the selected range above a live log of model calls.
+/// `llm_calls` holds accounting only, so nothing here can show prompt or output text. The pane
+/// reads stored costs; unpriced rows are backfilled off the main actor when it appears.
 struct UsageSettingsView: View {
     let env: AppEnvironment
-    @State private var grouping: UsagePresentation.Grouping = .day
-    @State private var rows: [Row] = []
-    @State private var recent: [LLMCall] = []
-    @State private var filter: UsagePresentation.CallFilter = .all
-    @State private var lastLimitAt: Date?
+    @State private var range: UsageRange = .today
+    @State private var dayStart = PeriodKey.localCalendar.startOfDay(for: .now)
+    @State private var calls: [LLMCall] = []
+    @State private var snapshotAt = Date.now
+    @State private var loaded = false
     @State private var loadFailed = false
+    @State private var lastLimitAt: Date?
+    @State private var filter = UsageFilter()
+    @State private var breakdownKind: UsageBreakdownKind = .job
+    @State private var selection: Int64?
     @State private var priceError: String?
 
-    private struct Row: Identifiable {
-        let totals: UsageTotals
-        var id: String { totals.key }
-    }
+    private nonisolated static let logger = Logger(subsystem: "dev.remora", category: "usage")
+    private var calendar: Calendar { PeriodKey.localCalendar }
+
+    /// The observation restarts when either changes: a new range, or midnight while the pane is open.
+    private struct ObservationKey: Equatable { var range: UsageRange; var dayStart: Date }
 
     var body: some View {
         ScrollView {
-            usageContent.padding()
+            content.padding()
         }
-        .task { await reload() }
-        .onChange(of: grouping) { Task { await reload() } }
+        .task(id: ObservationKey(range: range, dayStart: dayStart)) { await observeCalls() }
+        .task { await watchMidnight() }
+        .onAppear {
+            dayStart = calendar.startOfDay(for: .now)
+            env.memory.refreshStatus()
+            backfillUnpricedCalls()
+        }
+        .onChange(of: range) { selection = nil }
     }
 
-    private var usageContent: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if let banner = UsagePresentation.limitBanner(lastLimitAt: lastLimitAt, now: .now) {
-                Label(banner, systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-            }
-            Picker("Group", selection: $grouping) {
-                ForEach(UsagePresentation.Grouping.allCases) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented).labelsHidden()
-            if loadFailed {
-                Text("Usage could not be read.").foregroundStyle(.secondary)
-            } else if rows.isEmpty {
-                Text("No calls yet.").foregroundStyle(.secondary)
-            }
-            Table(rows) {
-                TableColumn(grouping.title.replacingOccurrences(of: "By ", with: "").capitalized) {
-                    Text(UsagePresentation.label($0.totals.key, grouping: grouping))
-                }
-                TableColumn("Calls") { Text("\($0.totals.calls)").monospacedDigit() }.width(40)
-                TableColumn("Input (cached)") { Text(UsagePresentation.input($0.totals)).monospacedDigit() }
-                TableColumn("Output (reasoning)") { Text(UsagePresentation.output($0.totals)).monospacedDigit() }
-                TableColumn("Est. cost") { Text(UsagePresentation.cost($0.totals)).monospacedDigit() }.width(80)
-            }
-            .frame(height: 240)
-            Text(UsagePresentation.caption).font(.footnote).foregroundStyle(.secondary)
-            Text(UsagePresentation.priceNote).font(.footnote).foregroundStyle(.secondary)
+    private var content: some View {
+        let summary = UsageDashboard.summarize(calls)
+        return VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Button("Manage usage") { NSWorkspace.shared.open(SIWC.usageSettingsURL) }
-                Button("Edit price table…") { editPriceTable() }
+                Picker("Range", selection: $range) {
+                    ForEach(UsageRange.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented).labelsHidden().fixedSize()
                 Spacer()
-                Button("Refresh") { Task { await reload() } }
+                Button("Manage usage") { NSWorkspace.shared.open(SIWC.usageSettingsURL) }
+            }
+            if let notice = UsagePresentation.notice(backoffUntil: env.memory.backoffUntil, lastLimitAt: lastLimitAt,
+                                                     now: snapshotAt) {
+                Label(notice, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+            }
+            if loadFailed {
+                Text(UsagePresentation.unreadable).foregroundStyle(.secondary)
+            } else if loaded && calls.isEmpty {
+                Text(UsagePresentation.emptyRange).foregroundStyle(.secondary)
+            } else if !calls.isEmpty {
+                dashboard(summary)
+            }
+            footer(summary)
+        }
+    }
+
+    @ViewBuilder private func dashboard(_ summary: UsageSummary) -> some View {
+        UsageSummaryTiles(summary: summary)
+        UsageChart(buckets: UsageDashboard.buckets(calls, range: range, now: snapshotAt, calendar: calendar),
+                   range: range, domain: range.chartDomain(now: snapshotAt, calendar: calendar),
+                   showsCost: summary.costUSD > 0, filter: $filter)
+        UsageBreakdownList(rows: UsageDashboard.breakdown(calls, by: breakdownKind), kind: $breakdownKind,
+                           filter: $filter)
+        UsageCallTable(calls: calls, range: range, filter: $filter, selection: $selection)
+        if let selection, let call = calls.first(where: { $0.id == selection }) {
+            UsageCallDetail(call: call, prices: env.prices.table())
+        }
+    }
+
+    private func footer(_ summary: UsageSummary) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(UsagePresentation.footnotes(summary, loadedCalls: calls.count), id: \.self) { Text($0) }
+                }
+                .font(.footnote).foregroundStyle(.secondary)
+                Spacer()
+                Button("Edit price table…") { editPriceTable() }
             }
             if let priceError { Text(priceError).font(.footnote).foregroundStyle(.orange) }
-            recentSection
         }
     }
 
-    private var recentSection: some View {
-        DisclosureGroup("Recent calls") {
-            Picker("Show", selection: $filter) {
-                ForEach(UsagePresentation.CallFilter.allCases) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented).labelsHidden()
-            let shown = recent.filter { UsagePresentation.matches($0, filter) }.prefix(20)
-            ForEach(Array(shown), id: \.id) { call in
-                HStack {
-                    Text(call.startedAt.formatted(date: .abbreviated, time: .shortened))
-                    Text(UsagePresentation.label(call.jobType, grouping: .job))
-                    Spacer()
-                    Text(UsagePresentation.statusLabel(call))
-                        .foregroundStyle(UsagePresentation.isUsageLimit(call) ? .orange : .secondary)
-                }
-                .font(.footnote)
-            }
-            if shown.isEmpty { Text("Nothing to show.").font(.footnote).foregroundStyle(.secondary) }
-        }
-    }
-
-    private func reload() async {
+    /// Bridges the store's background-queue observation to the main actor. Cancelling the task
+    /// (range or day change, pane closed) ends the stream, which cancels the observation.
+    private func observeCalls() async {
+        let since = range.interval(now: .now, calendar: calendar).start
         let store = LLMCallStore(env.db)
-        let g = grouping
-        let since = UsagePresentation.since(g, now: .now)
-        let result = await Task.detached { () -> ([UsageTotals], [LLMCall])? in
-            let grouped: UsageGrouping = switch g {
-            case .day: .day(Calendar.current)
-            case .job: .jobType
-            case .model: .model
-            }
-            guard let totals = try? store.totals(grouped, since: since),
-                  let recent = try? store.recent(limit: 100) else { return nil }
-            return (totals, recent)
-        }.value
-        if let result {
-            rows = result.0.map(Row.init)
-            recent = result.1
-            loadFailed = false
-        } else {
-            loadFailed = true
+        let snapshots = AsyncStream<[LLMCall]?> { continuation in
+            let observation = store.observeCalls(
+                since: since, limit: UsagePresentation.callLimit,
+                onChange: { continuation.yield($0) },
+                onError: { _ in continuation.yield(nil) })
+            continuation.onTermination = { _ in observation.cancel() }
         }
-        lastLimitAt = await env.llm.lastLimitAt()
+        for await snapshot in snapshots {
+            if let snapshot {
+                calls = snapshot
+                loadFailed = false
+            } else {
+                Self.logger.error("usage observation failed")
+                loadFailed = true
+            }
+            loaded = true
+            snapshotAt = .now
+            lastLimitAt = await env.llm.lastLimitAt()
+        }
+    }
+
+    /// "Today" and the day buckets roll over at local midnight while the pane stays open.
+    private func watchMidnight() async {
+        while !Task.isCancelled {
+            let next = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: .now))
+                ?? .now.addingTimeInterval(3_600)
+            try? await Task.sleep(for: .seconds(max(1, next.timeIntervalSinceNow + 1)))
+            if Task.isCancelled { return }
+            dayStart = calendar.startOfDay(for: .now)
+        }
+    }
+
+    /// Prices calls recorded before their model had a price (for example after the price table was
+    /// edited). The live observation shows the new costs; a stored cost is never rewritten.
+    private func backfillUnpricedCalls() {
+        let db = env.db, prices = env.prices
+        Task.detached(priority: .utility) {
+            do { _ = try UsageRepricer.backfill(store: LLMCallStore(db), prices: prices.table()) } catch {
+                Self.logger.error("usage backfill failed: \(String(describing: type(of: error)), privacy: .public)")
+            }
+        }
     }
 
     /// Writes the template if the file is missing, then opens it in the default editor.
@@ -119,7 +152,7 @@ struct UsageSettingsView: View {
                 try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
                 try PriceTable.template(slugs: slugs.isEmpty ? [ModelResolver.defaultLarge, "gpt-6-luna"] : slugs).write(to: url)
             } catch {
-                Logger(subsystem: "dev.remora", category: "usage").error("price table template not written")
+                Self.logger.error("price table template not written")
                 priceError = "Could not create the price table."
                 return
             }

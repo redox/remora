@@ -37,36 +37,42 @@ import Testing
     #expect(AccountPresentation.message(for: AuthError.tokenEndpoint(status: 500, code: "x"))?.contains("x") == false)
 }
 
-private func totals(cost: Double?, unpriced: Int, calls: Int = 3) -> UsageTotals {
-    UsageTotals(key: "k", calls: calls, inputTokens: 1200, cachedInputTokens: 400, outputTokens: 300, reasoningTokens: 120,
-                estCostUSD: cost, unpricedCalls: unpriced)
+@Test func pausedNoticeGivesTheBackoffEnd() {
+    let utc = TimeZone(identifier: "UTC")!, us = Locale(identifier: "en_US")
+    let until = Date(timeIntervalSince1970: 1_700_000_000)  // 22:13 UTC
+    let text = UsagePresentation.pausedNotice(until: until, timeZone: utc, locale: us)
+    // The time separator before "PM" is a narrow no-break space on current macOS.
+    #expect(text.hasPrefix("Background memory paused until 10:13"))
+    #expect(text.hasSuffix("PM: ChatGPT usage limit reached."))
 }
 
-@Test func costFormatting() {
-    #expect(UsagePresentation.cost(totals(cost: nil, unpriced: 3)) == "—")
-    #expect(UsagePresentation.cost(totals(cost: 0.5, unpriced: 0)) == "$0.5000")
-    #expect(UsagePresentation.cost(totals(cost: 0.5, unpriced: 1)) == "≥ $0.5000")
-    #expect(UsagePresentation.cost(totals(cost: 0, unpriced: 0)) == "$0.0000")
+@Test func footnotesForUnpricedAndCappedCalls() {
+    #expect(UsagePresentation.unpricedNote(3) == "3 calls have no price yet.")
+    #expect(UsagePresentation.unpricedNote(1) == "1 call has no price yet.")
+    #expect(UsagePresentation.callLimit == 5_000)
+    #expect(UsagePresentation.cappedNote == "Showing the newest 5,000 calls.")
+    #expect(UsagePresentation.emptyRange == "No calls in this range.")
+    #expect(UsagePresentation.unreadable == "Usage could not be read.")
 }
 
-@Test func tokenFormatting() {
-    let t = totals(cost: nil, unpriced: 0)
-    #expect(UsagePresentation.input(t, locale: Locale(identifier: "en_US")) == "1,200 (400 cached)")
-    #expect(UsagePresentation.output(t, locale: Locale(identifier: "en_US")) == "300 (120 reasoning)")
+@Test func activeBackoffNoticeWinsOverTheLimitBanner() {
+    let now = Date(timeIntervalSince1970: 1_700_000_000)
+    let utc = TimeZone(identifier: "UTC")!, us = Locale(identifier: "en_US")
+    let backoff = UsagePresentation.notice(backoffUntil: now.addingTimeInterval(600), lastLimitAt: now.addingTimeInterval(-60),
+                                           now: now, timeZone: utc, locale: us)
+    #expect(backoff?.hasPrefix("Background memory paused until ") == true)
+    let banner = UsagePresentation.notice(backoffUntil: now.addingTimeInterval(-1), lastLimitAt: now.addingTimeInterval(-60),
+                                          now: now, timeZone: utc, locale: us)
+    #expect(banner?.hasPrefix("Usage limit reached at ") == true)
+    #expect(UsagePresentation.notice(backoffUntil: nil, lastLimitAt: nil, now: now) == nil)
 }
 
-@Test func labels() {
-    #expect(UsagePresentation.label("dictation_cleanup", grouping: .job) == "Dictation cleanup")
-    #expect(UsagePresentation.label("2026-11-20", grouping: .day) == "2026-11-20")
-    #expect(UsagePresentation.label("gpt_x", grouping: .model) == "gpt_x")
-}
-
-@Test func dayWindowIsFourteenCalendarDays() {
-    var cal = Calendar(identifier: .gregorian)
-    cal.timeZone = TimeZone(identifier: "UTC")!
-    let now = Date(timeIntervalSince1970: 1_700_000_000 + 3600)  // 2023-11-14 23:13 UTC
-    let s = UsagePresentation.since(.day, now: now, calendar: cal)
-    #expect(cal.dateComponents([.year, .month, .day, .hour], from: s) == DateComponents(year: 2023, month: 11, day: 1, hour: 0))
+@Test func footnotesFollowTheLoadedCalls() {
+    var s = UsageSummary()
+    #expect(UsagePresentation.footnotes(s, loadedCalls: 10) == [UsagePresentation.caption])
+    s.unpricedCalls = 2
+    #expect(UsagePresentation.footnotes(s, loadedCalls: UsagePresentation.callLimit)
+        == [UsagePresentation.caption, "2 calls have no price yet.", "Showing the newest 5,000 calls."])
 }
 
 @Test func limitBannerOnlyWithin24Hours() {
@@ -85,11 +91,4 @@ private func totals(cost: Double?, unpriced: Int, calls: Int = 3) -> UsageTotals
     }
     let byCode = call(.failed, "usage_limit"), byStatus = call(.limit, nil), plainFail = call(.failed, "http_500")
     #expect(UsagePresentation.isUsageLimit(byCode) && UsagePresentation.isUsageLimit(byStatus) && !UsagePresentation.isUsageLimit(plainFail))
-    #expect(UsagePresentation.matches(byCode, .usageLimit) && !UsagePresentation.matches(byCode, .failed))
-    #expect(UsagePresentation.matches(plainFail, .failed) && !UsagePresentation.matches(plainFail, .usageLimit))
-    #expect(UsagePresentation.matches(plainFail, .all))
-    #expect(UsagePresentation.statusLabel(byCode) == "Usage limit reached")
-    #expect(UsagePresentation.statusLabel(call(.completed, nil)) == "OK")
-    #expect(UsagePresentation.statusLabel(plainFail) == "Failed")
-    #expect(UsagePresentation.statusLabel(call(.cancelled, nil)) == "Cancelled")
 }

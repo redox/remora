@@ -161,6 +161,63 @@ import Storage
         #expect(UsageDashboard.costText(0.29, lowerBound: true) == "≥ $0.29")
     }
 
+    @Test func lowerBoundNeverPrefixesTheBelowSign() {
+        #expect(UsageDashboard.costText(0.00001, lowerBound: false) == "<$0.0001")
+        #expect(UsageDashboard.costText(0.00001, lowerBound: true) == "≥ $0")
+        #expect(UsageDashboard.costText(0, lowerBound: true) == "≥ $0")
+    }
+
+    @Test func problemsTextCountsLimitsAndFailures() {
+        var s = UsageSummary()
+        #expect(UsageDashboard.problemsText(s) == "None")
+        s.usageLimits = 1
+        #expect(UsageDashboard.problemsText(s) == "1 limit")
+        s.usageLimits = 3; s.failures = 1
+        #expect(UsageDashboard.problemsText(s) == "3 limits · 1 failed")
+        s.usageLimits = 0
+        #expect(UsageDashboard.problemsText(s) == "1 failed")
+    }
+
+    @Test func callLabelsForTheLogAndDetail() {
+        var c = Self.call(model: "gpt-6-luna", input: 12_410, cached: 2_560, output: 380)
+        c.reasoningTokens = 120
+        #expect(UsageLabels.model(c) == "gpt-6-luna")
+        c.reasoningEffort = "low"
+        #expect(UsageLabels.model(c) == "gpt-6-luna · low")
+        #expect(UsageLabels.tokens(c, locale: Self.posix) == "12.4k → 380")
+        #expect(UsageLabels.tokenBreakdown(c, locale: Self.posix)
+            == "Input 12,410 (2,560 cached) · Output 380 (120 reasoning)")
+        #expect(UsageLabels.backend("siwc") == "ChatGPT")
+        #expect(UsageLabels.backend("on_device") == "On-device")
+        #expect(UsageLabels.backend("api_key") == "API key")
+        #expect(UsageLabels.backend("other") == "other")
+    }
+
+    @Test func durationIsShortAndReadable() {
+        #expect(UsageLabels.duration(ms: 420, locale: Self.posix) == "0.4 s")
+        #expect(UsageLabels.duration(ms: 2_100, locale: Self.posix) == "2.1 s")
+        #expect(UsageLabels.duration(ms: 12_345, locale: Self.posix) == "12 s")
+        #expect(UsageLabels.duration(ms: 65_000, locale: Self.posix) == "1 min 5 s")
+    }
+
+    @Test func clickingABreakdownRowTogglesItsFilter() {
+        var f = UsageFilter(category: .memory)
+        f = f.toggling(.job, key: "rewrite")
+        #expect(f.job == "rewrite" && f.model == nil && f.category == nil)
+        f = f.toggling(.model, key: "m")
+        #expect(f.job == "rewrite" && f.model == "m")
+        f = f.toggling(.job, key: "rewrite")
+        #expect(f.job == nil && f.model == "m")
+        f = f.toggling(.job, key: "chat").toggling(.job, key: "rewrite")
+        #expect(f.job == "rewrite")
+    }
+
+    @Test func choosingACategoryClearsTheJobFilter() {
+        let f = UsageFilter(job: "rewrite", model: "m").selecting(category: .chat)
+        #expect(f.category == .chat && f.job == nil && f.model == "m")
+        #expect(f.selecting(job: "chat").category == nil)
+    }
+
     @Test func explanationMatchesPriceTableCost() {
         let table = PriceTable(models: ["m": ModelPrice(inputPer1M: 0.25, cachedInputPer1M: 0.025, outputPer1M: 2)])
         let c = Self.call(model: "m", input: 12_410, cached: 2_560, output: 380)
@@ -182,5 +239,32 @@ import Storage
     @Test func onDeviceCallsExplainAsFree() {
         let c = Self.call(backend: "on_device", cost: 0)
         #expect(UsageCost.explanation(c, prices: .empty, locale: Self.posix) == "On-device: free")
+    }
+
+    @Test func legendClickTogglesTheCategory() {
+        let f = UsageFilter(job: "rewrite").toggling(category: .chat)
+        #expect(f.category == .chat && f.job == nil)
+        #expect(f.toggling(category: .chat).category == nil)
+        #expect(f.toggling(category: .memory).category == .memory)
+    }
+
+    @Test func chartDomainRunsToTheEndOfToday() {
+        let now = Self.date(2026, 11, 23, 14, 5)
+        let today = UsageRange.today.chartDomain(now: now, calendar: Self.paris)
+        #expect(today.start == Self.date(2026, 11, 23) && today.end == Self.date(2026, 11, 24))
+        let week = UsageRange.week.chartDomain(now: now, calendar: Self.paris)
+        #expect(week.start == Self.date(2026, 11, 17) && week.end == Self.date(2026, 11, 24))
+    }
+
+    @Test func detailLinesDescribeTheCallWithoutContent() {
+        var c = Self.call(model: "m", input: 1000, output: 100)
+        c.durationMs = 2_100
+        #expect(UsageLabels.facts(c, locale: Self.posix) == "Effort default · Backend ChatGPT · Duration 2.1 s")
+        c.reasoningEffort = "low"
+        #expect(UsageLabels.facts(c, locale: Self.posix) == "Effort low · Backend ChatGPT · Duration 2.1 s")
+        let table = PriceTable(models: ["m": ModelPrice(inputPer1M: 1, cachedInputPer1M: 0.1, outputPer1M: 2)])
+        #expect(UsageCost.detailLine(c, prices: table, locale: Self.posix)
+            == "Cost: " + UsageCost.explanation(c, prices: table, locale: Self.posix)!)
+        #expect(UsageCost.detailLine(c, prices: .empty, locale: Self.posix) == "Cost: the price table has no price for m.")
     }
 }

@@ -46,6 +46,8 @@ final class AppEnvironment {
     let indicator: IndicatorController
     let account: AccountModel
     let llm: LLMService
+    /// The price table (built-in prices overlaid by `model-prices.json`); Settings › Usage reads it.
+    let prices: PriceTableFile
     let rewriteEngine: RewriteEngine
     let rewrite: RewriteController
     let speechAssets: SpeechAssetModel
@@ -114,6 +116,7 @@ final class AppEnvironment {
         let box = LLMSnapshotBox(routing: AccountModel.loadRouting(settings), catalog: [])
         let onDeviceModel = SystemOnDeviceModel()
         let prices = PriceTableFile()
+        self.prices = prices
         let calls = LLMCallStore(db)
         let service = LLMService(
             siwc: SIWCClient(tokens: tokens, responses: ResponsesClient(http: http)),
@@ -363,6 +366,14 @@ final class AppEnvironment {
         Task.detached(priority: .utility) {
             do { try DataReset.scrubIfPending(in: db) } catch {
                 logger.error("pending scrub failed: \(String(describing: type(of: error)), privacy: .public)")
+            }
+        }
+        // Calls recorded before their model had a price get one now, so every surface reading the
+        // stored cost agrees. Never rewrites a stored cost.
+        let prices = prices
+        Task.detached(priority: .utility) {
+            do { _ = try UsageRepricer.backfill(store: LLMCallStore(db), prices: prices.table()) } catch {
+                logger.error("usage backfill failed: \(String(describing: type(of: error)), privacy: .public)")
             }
         }
         refreshPause()
