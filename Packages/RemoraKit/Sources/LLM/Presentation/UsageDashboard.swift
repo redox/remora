@@ -115,10 +115,23 @@ public enum UsageLabels {
         }
     }
 
-    /// "gpt-6-luna · low"; the model alone when the call used the model's default effort.
-    public static func model(_ c: LLMCall) -> String {
-        guard let effort = c.reasoningEffort, !effort.isEmpty else { return c.model }
-        return "\(c.model) · \(effort)"
+    /// A call's time, as short as its range allows so the log's Time column never truncates:
+    /// "19:59" for today's calls, "Sun 19:59" in the 7-day range, "22 Nov 19:59" in the 30-day
+    /// range. Uses the locale's 12- or 24-hour clock.
+    public static func time(_ date: Date, range: UsageRange, now: Date, calendar: Calendar,
+                            locale: Locale = .current) -> String {
+        func format(_ template: String) -> String {
+            let f = DateFormatter()
+            f.calendar = calendar
+            f.timeZone = calendar.timeZone
+            f.locale = locale
+            f.setLocalizedDateFormatFromTemplate(template)
+            return f.string(from: date)
+        }
+        let clock = format("jmm")
+        if calendar.isDate(date, inSameDayAs: now) { return clock }
+        // Day and clock are formatted apart: a combined template adds a word ("at", "à").
+        return format(range == .month ? "dMMM" : "EEE") + " " + clock
     }
 
     /// "12.4k → 380": input then output, compact.
@@ -193,7 +206,7 @@ public enum UsageCost {
                              outputTokens: c.outputTokens, reasoningTokens: c.reasoningTokens)
         guard let total = prices.cost(model: c.model, usage: usage, backend: LLMBackend(rawValue: c.backend) ?? .siwc)
         else { return nil }
-        return parts.joined(separator: " + ") + " per 1M ≈ " + UsageDashboard.costText(total, lowerBound: false)
+        return parts.joined(separator: " + ") + " per 1M ≈ " + UsageDashboard.costText(total, lowerBound: false, locale: locale)
     }
 
     /// The detail block's cost line, from the current price table.
@@ -367,13 +380,18 @@ public enum UsageDashboard {
 
     /// "$0.29" from one cent up, "$0.0031" below, "$0" for nothing; "≥ " when some calls are unpriced.
     /// A lower bound below the smallest shown amount reads "≥ $0", never "≥ <$0.0001".
-    public static func costText(_ usd: Double, lowerBound: Bool) -> String {
+    /// The number follows `locale` (decimal and grouping separators), like the token counts and
+    /// per-million rates beside it; the "$" stays because every price is in US dollars.
+    public static func costText(_ usd: Double, lowerBound: Bool, locale: Locale = .current) -> String {
         if lowerBound, usd < 0.00005 { return "≥ $0" }
+        func dollars(_ v: Double, _ digits: Int) -> String {
+            "$" + v.formatted(.number.grouping(.automatic).precision(.fractionLength(digits)).locale(locale))
+        }
         let text: String
         if usd <= 0 { text = "$0" }
-        else if usd >= 0.01 { text = String(format: "$%.2f", usd) }
-        else if usd < 0.00005 { text = "<$0.0001" }
-        else { text = String(format: "$%.4f", usd) }
+        else if usd >= 0.01 { text = dollars(usd, 2) }
+        else if usd < 0.00005 { text = "<" + dollars(0.0001, 4) }
+        else { text = dollars(usd, 4) }
         return lowerBound ? "≥ " + text : text
     }
 }

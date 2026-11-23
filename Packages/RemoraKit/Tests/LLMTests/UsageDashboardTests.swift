@@ -62,7 +62,7 @@ import Storage
         let s = UsageDashboard.summarize([Self.call(cost: 0.1), Self.call()])
         #expect(s.unpricedCalls == 1)
         #expect(UsageCost.effective(Self.call()) == nil)
-        #expect(UsageDashboard.costText(s.costUSD, lowerBound: s.unpricedCalls > 0) == "≥ $0.10")
+        #expect(UsageDashboard.costText(s.costUSD, lowerBound: s.unpricedCalls > 0, locale: Self.posix) == "≥ $0.10")
     }
 
     @Test func summaryCountsLimitsAndFailuresSeparately() {
@@ -154,16 +154,38 @@ import Storage
     }
 
     @Test func costTextFormatting() {
-        #expect(UsageDashboard.costText(0.29, lowerBound: false) == "$0.29")
-        #expect(UsageDashboard.costText(0.0031, lowerBound: false) == "$0.0031")
-        #expect(UsageDashboard.costText(0, lowerBound: false) == "$0")
-        #expect(UsageDashboard.costText(0.29, lowerBound: true) == "≥ $0.29")
+        let l = Self.posix
+        #expect(UsageDashboard.costText(0.29, lowerBound: false, locale: l) == "$0.29")
+        #expect(UsageDashboard.costText(0.0031, lowerBound: false, locale: l) == "$0.0031")
+        #expect(UsageDashboard.costText(0, lowerBound: false, locale: l) == "$0")
+        #expect(UsageDashboard.costText(0.29, lowerBound: true, locale: l) == "≥ $0.29")
+        #expect(UsageDashboard.costText(1_234.5, lowerBound: false, locale: l) == "$1,234.50")
+    }
+
+    @Test func costTextUsesTheLocaleDecimalSeparatorLikeTheOtherFigures() {
+        let fr = Locale(identifier: "fr_FR")
+        #expect(UsageDashboard.costText(0.29, lowerBound: false, locale: fr) == "$0,29")
+        #expect(UsageDashboard.costText(0.0024, lowerBound: false, locale: fr) == "$0,0024")
+        #expect(UsageDashboard.costText(0.00001, lowerBound: false, locale: fr) == "<$0,0001")
     }
 
     @Test func lowerBoundNeverPrefixesTheBelowSign() {
-        #expect(UsageDashboard.costText(0.00001, lowerBound: false) == "<$0.0001")
-        #expect(UsageDashboard.costText(0.00001, lowerBound: true) == "≥ $0")
-        #expect(UsageDashboard.costText(0, lowerBound: true) == "≥ $0")
+        let l = Self.posix
+        #expect(UsageDashboard.costText(0.00001, lowerBound: false, locale: l) == "<$0.0001")
+        #expect(UsageDashboard.costText(0.00001, lowerBound: true, locale: l) == "≥ $0")
+        #expect(UsageDashboard.costText(0, lowerBound: true, locale: l) == "≥ $0")
+    }
+
+    @Test func callTimeIsShortEnoughForItsColumn() {
+        let gb = Locale(identifier: "en_GB")
+        let now = Self.date(2026, 11, 23, 20, 0)
+        let earlierToday = Self.date(2026, 11, 23, 19, 59)
+        let sunday = Self.date(2026, 11, 22, 19, 59)
+        #expect(UsageLabels.time(earlierToday, range: .today, now: now, calendar: Self.paris, locale: gb) == "19:59")
+        #expect(UsageLabels.time(earlierToday, range: .week, now: now, calendar: Self.paris, locale: gb) == "19:59")
+        #expect(UsageLabels.time(sunday, range: .week, now: now, calendar: Self.paris, locale: gb) == "Sun 19:59")
+        let month = UsageLabels.time(sunday, range: .month, now: now, calendar: Self.paris, locale: gb)
+        #expect(month == "22 Nov 19:59")
     }
 
     @Test func problemsTextCountsLimitsAndFailures() {
@@ -180,9 +202,7 @@ import Storage
     @Test func callLabelsForTheLogAndDetail() {
         var c = Self.call(model: "gpt-6-luna", input: 12_410, cached: 2_560, output: 380)
         c.reasoningTokens = 120
-        #expect(UsageLabels.model(c) == "gpt-6-luna")
         c.reasoningEffort = "low"
-        #expect(UsageLabels.model(c) == "gpt-6-luna · low")
         #expect(UsageLabels.tokens(c, locale: Self.posix) == "12.4k → 380")
         #expect(UsageLabels.tokenBreakdown(c, locale: Self.posix)
             == "Input 12,410 (2,560 cached) · Output 380 (120 reasoning)")
@@ -222,7 +242,7 @@ import Storage
         let c = Self.call(model: "m", input: 12_410, cached: 2_560, output: 380)
         let text = UsageCost.explanation(c, prices: table, locale: Self.posix)
         let total = table.cost(model: "m", usage: LLMUsage(inputTokens: 12_410, cachedInputTokens: 2_560, outputTokens: 380, reasoningTokens: 0), backend: .siwc)!
-        #expect(text == "9,850 input × $0.25 + 2,560 cached × $0.025 + 380 output × $2.00 per 1M ≈ \(UsageDashboard.costText(total, lowerBound: false))")
+        #expect(text == "9,850 input × $0.25 + 2,560 cached × $0.025 + 380 output × $2.00 per 1M ≈ \(UsageDashboard.costText(total, lowerBound: false, locale: Self.posix))")
         #expect(text?.hasSuffix("≈ $0.0033") == true)
         #expect(UsageCost.explanation(Self.call(model: "unknown"), prices: table, locale: Self.posix) == nil)
     }

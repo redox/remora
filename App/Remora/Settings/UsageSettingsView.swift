@@ -82,7 +82,7 @@ struct UsageSettingsView: View {
         UsageBreakdownList(rows: UsageDashboard.breakdown(calls, by: breakdownKind), kind: $breakdownKind,
                            filter: $filter)
         UsageCallTable(table: UsagePresentation.tableCalls(calls, filter: filter), calls: calls, range: range,
-                       filter: $filter, selection: $selection)
+                       calendar: calendar, now: snapshotAt, filter: $filter, selection: $selection)
         if let selection, let call = calls.first(where: { $0.id == selection }) {
             UsageCallDetail(call: call, prices: env.prices.table())
         }

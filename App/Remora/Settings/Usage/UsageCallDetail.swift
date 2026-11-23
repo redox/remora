@@ -15,6 +15,7 @@ struct UsageCallDetail: View {
                 .font(.headline)
             Text(UsageLabels.tokenBreakdown(call))
             Text(UsageLabels.facts(call))
+            Text("Status: \(UsageLabels.status(call))")
             Text(UsageCost.detailLine(call, prices: prices))
             if let table = call.artifactTable {
                 Text("Produced: \(UsageLabels.artifact(table: table, job: call.jobType))")

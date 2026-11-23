@@ -9,6 +9,9 @@ struct UsageCallTable: View {
     /// Every call in the range, for the job and model menus.
     let calls: [LLMCall]
     let range: UsageRange
+    /// The pane's calendar and snapshot time, so "today" in the Time column matches the range.
+    let calendar: Calendar
+    let now: Date
     @Binding var filter: UsageFilter
     @Binding var selection: Int64?
     @State private var sortOrder = [KeyPathComparator(\Row.startedAt, order: .reverse)]
@@ -27,21 +30,23 @@ struct UsageCallTable: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Calls").font(.headline)
             filterBar(shown: rows.count)
+            // Six columns fit the narrowest Settings pane without truncating. Effort and duration
+            // live in the detail block below; a completed call needs no status mark.
             Table(rows, selection: $selection, sortOrder: $sortOrder) {
-                TableColumn("Time", value: \.startedAt) { Text($0.startedAt, format: timeFormat).monospacedDigit() }
-                    .width(min: 48, ideal: range == .today ? 56 : 96)
+                TableColumn("Time", value: \.startedAt) {
+                    Text(UsageLabels.time($0.startedAt, range: range, now: now, calendar: calendar)).monospacedDigit()
+                }
+                .width(min: 44, ideal: range == .month ? 96 : (range == .week ? 76 : 48))
                 TableColumn("Job") { Text(UsageLabels.job($0.call.jobType)) }
-                    .width(min: 80, ideal: 120)
-                TableColumn("Model") { Text(UsageLabels.model($0.call)) }
-                    .width(min: 80, ideal: 130)
+                    .width(min: 90, ideal: 130)
+                TableColumn("Model") { Text($0.call.model) }
+                    .width(min: 80, ideal: 100)
                 TableColumn("Tokens in → out") { Text(UsageLabels.tokens($0.call)).monospacedDigit() }
-                    .width(min: 70, ideal: 100)
-                TableColumn("Duration") { Text(UsageLabels.duration(ms: $0.call.durationMs)).monospacedDigit() }
-                    .width(min: 44, ideal: 56)
+                    .width(min: 80, ideal: 96)
                 TableColumn("Cost", value: \.costSortKey) { Text(cost($0.call)).monospacedDigit() }
-                    .width(min: 48, ideal: 64)
-                TableColumn("Status") { StatusCell(call: $0.call) }
-                    .width(min: 48, ideal: 80)
+                    .width(min: 64, ideal: 72)
+                TableColumn("") { StatusCell(call: $0.call) }
+                    .width(22)
             }
             .frame(height: 300)
             if table.truncated {
@@ -89,28 +94,30 @@ struct UsageCallTable: View {
 
     private var models: [String] { Set(calls.map(\.model)).sorted() }
 
-    private var timeFormat: Date.FormatStyle {
-        range == .today ? .dateTime.hour().minute() : .dateTime.month(.abbreviated).day().hour().minute()
-    }
-
     private func cost(_ c: LLMCall) -> String {
         UsageCost.effective(c).map { UsageDashboard.costText($0, lowerBound: false) } ?? "—"
     }
 }
 
+/// A mark for calls that did not complete; the full status is in its tooltip and the detail block.
 private struct StatusCell: View {
     let call: LLMCall
 
     var body: some View {
-        if UsagePresentation.isUsageLimit(call) {
-            Text(UsageLabels.status(call)).foregroundStyle(.orange)
-        } else if call.status == .completed {
-            Image(systemName: "checkmark").foregroundStyle(.secondary)
+        if let (symbol, color) = mark {
+            Image(systemName: symbol).foregroundStyle(color)
+                .help(UsageLabels.status(call))
                 .accessibilityLabel(UsageLabels.status(call))
-        } else if call.status == .failed {
-            Text(UsageLabels.status(call)).foregroundStyle(.red)
-        } else {
-            Text(UsageLabels.status(call)).foregroundStyle(.secondary)
+        }
+    }
+
+    private var mark: (String, Color)? {
+        if UsagePresentation.isUsageLimit(call) { return ("exclamationmark.triangle.fill", .orange) }
+        switch call.status {
+        case .completed: return nil
+        case .failed: return ("xmark.circle.fill", .red)
+        case .limit: return ("exclamationmark.triangle.fill", .orange)
+        case .cancelled: return ("minus.circle", .secondary)
         }
     }
 }
