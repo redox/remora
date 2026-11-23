@@ -284,11 +284,6 @@ kbd {
   height: 100%;
   object-fit: cover;
   object-position: center 46%;
-  opacity: .88;
-}
-
-@media (prefers-color-scheme: dark) {
-  .demo-backdrop { opacity: .52; }
 }
 
 .demo-menubar {
@@ -549,22 +544,11 @@ kbd {
   box-shadow: 0 2px 8px #10272228;
 }
 
-.demo-dock > span {
-  display: grid;
-  place-items: center;
-  width: 1.78rem;
-  height: 1.78rem;
-  border-radius: .44rem;
-  color: #fff;
-  font-size: 1.15rem;
-  line-height: 1;
-  box-shadow: 0 1px 2px #16272535;
+.demo-dock > img {
+  display: block;
+  width: 2.12rem;
+  height: 2.12rem;
 }
-
-.demo-dock .demo-dock-files { background: linear-gradient(100deg, #5499df 50%, #effaff 50%); color: #153750; }
-.demo-dock .demo-dock-mail { background: linear-gradient(#68cafa, #1789dc); }
-.demo-dock .demo-dock-notes { background: linear-gradient(#ffd659 29%, #fbfaf2 29%); color: #787665; }
-.demo-dock .demo-dock-settings { background: linear-gradient(#bfc2c2, #67716f); }
 
 .demo figcaption {
   display: flex;

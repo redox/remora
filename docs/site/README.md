@@ -20,6 +20,8 @@ to build offline.
 ## Edit
 
 - Edit the homepage in `pages/home.html` and documentation in the other files under `pages/`.
+- The homepage demo uses Apple's macOS 27 Golden Gate wallpaper and built-in app icons. The
+  repository README image is a render of the demo's Recall view.
 - Give each article section an `h2` with a stable `id`. The build uses these for the table of
   contents and search results.
 - Use `@ROOT@` for links to this site. For example, link to `@ROOT@docs/rewrite/#edit-mode`.
