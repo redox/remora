@@ -13,8 +13,9 @@ make preview
 
 Open [the local preview](http://127.0.0.1:8000/). Press `Ctrl+C` to stop the server.
 After editing, run `python3 docs/site/build.py` in another terminal and refresh the page.
-To preview GitHub, Releases, and Edit links too, pass `--repository https://github.com/OWNER/REPO`
-to that build command.
+The build looks up the latest published DMG for Remora on GitHub. Pass
+`--repository https://github.com/OWNER/REPO` to preview another repository or `--download-url ''`
+to build offline.
 
 ## Edit
 
@@ -31,6 +32,9 @@ In the GitHub repository, open **Settings › Pages** and select **GitHub Action
 On `main`, the **Website** workflow publishes changes to the site sources or app icon. You can
 also run it on demand from **Actions › Website › Run workflow**. The deployment records the site
 URL in the `github-pages` environment.
+
+Release changes also rebuild the website from the default branch. The build links the download
+buttons to the latest release's DMG when one is available.
 
 The workflow uploads the contents of `dist/site`. GitHub generates the repository links from the
 repository that runs the workflow. See [GitHub’s publishing guide](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).

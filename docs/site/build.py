@@ -5,15 +5,19 @@ import argparse
 import json
 import os
 import posixpath
+import re
 import shutil
 from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.parse import quote, urlsplit
+from urllib.request import Request, urlopen
 
 SOURCE = Path(__file__).resolve().parent
 REPO = SOURCE.parents[1]
 OUTPUT = REPO / "dist/site"
+DEFAULT_REPOSITORY = "https://github.com/redox/remora"
 
 GROUPS = {
     "Get started": [
@@ -148,7 +152,24 @@ def render(template, **values):
     return template
 
 
-def build(repository, branch):
+def latest_download_url(repository):
+    api = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+    path = urlsplit(repository).path
+    request = Request(f"{api}/repos{path}/releases/latest", headers={"Accept": "application/vnd.github+json"})
+    token = os.environ.get("REMORA_SITE_GITHUB_TOKEN")
+    if token:
+        request.add_unredirected_header("Authorization", f"Bearer {token}")
+    try:
+        with urlopen(request, timeout=10) as response:
+            release = json.load(response)
+    except HTTPError as error:
+        if error.code == 404:
+            return ""
+        raise
+    return next((asset["browser_download_url"] for asset in release["assets"] if asset["name"].endswith(".dmg")), "")
+
+
+def build(repository, branch, download_url):
     OUTPUT.mkdir(parents=True, exist_ok=True)
     shutil.copytree(SOURCE / "assets", OUTPUT / "assets", dirs_exist_ok=True)
     icons = REPO / "App/Remora/Assets.xcassets/AppIcon.appiconset"
@@ -171,12 +192,16 @@ def build(repository, branch):
         document = render(template, root=root, home=home, title=escape(title), description=escape(description),
                           kind=kind, github=github, docs_current=docs_current, home_current=home_current,
                           content=render(content, root=root))
+        document = render(document, download=download_url or f"{root}docs/installation/")
         file.write_text(document, encoding="utf-8")
         links = PageLinks()
         links.feed(document)
         page_links[path] = links
 
     home = (SOURCE / "pages/home.html").read_text(encoding="utf-8")
+    filename = posixpath.basename(urlsplit(download_url).path)
+    version = re.fullmatch(r"Remora-([0-9]+\.[0-9]+\.[0-9]+)\.dmg", filename)
+    home = render(home, version_label=f"Version {version[1]} · " if version else "")
     write("index.html", "./", "Remora — A local memory for your Mac",
           "Rewrite in place, dictate on your Mac, and ask questions about what you’ve seen.", "home", home)
     pages = [page for group in GROUPS.values() for page in group]
@@ -187,7 +212,11 @@ def build(repository, branch):
         body = (SOURCE / "pages" / source_file).read_text(encoding="utf-8")
         if slug == "installation":
             releases = f'<a href="{repository}/releases">Releases</a>' if repository else "the repository’s Releases page"
-            body = render(body, releases=releases)
+            if download_url:
+                download = f'<a href="{download_url}">Download the Remora disk image</a> (<code>.dmg</code>).'
+            else:
+                download = f'Download the Remora disk image (<code>.dmg</code>) from {releases} when a release is available.'
+            body = render(body, install_download=download)
         article = Article(title)
         article.feed(body)
         results = article.index(path)
@@ -214,8 +243,14 @@ def build(repository, branch):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repository", default=os.environ.get("REMORA_SITE_REPOSITORY", ""),
-                        help="GitHub repository URL, used for Releases and page edits")
+    parser.add_argument("--repository", default=os.environ.get("REMORA_SITE_REPOSITORY", DEFAULT_REPOSITORY),
+                        help="GitHub repository URL, used for the download, Releases and page edits")
+    parser.add_argument("--download-url", default=os.environ.get("REMORA_SITE_DOWNLOAD_URL"),
+                        help="Override the release download URL. Pass an empty string for an offline build.")
     parser.add_argument("--branch", default="main", help="branch for GitHub edit links")
     args = parser.parse_args()
-    build(escape(args.repository.rstrip("/"), quote=True), args.branch)
+    repository = args.repository.rstrip("/")
+    download_url = args.download_url
+    if download_url is None and repository:
+        download_url = latest_download_url(repository)
+    build(escape(repository, quote=True), args.branch, escape(download_url or "", quote=True))
