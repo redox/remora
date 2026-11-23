@@ -269,6 +269,12 @@ for 90 days. Editing the latest question replaces its exchange atomically and pr
 receipts and later inbox deliveries. This
 lets a question be corrected without falsely implying that completed work was undone.
 
+**Follow the reply while the reader is at the end.** Chat opens at the latest message, or at
+the welcome heading in a new conversation. Sending brings the question into view immediately
+and keeps the reply in view as it grows. Scrolling up preserves the reading position during
+streaming. Scroll back down or choose **Latest** to resume following the reply. Notification
+clicks open the corresponding message.
+
 **Treat observations as untrusted input and keep ownership of actions with the user.** Captures,
 clipboard text, imported text, memory, and tool results are escaped into tagged data sections.
 A turn that has read untrusted content is tainted, including through replay. It requires a visible
@@ -361,7 +367,7 @@ unsigned Debug build. [Verification guidance](../.claude/skills/remora-verify/SK
 | --- | --- |
 | Capture and insertion | Safari, Chrome, Arc if installed, Mail, Messages, Notes, Slack, VS Code/Cursor, Terminal, and web composers such as Gmail and LinkedIn. Submit a typed Insert prompt at a caret and over a selection. In an excluded app, verify that Insert shows Prompt only and can draft with Apple Intelligence unavailable. Exercise private windows, secure fields, pause, pasteboard restoration, undo, and the onboarding practice field. |
 | Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Insert and Edit, cancel, and a mode switch followed immediately by Return. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
-| Chat and indicators | Real notch and secondary displays, hide and show the menu bar, hover and pin, IME, trackpad scroll, min size with 150% text, caption and badge placement, light and dark appearance, and accessibility display options. Return must never approve a card. |
+| Chat and indicators | Real notch and secondary displays, hide and show the menu bar, hover and pin, IME, trackpad scroll, min size with 150% text, caption and badge placement, light and dark appearance, and accessibility display options. Send from older history and check that the question is visible before the reply. Scroll up mid-reply, then choose **Latest** and check that the view follows the rest of the reply. Open chat from a notification and check the selected message. Return must never approve a card. |
 | Notifications and MCP | In the installed app, use Settings › Notifications › Send a test notification and check for the Remora app icon in the banner and Notification Center. Verify the permission prompt, wake catch-up, reminders with proactive messages off, sharing suppression, and delete-all cleanup. Test Connect and Update in real clients. For meeting sources, use test accounts and synthetic meetings to exercise authorization, resync, pause, forget, and disconnect. |
 | Distribution | Fresh macOS account, install and move, permissions, signed DMG and Gatekeeper, and an update from a real appcast. |
 

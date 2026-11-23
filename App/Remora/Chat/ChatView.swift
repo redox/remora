@@ -18,9 +18,12 @@ struct ChatView: View {
     let height: CGFloat
     @FocusState private var composerFocused: Bool
     @State private var confirmClear = false
+    @State private var messagePosition = ScrollPosition(idType: Int64?.self)
+    @State private var atLatest = true
     @Environment(\.colorScheme) private var scheme
 
     private var fontSize: CGFloat { 13 * textScale }
+    private var hasMessages: Bool { !model.turns.isEmpty || model.sendingText != nil }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -122,50 +125,85 @@ struct ChatView: View {
     // MARK: Messages
 
     private var messages: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 18) {
-                    Color.clear.frame(height: 0).id(Self.top)
-                    if model.turns.isEmpty, model.sendingText == nil {
-                        emptyState
-                    }
-                    ForEach(model.turns, id: \.id) { turn in
-                        MessageView(turn: turn, model: model, bar: bar,
-                                    kind: turn.inboxID.flatMap { model.inboxKinds[$0] })
-                            .id(turn.id)
-                            .onAppear {
-                                if let inbox = turn.inboxID { model.markVisibleSeen([inbox]) }
-                            }
-                    }
-                    if let sending = model.sendingText {
-                        UserBubble(text: sending)
-                        StreamingMessage(model: model)
-                    }
-                    Color.clear.frame(height: 1).id(Self.bottom)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 18) {
+                if !hasMessages { emptyState }
+                ForEach(model.turns, id: \.id) { turn in
+                    MessageView(turn: turn, model: model, bar: bar,
+                                kind: turn.inboxID.flatMap { model.inboxKinds[$0] })
+                        .onAppear {
+                            if let inbox = turn.inboxID { model.markVisibleSeen([inbox]) }
+                        }
                 }
-                .padding(16)
+                if let sending = model.sendingText {
+                    UserBubble(text: sending)
+                    StreamingMessage(model: model)
+                }
             }
-            .onAppear { scrollToLatest(proxy) }
-            .onChange(of: model.streamingText) { scrollToLatest(proxy) }
-            .onChange(of: model.turns.last?.id) { scrollToLatest(proxy) }
-            .onChange(of: model.pendingConfirmation?.id) { scrollToLatest(proxy) }
-            .onChange(of: model.scrollTarget) { _, target in
-                guard let target else { return }
-                withAnimation { proxy.scrollTo(target, anchor: .top) }
-                model.scrollTarget = nil
+            .scrollTargetLayout()
+            .padding(16)
+        }
+        .defaultScrollAnchor(hasMessages ? .bottom : .top, for: .initialOffset)
+        .defaultScrollAnchor(.top, for: .alignment)
+        // Follow layout changes from streamed text, status rows and the composer when at the end.
+        .defaultScrollAnchor(hasMessages && atLatest ? .bottom : nil, for: .sizeChanges)
+        .scrollPosition($messagePosition)
+        .onScrollGeometryChange(for: ScrollGeometry.self, of: { $0 }) { _, geometry in
+            atLatest = Self.isNearLatest(geometry)
+            // The lazy stack can revise its height after the first scroll to the end.
+            if !atLatest && messagePosition.edge == .bottom {
+                scrollToLatest()
+            }
+        }
+        .onScrollPhaseChange { _, phase, context in
+            // Manual scrolling clears the edge. Reattach after a gesture ends near the bottom.
+            if phase == .idle, hasMessages, messagePosition.isPositionedByUser,
+               Self.isNearLatest(context.geometry) {
+                scrollToLatest()
+            }
+        }
+        .onChange(of: model.isStreaming, initial: true) { _, isStreaming in
+            if isStreaming { scrollToLatest() }
+        }
+        .onChange(of: hasMessages) { _, hasMessages in
+            if !hasMessages { messagePosition.scrollTo(edge: .top) }
+        }
+        .onChange(of: model.scrollTarget, initial: true) { _, target in
+            guard let target else { return }
+            // The position's ID type matches the stored rows' ForEach key path.
+            messagePosition.scrollTo(id: Optional(target), anchor: .top)
+            model.scrollTarget = nil
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if hasMessages && !atLatest && messagePosition.edge != .bottom {
+                latestButton
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 8)
             }
         }
     }
 
-    private static let bottom = "chat-bottom"
-    private static let top = "chat-top"
-
-    private func scrollToLatest(_ proxy: ScrollViewProxy) {
-        if !model.turns.isEmpty || model.sendingText != nil {
-            proxy.scrollTo(Self.bottom, anchor: .bottom)
-        } else {
-            proxy.scrollTo(Self.top, anchor: .top)
+    private var latestButton: some View {
+        Button {
+            scrollToLatest()
+        } label: {
+            Label("Latest", systemImage: "arrow.down")
+                .font(.system(size: fontSize - 1, weight: .medium))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
         }
+        .buttonStyle(QuietButtonStyle())
+        .modifier(OverlaySurface(cornerRadius: 10))
+        .accessibilityLabel("Jump to latest message")
+        .help("Jump to latest message")
+    }
+
+    private static func isNearLatest(_ geometry: ScrollGeometry) -> Bool {
+        geometry.contentSize.height + geometry.contentInsets.bottom - geometry.visibleRect.maxY <= 20
+    }
+
+    private func scrollToLatest() {
+        messagePosition.scrollTo(edge: .bottom)
     }
 
     private var emptyState: some View {

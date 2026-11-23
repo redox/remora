@@ -28,12 +28,31 @@ import Testing
         #expect(!panel.contains("if ignoresMouseEvents"))
     }
 
-    @Test func emptyChatOpensAtTheWelcomeHeadingInsteadOfTheLastSuggestion() throws {
+    @Test func chatOpensAtTheWelcomeHeadingOrLatestMessage() throws {
         let view = try source("App/Remora/Chat/ChatView.swift")
-        #expect(view.contains("if !model.turns.isEmpty || model.sendingText != nil"))
-        #expect(!view.contains(".onAppear { proxy.scrollTo(Self.bottom, anchor: .bottom) }"))
-        #expect(view.contains("proxy.scrollTo(Self.top, anchor: .top)"))
-        #expect(view.contains(".onChange(of: model.turns.last?.id) { scrollToLatest(proxy) }"))
+        #expect(view.contains(".defaultScrollAnchor(hasMessages ? .bottom : .top, for: .initialOffset)"))
+        #expect(view.contains(".defaultScrollAnchor(.top, for: .alignment)"))
+    }
+
+    @Test func sendingJumpsToLatestBeforeAnyResponseArrives() throws {
+        let view = try source("App/Remora/Chat/ChatView.swift")
+        let send = try #require(view.range(of: ".onChange(of: model.isStreaming, initial: true)"))
+        let handler = view[send.upperBound...].prefix(while: { $0 != "}" })
+        #expect(handler.contains("if isStreaming { scrollToLatest()"))
+        #expect(!view.contains(".onChange(of: model.streamingText)"))
+    }
+
+    @Test func chatFollowsLayoutChangesOnlyNearTheLatestMessage() throws {
+        let view = try source("App/Remora/Chat/ChatView.swift")
+        #expect(view.contains(".defaultScrollAnchor(hasMessages && atLatest ? .bottom : nil, for: .sizeChanges)"))
+        #expect(view.contains(".onScrollGeometryChange(for: ScrollGeometry.self"))
+        #expect(view.contains("if !atLatest && messagePosition.edge == .bottom"))
+        #expect(view.contains("if hasMessages && !atLatest && messagePosition.edge != .bottom"))
+    }
+
+    @Test func chatHonorsNotificationTargetsOnFirstLayout() throws {
+        let view = try source("App/Remora/Chat/ChatView.swift")
+        #expect(view.contains(".onChange(of: model.scrollTarget, initial: true)"))
     }
 
     @Test func reopeningAStreamingChatDoesNotReloadItsProvisionalRows() throws {
