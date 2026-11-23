@@ -4,7 +4,7 @@ import GRDB
 public enum LLMCallStatus: String, Codable, Sendable { case completed, failed, limit, cancelled }
 
 /// One model call (accounting only; holds no prompt or output content).
-public struct LLMCall: Codable, Sendable, FetchableRecord, MutablePersistableRecord {
+public struct LLMCall: Codable, Sendable, Equatable, FetchableRecord, MutablePersistableRecord {
     public var id: Int64?
     public var startedAt: Date
     public var durationMs: Int
@@ -79,6 +79,15 @@ public struct UsageTotals: Sendable, Equatable, Codable {
     }
 }
 
+/// Handle for a live `observeCalls` subscription, so callers never import GRDB. Deallocating it
+/// also stops the observation.
+public final class LLMCallObservation: Sendable {
+    // GRDB's AnyDatabaseCancellable is a Sendable final class; cancel() is safe from any thread.
+    private let cancellable: AnyDatabaseCancellable
+    fileprivate init(_ cancellable: AnyDatabaseCancellable) { self.cancellable = cancellable }
+    public func cancel() { cancellable.cancel() }
+}
+
 public struct LLMCallStore: Sendable {
     private let db: AppDatabase
     public init(_ db: AppDatabase) { self.db = db }
@@ -119,6 +128,49 @@ public struct LLMCallStore: Sendable {
         try db.reader.read { d in
             try LLMCall.fetchAll(d, sql: "SELECT * FROM llm_calls ORDER BY started_at DESC, id DESC LIMIT ?",
                                  arguments: [limit])
+        }
+    }
+
+    /// Rows with `since <= started_at < until` (no upper bound when nil), newest first.
+    public func calls(since: Date, until: Date? = nil, limit: Int) throws -> [LLMCall] {
+        try db.reader.read { d in try Self.fetchCalls(d, since: since, until: until, limit: limit) }
+    }
+
+    private static func fetchCalls(_ d: Database, since: Date, until: Date?, limit: Int) throws -> [LLMCall] {
+        try LLMCall.fetchAll(d, sql: """
+            SELECT * FROM llm_calls WHERE started_at >= ? AND (? IS NULL OR started_at < ?)
+            ORDER BY started_at DESC, id DESC LIMIT ?
+            """, arguments: [since, until, until, limit])
+    }
+
+    /// Delivers the newest `limit` calls since `since` now and after every change, skipping
+    /// identical snapshots. Callbacks run on a background queue, never the main queue.
+    public func observeCalls(since: Date, limit: Int,
+                             onChange: @escaping @Sendable ([LLMCall]) -> Void,
+                             onError: @escaping @Sendable (Error) -> Void) -> LLMCallObservation {
+        let observation = ValueObservation
+            .tracking { d in try Self.fetchCalls(d, since: since, until: nil, limit: limit) }
+            .removeDuplicates()
+        let c = observation.start(in: db.reader, scheduling: .async(onQueue: DispatchQueue(label: "dev.remora.llm-call-observation")),
+                                  onError: onError, onChange: onChange)
+        return LLMCallObservation(c)
+    }
+
+    /// Calls with no cost that did use tokens, oldest first so a backfill is deterministic.
+    public func unpricedWithTokens(limit: Int) throws -> [LLMCall] {
+        try db.reader.read { d in
+            try LLMCall.fetchAll(d, sql: """
+                SELECT * FROM llm_calls WHERE est_cost_usd IS NULL AND input_tokens + output_tokens > 0
+                ORDER BY id LIMIT ?
+                """, arguments: [limit])
+        }
+    }
+
+    /// Never overwrites a cost that is already there.
+    public func setCostIfUnpriced(id: Int64, usd: Double) throws {
+        try db.writer.write { d in
+            try d.execute(sql: "UPDATE llm_calls SET est_cost_usd = ? WHERE id = ? AND est_cost_usd IS NULL",
+                          arguments: [usd, id])
         }
     }
 
