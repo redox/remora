@@ -10,9 +10,14 @@ public struct RewriteNotice: Sendable, Equatable {
     public enum Action: Sendable, Equatable { case openSettings, manageUsage, openMicrophoneSettings, openDictationSettings }
 
     public var text: String
+    public var detail: String?
     public var action: Action?
 
-    public init(text: String, action: Action? = nil) { self.text = text; self.action = action }
+    public init(text: String, detail: String? = nil, action: Action? = nil) {
+        self.text = text
+        self.detail = detail
+        self.action = action
+    }
 
     public var actionTitle: String? {
         switch action {
@@ -39,13 +44,18 @@ public struct RewriteNotice: Sendable, Equatable {
         text: "This field has attachments or formatting Remora can't rewrite whole — select the text to rewrite")
 
     public static func onDeviceUnavailable(_ reason: String) -> RewriteNotice {
-        RewriteNotice(text: "On-device model unavailable — \(reason)")
+        RewriteNotice(text: "On-device model unavailable", detail: reason)
     }
 
-    /// An on-device-only rewrite (excluded, private or unverifiable context) could not run locally:
+    /// An on-device-only operation (excluded, private or unverifiable context) could not run locally:
     /// nothing was sent anywhere.
-    public static func notCapturedOnDeviceUnavailable(_ reason: String) -> RewriteNotice {
-        RewriteNotice(text: "Remora doesn't capture here, so it only rewrites with the on-device model — unavailable: \(reason)")
+    public static func notCapturedOnDeviceUnavailable(_ reason: String, mode: RewriteMode = .full) -> RewriteNotice {
+        switch mode {
+        case .draft, .draftAtCaret:
+            RewriteNotice(text: couldNotInsert.text, detail: "\(reason) Here, this shortcut drafts only on this Mac.")
+        case .selection, .full, .question:
+            RewriteNotice(text: "Couldn't rewrite here", detail: "\(reason) Rewrites here run only on this Mac.")
+        }
     }
 }
 
@@ -291,10 +301,12 @@ public enum RewriteFlow {
 
     /// nil for a cancellation (the user did it). `onDeviceOnly`: the request was not allowed to use
     /// the cloud (an excluded context).
-    public static func notice(for error: any Error, onDeviceOnly: Bool = false) -> RewriteNotice? {
+    public static func notice(for error: any Error, onDeviceOnly: Bool = false, mode: RewriteMode = .full) -> RewriteNotice? {
         if error is CancellationError { return nil }
         if let e = error as? LLMError {
-            if onDeviceOnly, case .onDeviceUnavailable(let reason) = e { return .notCapturedOnDeviceUnavailable(reason) }
+            if onDeviceOnly, case .onDeviceUnavailable(let reason) = e {
+                return .notCapturedOnDeviceUnavailable(reason, mode: mode)
+            }
             switch e {
             case .cancelled: return nil
             case .usageLimit: return .usageLimit

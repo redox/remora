@@ -25,6 +25,7 @@ enum ScreenPlacement {
 final class CaretIndicatorPanel {
     static let hintSize = CGSize(width: 18, height: 18)
     static let workingSize = CGSize(width: 86, height: 28)
+    private static let noticeWidth: CGFloat = 320
     private static let noticeDuration: Duration = .seconds(4)
 
     private final class Panel: NSPanel {
@@ -74,14 +75,15 @@ final class CaretIndicatorPanel {
     func showNotice(_ notice: RewriteNotice, at anchor: CGRect?, onAction: @escaping @MainActor (RewriteNotice.Action) -> Void) {
         hideTask?.cancel()
         content = .notice
-        host.rootView = IndicatorView(kind: .notice(notice, onAction: { [weak self] action in
+        let caret = anchor.map(ScreenPlacement.cocoa(fromAX:)) ?? Self.mouseRect()
+        let visible = ScreenPlacement.visibleFrame(for: caret)
+        let width = min(Self.noticeWidth, visible.width)
+        host.rootView = IndicatorView(kind: .notice(notice, width: width, onAction: { [weak self] action in
             self?.hide()
             onAction(action)
         }, onDismiss: { [weak self] in self?.hide() }))
         panel.ignoresMouseEvents = false
         let size = host.fittingSize
-        let caret = anchor.map(ScreenPlacement.cocoa(fromAX:)) ?? Self.mouseRect()
-        let visible = ScreenPlacement.visibleFrame(for: caret)
         let origin = Self.noticeOrigin(size: size, caret: caret, visible: visible)
         panel.setFrame(CGRect(origin: origin, size: size), display: true)
         panel.orderFrontRegardless()
@@ -145,7 +147,8 @@ struct IndicatorView: View {
         case hidden
         case working(onCancel: @MainActor () -> Void)
         case hint
-        case notice(RewriteNotice, onAction: @MainActor (RewriteNotice.Action) -> Void, onDismiss: @MainActor () -> Void)
+        case notice(RewriteNotice, width: CGFloat, onAction: @MainActor (RewriteNotice.Action) -> Void,
+                    onDismiss: @MainActor () -> Void)
     }
 
     let kind: Kind
@@ -165,25 +168,13 @@ struct IndicatorView: View {
                 }
                 .frame(width: CaretIndicatorPanel.hintSize.width, height: CaretIndicatorPanel.hintSize.height)
                 .accessibilityLabel("Release to open Edit mode")
-        case .notice(let notice, let onAction, let onDismiss):
-            HStack(spacing: 8) {
-                RemoraGlyph().frame(width: 16, height: 16)
-                    .foregroundStyle(RemoraBrand.accent(scheme))
-                    .accessibilityHidden(true)
-                Text(notice.text).font(.callout).lineLimit(2).fixedSize(horizontal: false, vertical: true)
-                if let action = notice.action, let title = notice.actionTitle {
-                    Button(title) { onAction(action) }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .frame(maxWidth: 380)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-            .fixedSize()
-            .contentShape(Rectangle())
-            .onTapGesture { onDismiss() }
+        case .notice(let notice, let width, let onAction, let onDismiss):
+            WritingNoticeView(notice: notice, onAction: onAction)
+                // Give the text its final width before the hosting view measures the wrapped height.
+                .frame(width: width)
+                .modifier(OverlaySurface(cornerRadius: 9))
+                .contentShape(Rectangle())
+                .onTapGesture { onDismiss() }
         }
     }
 

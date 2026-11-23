@@ -276,7 +276,8 @@ final class RewriteController {
             output = try await engine.rewrite(request)
             try Task.checkCancellation()
         } catch {
-            return finish(mine, RewriteFlow.notice(for: error, onDeviceOnly: !request.cloudAllowed), at: field)
+            let notice = RewriteFlow.notice(for: error, onDeviceOnly: !request.cloudAllowed, mode: request.mode)
+            return finish(mine, notice, at: field)
         }
         guard isCurrent(mine) else { return }
         // From here the write runs to its end; Esc and the indicator no longer cancel.

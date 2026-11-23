@@ -148,8 +148,6 @@ func passwordVaultSitesAreRefused(url: String) {
     (RewriteError.selectionOutOfBounds, "Field changed, nothing inserted"),
     (RewriteError.emptyResult, "Something went wrong"),
     (LLMError.schemaMismatch, "Something went wrong"),
-    (LLMError.onDeviceUnavailable(reason: "Apple Intelligence is turned off."),
-     "On-device model unavailable — Apple Intelligence is turned off."),
     (URLError(.badURL), "Something went wrong"),
 ])
 func errorNotices(error: any Error, text: String) {
@@ -444,12 +442,32 @@ private let richNotice = "This field has attachments or formatting Remora can't 
     #expect(RewriteFlow.editBarFooter(backend: nil, fieldOnly: true) == "On-device or ChatGPT · Field only")
 }
 
-@Test func onDeviceOnlyFailureSaysWhyNothingWasSent() {
-    let e = LLMError.onDeviceUnavailable(reason: "Apple Intelligence is turned off.")
-    #expect(RewriteFlow.notice(for: e, onDeviceOnly: true)?.text
-        == "Remora doesn't capture here, so it only rewrites with the on-device model — unavailable: Apple Intelligence is turned off.")
-    #expect(RewriteFlow.notice(for: e)?.text == "On-device model unavailable — Apple Intelligence is turned off.")
+@Test(arguments: [
+    "Apple Intelligence is turned off.",
+    "The on-device model is not ready yet.",
+    "The input is too large for the on-device model.",
+])
+func onDeviceOnlyFailureLeadsWithTheOutcomeAndPreservesTheReason(reason: String) throws {
+    let error = LLMError.onDeviceUnavailable(reason: reason)
+    let notice = try #require(RewriteFlow.notice(for: error, onDeviceOnly: true))
+    #expect(notice.text == "Couldn't rewrite here")
+    #expect(notice.detail == "\(reason) Rewrites here run only on this Mac.")
     #expect(RewriteFlow.notice(for: LLMError.cancelled, onDeviceOnly: true) == nil)
+}
+
+@Test(arguments: [RewriteMode.draft, .draftAtCaret(6)])
+func onDeviceOnlyDraftFailureNamesInsertion(mode: RewriteMode) throws {
+    let error = LLMError.onDeviceUnavailable(reason: "The on-device model is not ready yet.")
+    let notice = try #require(RewriteFlow.notice(for: error, onDeviceOnly: true, mode: mode))
+    #expect(notice.text == "Couldn't insert here")
+    #expect(notice.detail == "The on-device model is not ready yet. Here, this shortcut drafts only on this Mac.")
+}
+
+@Test func onDeviceModelFailureShowsTheReason() throws {
+    let error = LLMError.onDeviceUnavailable(reason: "Apple Intelligence is turned off.")
+    let notice = try #require(RewriteFlow.notice(for: error))
+    #expect(notice.text == "On-device model unavailable")
+    #expect(notice.detail == "Apple Intelligence is turned off.")
 }
 
 @Test func roundRequestKeepsTheCloudRule() {

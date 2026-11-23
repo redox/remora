@@ -494,16 +494,10 @@ struct EditBarView: View {
                 }
             }
             if let notice = model.notice {
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: "exclamationmark.circle").foregroundStyle(.orange).accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(notice.text).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
-                        if let action = notice.action, let title = notice.actionTitle {
-                            Button(title) { actions?.noticeAction(action) }.buttonStyle(.link)
-                        }
-                    }
-                    Spacer(minLength: 0)
-                    undoButton.foregroundStyle(.secondary)
+                WritingNoticeView(notice: notice) { actions?.noticeAction($0) }
+                    .textSelection(.enabled)
+                if model.canUndo {
+                    undoButton.frame(maxWidth: .infinity, alignment: .trailing)
                 }
             } else {
                 HStack(alignment: .top, spacing: 6) {
