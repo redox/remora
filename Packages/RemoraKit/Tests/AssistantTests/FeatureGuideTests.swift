@@ -20,6 +20,15 @@ import Testing
         for s in ["app:", "title:", "url:", "path:"] { #expect(all.contains(s), "\(s)") }
     }
 
+    /// Settings › Usage is a dashboard over a live call log; the guide must describe that screen.
+    @Test func usageSectionDescribesTheDashboardAndCallLog() throws {
+        let usage = try #require(FeatureGuide.sections.first { $0.id == "usage" }).body
+        for p in ["Today, 7 days or 30 days", "by category", "by job or by model", "live log", "API-equivalent"] {
+            #expect(usage.contains(p), "\(p)")
+        }
+        #expect(!usage.contains("per day, job and model"))
+    }
+
     @Test func privacyListsDefaultExclusionsAndTheSkipList() throws {
         let privacy = try #require(FeatureGuide.sections.first { $0.id == "privacy" }).body
         for p in ["app:Claude", "app:ChatGPT", "app:Cursor", "claude.ai", "chatgpt.com", "chat.openai.com",

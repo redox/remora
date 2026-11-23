@@ -293,7 +293,9 @@ public enum FeatureGuide {
             """),
         GuideSection(id: "usage", title: "Usage and cost", body: """
             Remora uses your ChatGPT plan through Sign in with ChatGPT (Settings › Account). Settings › \
-            Usage shows calls and tokens per day, job and model, with an estimated cost: API-equivalent \
+            Usage covers Today, 7 days or 30 days: estimated cost, calls, tokens and problems, a chart of \
+            estimated cost by category, a breakdown by job or by model, and a live log of model calls \
+            where selecting a call shows its tokens, model, duration and cost. Costs are API-equivalent \
             list prices, not a bill. Your real allowance is at chatgpt.com/settings/usage. Background \
             memory pauses when the plan's usage limit is reached and tries again later. Each answer's \
             details show the model, tokens and estimated cost.
@@ -303,7 +305,7 @@ public enum FeatureGuide {
 
             - **General:** open at login, Show onboarding again (includes a box to try the rewrite key).
             - **Account:** sign in or out of ChatGPT, models.
-            - **Usage:** tokens, calls and estimated cost.
+            - **Usage:** estimated cost, calls and tokens, with a live log of model calls.
             - **Privacy:** Accessibility and Microphone permissions, exclusions, pause, Delete all data.
             - **Appearance:** chat bar position, open on hover, auto-hide, dim, text size, the per-window capture badge.
             - **Identity:** edit your profile.
