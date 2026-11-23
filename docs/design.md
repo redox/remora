@@ -358,10 +358,10 @@ ID signature, notarized DMG, and a Sparkle feed on GitHub Releases. The feed and
 are configuration, and the updater lives outside database initialization so updates work if the
 database fails to open. A ready installed copy can update on quit or after idle, with busy checks
 covering writing, dictation, deletion, memory jobs, onboarding, and streaming chat. The trade-off
-is that an active session can delay an update. The separate release runbook owns the signing
-and publishing procedure. A maintainer starts the signing workflow on `main` and publishes the
-verified files to GitHub Releases after checking the installer. Keeping publishing separate lets
-the maintainer test a build before it becomes available to Sparkle. [Releasing](releasing.md)
+is that an active session can delay an update. A successful CI run on `main` starts signing when
+the configured version is unpublished. GitHub publishes the verified installer and Sparkle feed
+from that exact commit, then refreshes the website. A release uses a build number greater than all
+previously published builds so installed copies can recognize it as an update. [Releasing](releasing.md)
 
 ## Verification
 

@@ -24,6 +24,8 @@ jobs:
         run: scripts/check-public.sh --selftest
       - name: Check for personal data and secrets
         run: scripts/check-public.sh
+      - name: Test GitHub release checks
+        run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_github_release.py
       - name: Unit tests
         # Run Swift Testing serially so elapsed-time assertions have runner capacity.
         run: make test SWIFT_TEST_FLAGS=--no-parallel
