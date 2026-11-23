@@ -44,7 +44,7 @@ struct DictationSettingsView: View {
                 Toggle("Enable voice dictation", isOn: enabledBinding)
             }
             Section("Shortcut") {
-                Text("Hold the rewrite key to dictate and release to review. Tap it again to switch between Insert and Edit. Press Return to use the selected action.")
+                Text("Hold the rewrite key to dictate and release to review. Press Return in Insert to draft from your prompt, or choose Insert transcript to use your words.")
                     .font(.footnote).foregroundStyle(.secondary)
                 Text("For hands-free dictation, tap the key to open the popover and choose Record.")
                     .font(.footnote).foregroundStyle(.secondary)
@@ -86,7 +86,7 @@ struct DictationSettingsView: View {
                         }
                     }
                 }
-                Text("Saving a key allows OpenAI to transcribe eligible recordings when you choose Insert. The live preview and fallback use this Mac. Your key stays in the macOS Keychain.")
+                Text("Saving a key allows OpenAI to transcribe eligible recordings when you choose Insert transcript. The live preview and fallback use this Mac. Your key stays in the macOS Keychain.")
                     .font(.footnote).foregroundStyle(.secondary)
                 if let transcriptionKeyError { Text(transcriptionKeyError).foregroundStyle(.red) }
             }

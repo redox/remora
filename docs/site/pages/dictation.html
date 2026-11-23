@@ -10,16 +10,16 @@
 <ol>
   <li>Focus a text field and hold <kbd>right ⌥</kbd> while you speak. A closed popover opens in <strong>Insert</strong>. If the popover is already open, it keeps the selected mode.</li>
   <li>Release to finish recording. Review the transcript and correct any words in the popover.</li>
-  <li>With <strong>Insert</strong> selected, press <kbd>Return</kbd> to insert at the caret or replace the selection. To use your words as an instruction, select <strong>Edit</strong> and press <kbd>Return</kbd>. Tap <kbd>right ⌥</kbd> to switch modes or press <kbd>Esc</kbd> to discard the draft.</li>
+  <li>In <strong>Insert</strong>, press <kbd>Return</kbd> to draft from what you said, or choose <strong>Insert transcript</strong> to put your words into the field. Switch to <strong>Edit</strong> to apply a spoken instruction to existing text. Press <kbd>Esc</kbd> to discard the draft.</li>
 </ol>
 <p>For hands-free dictation, tap <kbd>right ⌥</kbd> to open the popover. Choose <strong>Record</strong> to start and <strong>Stop</strong> to review the transcript. Tap the key or choose a mode in the popover before submitting.</p>
 
 <h2 id="choose-a-language">Choose a language</h2>
-<p>Remora selects a single language per session. Pin a language in the menu bar or switch languages during recording with the language button in the popover. With <strong>Automatic</strong> selected, Remora uses the last language you dictated in that app, then the default from Settings. Choose English (US) or French (France).</p>
+<p>Remora uses one language at a time. Pin a language in the menu bar or use the language button in the popover. With <strong>Automatic</strong> selected, Remora uses the last language you dictated in that app, then the default from Settings. Choose English (US) or French (France).</p>
 
 <h2 id="openai-transcription">Use OpenAI for the final transcript</h2>
 <p>To enable it, open <strong>Settings › Dictation › OpenAI transcription</strong>, enter an OpenAI project API key with write access to <code>/v1/audio/transcriptions</code>, and choose <strong>Save and enable</strong>. The key is stored in the macOS Keychain. Use a project in your linked API organization to draw on its credits.</p>
-<p>Your Mac generates the live preview. For eligible recordings, Remora sends the audio and a language hint to <code>gpt-transcribe</code> when you choose Insert with the unchanged transcript. Remora uses the Mac transcript if the upload fails or if the window changes or is private, excluded, or unverifiable. Capture pause and spoken Edit-mode instructions also keep transcription on the Mac. <a href="@ROOT@docs/privacy/#dictation-audio">Dictation audio and privacy</a></p>
+<p>Your Mac generates the live preview. For eligible recordings, Remora sends the audio and a language hint to <code>gpt-transcribe</code> when you choose <strong>Insert transcript</strong> with the unchanged transcript. Remora uses the Mac transcript if the upload fails, the window changes, capture is paused, or the window is private, excluded, or unverifiable. Drafting and editing use the reviewed text. <a href="@ROOT@docs/privacy/#dictation-audio">Dictation audio and privacy</a></p>
 <p>Choose <strong>Remove key</strong> to disable cloud transcription. You can also delete the <code>dev.remora.dictation-transcription</code> item for account <code>openai</code> in Keychain Access.</p>
 
 <h2 id="transcript-cleanup">Transcript cleanup</h2>

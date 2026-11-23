@@ -8,12 +8,12 @@ public enum AssetState: Sendable, Equatable { case unknown, notInstalled, instal
 
 public enum NoticeAction: Sendable, Equatable { case openMicrophoneSettings, openDictationSettings }
 
-/// Short notes shown by the dictation HUD. Carry no transcript content.
+/// Short dictation notices. Carry no transcript content.
 public enum DictationNotice: Sendable, Equatable {
     case microphoneDenied, microphoneRequested, unsupported
     case assetDownloading(DictationLocale, Double?)
     case assetMissing(DictationLocale), localeUnsupported(DictationLocale)
-    case nothingHeard, cleanupSkipped, secureField, copiedInstead, limitReached, microphoneLost, failed
+    case microphoneNotReady, nothingHeard, cleanupSkipped, secureField, copiedInstead, limitReached, microphoneLost, failed
     case openAITranscriptionUnavailable
 
     public var text: String {
@@ -25,7 +25,8 @@ public enum DictationNotice: Sendable, Equatable {
             "Downloading the \(l.name) speech model…" + (p.map { " \(Int(($0 * 100).rounded(.down)))%" } ?? "")
         case .assetMissing(let l): "The \(l.name) speech model isn't installed yet. Downloading…"
         case .localeUnsupported(let l): "\(l.name) dictation isn't supported on this Mac."
-        case .nothingHeard: "Didn't catch that."
+        case .microphoneNotReady: "No audio received. Wait for Listening, then speak."
+        case .nothingHeard: "No speech recognized. Check the language and try again."
         case .cleanupSkipped: "Inserted without cleanup."
         case .openAITranscriptionUnavailable: "OpenAI transcription unavailable. Used this Mac."
         case .secureField: "Can't dictate into a password field."

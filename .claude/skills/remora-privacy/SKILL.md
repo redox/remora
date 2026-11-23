@@ -19,10 +19,10 @@ the code that enforces them.
   No analytics, crash reporting, remote config, fonts, CDNs or "phone home".
   [Meeting sources design](../../../docs/design.md#mcp-and-meeting-sources)
 - Speech-to-text defaults to Apple's local recognizer. Saving a project key in Dictation settings
-  enables `POST /v1/audio/transcriptions` at `api.openai.com` after Insert is selected with an
+  enables `POST /v1/audio/transcriptions` at `api.openai.com` after **Insert transcript** is chosen with an
   eligible, unchanged transcript. Send audio and a language hint only. Require an observed,
-  verifiable context and freshly loaded exclusions before upload. Capture pause and spoken
-  Edit-mode instructions stay local.
+  verifiable context and freshly loaded exclusions before upload. Capture pause keeps audio local.
+  Draft and insert and Edit use the reviewed transcript as text.
   Embeddings and the on-device tier use Apple frameworks.
   [Writing and dictation design](../../../docs/design.md#writing-and-dictation)
 - A new host, or new data in an existing request, needs a design change and an update to
@@ -38,10 +38,10 @@ Every job that could send captured content decides its access first (`RewriteAcc
 | Normal, captured | yes | yes | yes | tier from the routing table |
 | Capture paused | yes | **no** | **no** | cloud allowed (`fieldOnlyCloud`) |
 | Excluded app or site, private window, unverifiable page | yes | **no** | **no** | **on-device only** for field text (`fieldOnlyOnDevice`) |
-| Typed Insert where field text must stay on-device | **no** | **no** | **no** | Configured tier with only the submitted prompt. Omit app and site identity too. |
+| Draft and insert where field text must stay on-device | **no** | **no** | **no** | Configured tier with only the submitted prompt. Omit app and site identity too. |
 | Password manager, secure field, vault page | refused outright (`RewriteGate`, `FieldRefusal`) | | | |
 
-Never fall back to the cloud with an on-device-only payload. Typed Insert builds the prompt-only
+Never fall back to the cloud with an on-device-only payload. Insert builds the prompt-only
 request separately before calling a model. The writing gate still has to approve the target.
 
 ## 3. Exclusions are read fresh, and failure denies everything

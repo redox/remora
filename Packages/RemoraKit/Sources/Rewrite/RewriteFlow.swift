@@ -7,7 +7,7 @@ import LLM
 /// A short note shown at the caret (or in the Edit bar) after a rewrite, with an optional action.
 /// Carries no field content.
 public struct RewriteNotice: Sendable, Equatable {
-    public enum Action: Sendable, Equatable { case openSettings, manageUsage }
+    public enum Action: Sendable, Equatable { case openSettings, manageUsage, openMicrophoneSettings, openDictationSettings }
 
     public var text: String
     public var action: Action?
@@ -18,6 +18,8 @@ public struct RewriteNotice: Sendable, Equatable {
         switch action {
         case .openSettings: "Open Settings"
         case .manageUsage: "Manage usage"
+        case .openMicrophoneSettings: "Open System Settings"
+        case .openDictationSettings: "Dictation settings"
         case nil: nil
         }
     }

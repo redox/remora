@@ -12,8 +12,8 @@ import Storage
 /// The rewrite key and Edit mode: reads the focused field, decides what the rewrite may use
 /// (`RewriteFlow`), shows the caret indicator or the Edit bar, runs `RewriteEngine` and writes the
 /// result back with `TextInserter`. The field is never touched until a full result is ready, and
-/// only if it still holds what was read. The popover previews speech until the user chooses Insert
-/// or Edit. Never logs field text, prompts, instructions or results.
+/// only if it still holds what was read. The popover previews speech until the user submits it.
+/// Never logs field text, prompts, instructions or results.
 @MainActor @Observable
 final class RewriteController {
     enum Phase: Equatable { case idle, working, editing, message(String) }
@@ -442,7 +442,7 @@ final class RewriteController {
                  actions: EditBarPanel.Actions(
                     submit: { [weak self] in self?.submitDraft($0, submission: $1) },
                     record: { [weak self] in self?.toggleRecording() },
-                    switchLanguage: { [weak self] in self?.dictation?.switchSessionLocale() },
+                    switchLanguage: { [weak self] in self?.switchRecordingLanguage() },
                     undo: { [weak self] in self?.undoRound() ?? false },
                     remember: { [weak self] in self?.previewNote() },
                     saveNote: { [weak self] in self?.saveNote() },
@@ -452,6 +452,7 @@ final class RewriteController {
                  focus: focus)
         bar.model.canRemember = noteSource != nil
         bar.model.selectionOnly = session == nil && !dictationEnabled
+        if dictationEnabled { bar.model.recordingLocale = dictation?.preferredLocale }
         if let fallback { bar.model.fallbackActionTitle = fallback == .nowhere ? "Copy text" : "Insert text" }
         bar.model.onDeviceOnly = access?.cloudAllowed == false
         bar.model.backend = account.routing.tier(for: .editMode) == .onDevice ? nil : .siwc
@@ -549,7 +550,7 @@ final class RewriteController {
             dictation?.cancelSession()
             submitRound(text, spoken: bar.model.draftIsSpoken)
         case .compose:
-            dictation?.cancelSession()
+            // Keep the reviewed transcript available for direct insertion if drafting fails.
             bar.model.isWorking = true
             bar.model.notice = nil
             edit?.round = Task { [weak self] in await self?.composeDraft(text, context: ctx) }
@@ -609,7 +610,7 @@ final class RewriteController {
         let prepared: DictationController.InsertionText
         if let dictation {
             guard let result = await dictation.prepareInsertion(text, field: context.field) else {
-                return endRound(mine, notice: nil)
+                return endRound(mine, notice: bar.model.notice)
             }
             prepared = result
         } else {
@@ -633,7 +634,7 @@ final class RewriteController {
             case .fieldChanged, .notFocused:
                 return endRound(mine, notice: RewriteFlow.notice(for: outcome))
             case .failed:
-                return copyDraft(prepared.text)
+                return copyDraft(prepared.text, at: field)
             }
         } else if context.fallback == .frontmostPaste, let pid = context.originalPID {
             bar.hideForPaste()
@@ -663,14 +664,21 @@ final class RewriteController {
         } else {
             return copyDraft(prepared.text)
         }
-        closeEditBar()
-        if let notice = prepared.notice { dictation?.show(notice) }
+        finishDictationInsertion(prepared.notice, at: context.field)
     }
 
-    private func copyDraft(_ text: String) {
+    private func copyDraft(_ text: String, at field: FocusedField? = nil) {
         _ = SystemPasteboardAccess().write(text: text)
+        finishDictationInsertion(.copiedInstead, at: field)
+    }
+
+    private func finishDictationInsertion(_ notice: DictationNotice?, at field: FocusedField?) {
         closeEditBar()
-        dictation?.show(.copiedInstead)
+        if let notice {
+            indicator.showNotice(notice.writingNotice, at: field.flatMap { $0.caretRect ?? $0.frame }) { [weak self] in
+                self?.perform($0)
+            }
+        }
     }
 
     /// `spoken`: the instruction is a transcript, so it is never stored (`recordInserted(spoken:)`).
@@ -947,16 +955,32 @@ final class RewriteController {
 
     private func startRecording(handsFree: Bool) {
         guard bar.model.noteDraft == nil, bar.model.savedNoteID == nil, !bar.model.selectionOnly,
-              let edit, edit.round == nil, dictation?.beginRecording(field: edit.field) == true else { return }
+              let edit, edit.round == nil,
+              dictation?.beginRecording(field: edit.field, locale: bar.model.recordingLocale) == true else { return }
         draftBeforeRecording = bar.model.instruction
         bar.model.notice = nil
         bar.model.instruction = ""
         bar.model.handsFree = handsFree
+        bar.model.microphoneReady = false
         bar.setListening(true)
     }
 
-    func setRecordingLocale(_ locale: DictationLocale) {
+    private func switchRecordingLanguage() {
+        if bar.model.listening {
+            dictation?.switchSessionLocale()
+        } else {
+            bar.model.recordingLocale = bar.model.recordingLocale?.other
+        }
+    }
+
+    func recordingIsReady(_ locale: DictationLocale) {
         bar.model.recordingLocale = locale
+        bar.model.microphoneReady = true
+    }
+
+    func showDictationNotice(_ notice: DictationNotice) {
+        guard bar.isOpen else { return }
+        bar.model.notice = notice.writingNotice
     }
 
     func showTranscript(_ partial: String) {
@@ -990,7 +1014,7 @@ final class RewriteController {
         bar.setListening(false)
         bar.model.finalizing = false
         bar.model.handsFree = false
-        bar.model.recordingLocale = nil
+        bar.model.microphoneReady = false
         if !voiceHold { bar.focus() }
     }
 
@@ -1145,6 +1169,12 @@ final class RewriteController {
             openAccountSettings()
         case .manageUsage:
             NSWorkspace.shared.open(SIWC.usageSettingsURL)
+        case .openMicrophoneSettings:
+            closeEditBar()
+            dictation?.perform(.openMicrophoneSettings)
+        case .openDictationSettings:
+            closeEditBar()
+            dictation?.perform(.openDictationSettings)
         }
     }
 

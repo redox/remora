@@ -57,12 +57,12 @@ Everything is stored on your Mac, in `~/Library/Application Support/Remora/remor
 - **Model requests to `api.openai.com`, and sign-in at `auth.openai.com`**, under your own ChatGPT
   account. A request holds the input and excerpts that task needs, such as a writing prompt, the
   text around the caret, and relevant memory. OpenAI's terms for your plan apply to it. In excluded,
-  private or unverifiable contexts, any text Remora reads stays on-device. If you submit a typed
-  Insert prompt in a supported field there, a cloud request contains only your prompt as user data.
+  private or unverifiable contexts, any text Remora reads stays on-device. If you submit an Insert
+  prompt in a supported field there, a cloud request contains only your typed or reviewed spoken prompt.
   Field text, app and site information, and memory stay on your Mac. While capture is paused in an
   otherwise allowed context, writing requests use only the field text and any prompt you enter.
-  If you enable meeting access
-  in Settings › Meeting sources, interactive chat can send relevant meeting excerpts to OpenAI.
+  If you enable meeting access in Settings › Meeting sources, interactive chat can send relevant
+  meeting excerpts to OpenAI.
   Imported meetings stay local by default. The separate **Use saved notes in chat** option
   allows relevant excerpts from saved notes in interactive chat. It is off by default.
 - **Update checks and downloads from GitHub (`github.com` and its release-asset hosts)**, which
@@ -80,13 +80,16 @@ Dictation is off by default. When on, Apple's speech recognition provides the li
 default final transcript. macOS downloads speech models from Apple as needed. The microphone audio
 is kept in memory for the session and is never written to disk by Remora.
 
+**Draft and insert** and **Edit** can send the reviewed transcript as text using the writing
+privacy rules above. Those actions keep the audio on your Mac.
+
 If you save a project API key in **Settings › Dictation › OpenAI transcription**, Remora can send
 the completed recording and selected language to `api.openai.com/v1/audio/transcriptions` with
-`gpt-transcribe` after you choose Insert with the unchanged transcript. The request uses that API
+`gpt-transcribe` after you choose **Insert transcript** with the unchanged transcript. The request uses that API
 project and contains only the audio and language hint.
 Cloud transcription requires a verifiable, allowed window throughout the dictation. Dictation
-audio stays local while capture is paused, if privacy checks fail, and for spoken Edit-mode
-instructions. Dismissing the draft discards its audio.
+audio stays local while capture is paused or if privacy checks fail. Dismissing the draft discards
+its audio.
 If the request fails, Remora uses Apple's transcript. Remove the key in Settings to disable uploads.
 
 ## MCP clients

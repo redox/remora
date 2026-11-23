@@ -3,9 +3,19 @@ import Testing
 
 /// Guards on App sources that have no test target of their own: they read the Swift files.
 @Suite struct AppSourceGuardTests {
-    @Test func typedInsertSubmitsThePromptForDrafting() throws {
+    @Test func dictationFailuresUseTheWritingPopoverNotice() throws {
+        let controller = try source("App/Remora/Dictation/DictationController.swift")
+        #expect(controller.contains("rewrite.showDictationNotice(notice)"))
+        #expect(!controller.contains("DictationHUDPanel"))
+        let rewrite = try source("App/Remora/Rewrite/RewriteController.swift")
+        #expect(rewrite.contains("bar.model.notice = notice.writingNotice"))
+    }
+
+    @Test func insertSubmitsTheReviewedPromptForDrafting() throws {
         let panel = try source("App/Remora/Rewrite/EditBarPanel.swift")
         #expect(panel.contains("actions?.submit(model.instruction, model.submission)"))
+        #expect(panel.contains("mode.submission(hasFallback: fallbackActionTitle != nil)"))
+        #expect(panel.contains("Button(\"Insert transcript\") { actions?.submit(model.instruction, .insertText) }"))
         let controller = try source("App/Remora/Rewrite/RewriteController.swift")
         let compose = try #require(controller.range(of: "case .compose:"))
         let literal = try #require(controller.range(of: "case .insertText:", range: compose.upperBound..<controller.endIndex))

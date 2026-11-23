@@ -14,7 +14,7 @@ struct DictationSessionTests {
         return (session, audio, transcriber, EventLog(session.events))
     }
 
-    /// The English "Hello." was shown, then a locale switch emitted an empty transcript to clear the HUD.
+    /// The English "Hello." was shown, then a locale switch cleared the preview.
     private func clearedAfterHello(_ events: [DictationSession.Event]) -> Bool {
         guard let hello = events.firstIndex(of: .transcript(.init(finalized: "Hello.", volatile: ""))),
               let cleared = events.lastIndex(of: .transcript(.init())) else { return false }
@@ -24,11 +24,23 @@ struct DictationSessionTests {
     @Test func streamsTranscriptEvents() async throws {
         let (session, audio, _, log) = make([.init(afterChunks: [1: [.final("Bonjour.")], 2: [.volatile("ça")]])])
         try await session.start()
-        #expect(await eventually { log.contains(.listening(.fr)) })
         await audio.sendChunk(0)
+        #expect(await eventually { log.contains(.listening(.fr)) })
         await audio.sendChunk(1)
         #expect(await eventually { log.contains(.transcript(.init(finalized: "Bonjour.", volatile: "ça"))) })
         #expect(log.contains(.transcript(.init(finalized: "Bonjour.", volatile: ""))))
+        await session.cancel()
+    }
+
+    @Test func listeningWaitsForTheFirstAudioBuffer() async throws {
+        let (session, audio, _, log) = make([.init()])
+        try await session.start()
+        await audio.send(.level(0.5))
+        try #require(await eventually { log.contains(.level(0.5)) })
+        #expect(!log.contains(.listening(.fr)))
+
+        await audio.sendChunk(0)
+        #expect(await eventually { log.contains(.listening(.fr)) })
         await session.cancel()
     }
 
@@ -74,6 +86,17 @@ struct DictationSessionTests {
         #expect(String(decoding: wav.dropFirst(8).prefix(4), as: UTF8.self) == "WAVE")
         #expect(wav.count == 684)
         #expect(await session.bufferedChunkCount == 0)
+    }
+
+    @Test(arguments: [false, true])
+    func emptyTranscriptReportsWhetherAudioArrived(_ sentAudio: Bool) async throws {
+        let (session, audio, _, _) = make([.init()])
+        try await session.start()
+        if sentAudio { await audio.sendChunk(0) }
+
+        let result = await session.finish(retainAudio: false)
+        #expect(result.text.isEmpty)
+        #expect(result.receivedAudio == sentAudio)
     }
 
     @Test func transcriptionWAVResamplesTheAnalyzersAudio() throws {
@@ -248,8 +271,7 @@ struct DictationSessionTests {
         #expect(await eventually { transcriber.sessions.first?.chunkTags.count == 3 })
         #expect(await eventually { log.contains(.transcript(.init(finalized: "Hello.", volatile: ""))) })
         try await session.switchLocale(.fr)
-        #expect(await eventually { log.contains(.listening(.fr)) })
-        #expect(clearedAfterHello(log.all))
+        #expect(await eventually { clearedAfterHello(log.all) })
         #expect(await audio.startCalls == 2)
         #expect(await audio.stopCalls == 1)
         #expect(await audio.formats.last == format48k)
@@ -259,6 +281,7 @@ struct DictationSessionTests {
         #expect(await session.bufferedChunkCount == 0)
         await audio.sendChunk(10)
         #expect(await eventually { transcriber.sessions[1].chunkTags == [10] })
+        #expect(await eventually { log.contains(.listening(.fr)) })
         #expect(await session.finish() == "Salut.")
         #expect(await audio.stopCalls == 2)
     }

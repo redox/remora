@@ -118,7 +118,7 @@ preference falls back within its family when possible and surfaces the change in
 | Verifiable and eligible | Field, permitted window context, and relevant memory | Configured tier |
 | Capture paused, context otherwise eligible | Field only, with no writing history recorded | Cloud allowed |
 | Excluded, private, or unverifiable | Field only, with no writing history recorded | On-device only for field operations |
-| Typed Insert where field text must stay on-device | Only the submitted prompt, with no writing history recorded | Configured tier |
+| Draft and insert where field text must stay on-device | Only the submitted prompt, with no writing history recorded | Configured tier |
 | Secure field, password manager, or vault page | Writing is refused | None |
 
 A forced on-device request fails with a notice if the model is unavailable or cannot handle the
@@ -208,12 +208,13 @@ so ordinary Option typing, including on AZERTY, stays intact. The optional Shift
 fallback is off by default because apps assign it other meanings. No gesture requires Input
 Monitoring.
 
-**Draft from typed prompts in Insert.** Submit a typed prompt to generate text for the original
-caret or selection. Existing text outside the target stays in place. Insert uses the Edit mode
+**Draft from typed or spoken prompts in Insert.** Submit a typed prompt or reviewed transcript
+to generate text for the original caret or selection. Existing text outside the target stays in
+place. Insert uses the Edit mode
 model settings and checks that the target is safe to write to. In places where field text must stay
-on-device, typed Insert sends just the submitted prompt with generic drafting instructions. It
+on-device, Draft and insert sends just the submitted prompt with generic drafting instructions. It
 uses the field locally to verify the insertion target. A failed draft leaves the prompt in the
-popover for retry. Insert keeps the transcript workflow when dictation produced the draft.
+popover for retry. Insert transcript puts the user's words into the field using dictation settings.
 
 **Finish the result before touching the target.** The original focused field, its text, and the
 selected range or caret are checked before applying a result. In a populated field, an unreadable
@@ -229,17 +230,21 @@ writing for style learning. [Insertion guidance](../.claude/skills/remora-access
 Apple's SpeechAnalyzer and SpeechTranscriber show live words using one locale per session.
 English and French are selectable, with the last-used locale per app as a convenience. Running
 one locale keeps latency and resource use down at the cost of an explicit switch for bilingual
-speech. Release or Stop leaves the text in the command bar. Insert can clean up an unchanged
-draft, and edits to the preview are kept as typed. Edit uses the draft as an instruction.
+speech. The command bar shows the language before recording and shows Listening once microphone
+audio starts arriving. This gives Bluetooth inputs time to connect before the user starts speaking.
+Recording errors appear in the command bar so the user can retry in place. Release or Stop leaves
+the text in the command bar. Insert transcript can clean up an unchanged draft, and edits to the
+preview are kept as typed. Draft and insert and Edit use the reviewed text as an instruction.
 Cancelling discards the recording. Audio stays in memory and spoken edit instructions are
 excluded from stored instructions.
 
 **Make cloud transcription a separate opt-in.** A user-supplied project key enables
-`gpt-transcribe` for an eligible unchanged recording after the user chooses Insert. This
+`gpt-transcribe` for an eligible unchanged recording after the user chooses Insert transcript. This
 uses the project's transcription endpoint and billing because the ChatGPT sign-in route is
 for text inference. Only bounded audio and a language hint are sent. The foreground context must
-remain verifiable and allowed throughout. Pause, secure input, context switches, and Edit
-instructions prevent an upload. Apple's transcript is available if the request fails.
+remain verifiable and allowed throughout. Pause, secure input, and context switches prevent an
+upload. Drafting and editing use the reviewed text. Apple's transcript is available if the
+request fails.
 [Dictation privacy](../PRIVACY.md#dictation)
 
 **Save selected excerpts as deliberate notes.** **Remember this** opens an editable preview before
@@ -366,7 +371,7 @@ unsigned Debug build. [Verification guidance](../.claude/skills/remora-verify/SK
 | Area | Manual checks |
 | --- | --- |
 | Capture and insertion | Safari, Chrome, Arc if installed, Mail, Messages, Notes, Slack, VS Code/Cursor, Terminal, and web composers such as Gmail and LinkedIn. Submit a typed Insert prompt at a caret and over a selection. In an excluded app, verify that Insert shows Prompt only and can draft with Apple Intelligence unavailable. Exercise private windows, secure fields, pause, pasteboard restoration, undo, and the onboarding practice field. |
-| Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Insert and Edit, cancel, and a mode switch followed immediately by Return. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
+| Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Draft and insert, Insert transcript, Edit, cancel, and a mode switch followed immediately by Return. In an excluded app, speak a prompt and verify that Return drafts the result. Check that Listening appears when the microphone is ready and a silent recording shows an inline notice. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
 | Chat and indicators | Real notch and secondary displays, hide and show the menu bar, hover and pin, IME, trackpad scroll, min size with 150% text, caption and badge placement, light and dark appearance, and accessibility display options. Send from older history and check that the question is visible before the reply. Scroll up mid-reply, then choose **Latest** and check that the view follows the rest of the reply. Open chat from a notification and check the selected message. Return must never approve a card. |
 | Notifications and MCP | In the installed app, use Settings › Notifications › Send a test notification and check for the Remora app icon in the banner and Notification Center. Verify the permission prompt, wake catch-up, reminders with proactive messages off, sharing suppression, and delete-all cleanup. Test Connect and Update in real clients. For meeting sources, use test accounts and synthetic meetings to exercise authorization, resync, pause, forget, and disconnect. |
 | Distribution | Fresh macOS account, install and move, permissions, signed DMG and Gatekeeper, and an update from a real appcast. |

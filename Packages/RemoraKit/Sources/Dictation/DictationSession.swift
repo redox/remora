@@ -16,6 +16,7 @@ public struct SessionLimits: Sendable, Equatable {
 public struct CompletedDictation: Sendable {
     public let text: String
     public let wav: Data?
+    public let receivedAudio: Bool
 }
 
 /// One dictation session over `AudioCapturing` and `Transcriber`.
@@ -25,6 +26,7 @@ public struct CompletedDictation: Sendable {
 /// `audio.stop()` once per `audio.start`, plus once more when stop races an unfinished start.
 public actor DictationSession {
     public enum Event: Sendable, Equatable {
+        /// A converted microphone buffer has arrived for the current capture.
         case listening(DictationLocale)
         case transcript(TranscriptUpdate)
         case level(Float)
@@ -113,8 +115,6 @@ public actor DictationSession {
             guard !Task.isCancelled else { return }
             await self.reachLimit()
         }
-        emit(.listening(locale))
-        Self.log.info("dictation listening locale=\(self.locale.rawValue, privacy: .public)")
     }
 
     /// Stops audio, lets the transcriber finalize for at most `finalizeTimeout`, and returns the
@@ -127,7 +127,7 @@ public actor DictationSession {
     public func finish(retainAudio: Bool) async -> CompletedDictation {
         guard phase == .running else {
             if phase == .idle { end() }
-            return CompletedDictation(text: "", wav: nil)
+            return CompletedDictation(text: "", wav: nil, receivedAudio: false)
         }
         phase = .finishing
         limitTask?.cancel()
@@ -138,13 +138,14 @@ public actor DictationSession {
         input?.finish()
         input = nil
         let finalized = await Self.wait(for: transcription, until: deadline)
-        guard phase == .finishing else { return CompletedDictation(text: "", wav: nil) }
+        guard phase == .finishing else { return CompletedDictation(text: "", wav: nil, receivedAudio: false) }
         cancelTranscription()
         let text = accumulator.current.text
         let wav = retainAudio ? DictationWAV.encode(buffered, input: format) : nil
+        let chunks = buffered.count
         end()
-        Self.log.info("dictation finished chars=\(text.count, privacy: .public) finalized=\(finalized, privacy: .public)")
-        return CompletedDictation(text: text, wav: wav)
+        Self.log.info("dictation finished chunks=\(chunks, privacy: .public) chars=\(text.count, privacy: .public) finalized=\(finalized, privacy: .public)")
+        return CompletedDictation(text: text, wav: wav, receivedAudio: chunks > 0)
     }
 
     /// Stops audio, cancels the transcription, drops buffers and text.
@@ -181,6 +182,7 @@ public actor DictationSession {
         locale = l
         if let format, newFormat == format {
             beginTranscription(replay: buffered)
+            if !buffered.isEmpty { emit(.listening(l)) }
             Self.log.info("dictation switched locale=\(l.rawValue, privacy: .public) replayed=\(self.buffered.count, privacy: .public)")
         } else {
             await stopAudio()
@@ -202,8 +204,6 @@ public actor DictationSession {
             }
             Self.log.info("dictation switched locale=\(l.rawValue, privacy: .public) restarted capture")
         }
-        guard phase == .running else { return }
-        emit(.listening(l))
     }
 
     // MARK: Audio
@@ -247,7 +247,12 @@ public actor DictationSession {
         case .chunk(let c):
             // Chunks queued before a stop still go in; nothing goes in after the cap.
             guard !limitHit else { return }
+            let first = buffered.isEmpty
             buffered.append(c)
+            if first, isListening {
+                emit(.listening(locale))
+                Self.log.info("dictation listening locale=\(self.locale.rawValue, privacy: .public)")
+            }
             input?.yield(c)
         case .level(let l):
             guard audioRunning else { return }

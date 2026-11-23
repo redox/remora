@@ -69,7 +69,8 @@ global keys and MCP registrations).
    transcripts, tokens or client ids. Interpolations of anything else stay `.private`.
 3. **Fail closed.** Unreadable exclusions deny all capture and use of captured data
    (`SnapshotPolicy.current` returns `.denyAll`). In excluded, private or unverifiable contexts,
-   field text stays on-device. Typed Insert can use the cloud with only the submitted prompt.
+   field text stays on-device. Insert can use the cloud with only the submitted prompt, including
+   a reviewed transcript the user submits for drafting.
    Password managers, secure fields and vault pages are refused.
 4. **Captured and derived text is untrusted data,** never instructions. Escape it with
    `PromptEscaping` inside tagged sections, and never let it trigger an action without a user click

@@ -42,7 +42,8 @@ public actor EngineAudioCapture: AudioCapturing {
             guard case .cancelled = termination, let self else { return }
             Task { await self.stop(generation: generation) }
         }
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: inputFormat,
+        // Request shorter callbacks so a quick release leaves less audio queued inside the engine.
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat,
                              block: Self.makeTapBlock(converter: converter, continuation: continuation))
         observer = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil

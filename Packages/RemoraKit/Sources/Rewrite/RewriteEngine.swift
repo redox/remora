@@ -18,7 +18,7 @@ public struct RewriteRequest: Sendable {
     public var memoryAllowed: Bool
     /// False for excluded contexts: nothing is stored in `inline_outputs`.
     public var logAllowed: Bool
-    /// Whether field context may go to a cloud model. Typed Insert can instead send the prompt alone.
+    /// Whether field context may go to a cloud model. Insert can instead send the prompt alone.
     public var cloudAllowed: Bool
     public init(mode: RewriteMode, fieldValue: String, app: String, bundleID: String?, surface: String,
                 windowTitle: String?, liveWindowText: String?, memoryAllowed: Bool, logAllowed: Bool,
@@ -122,7 +122,7 @@ public actor RewriteEngine {
         return try await run(.editMode, prompt, original: text, range: fullRange, cloudAllowed: r.cloudAllowed, onDelta: nil)
     }
 
-    /// Drafts from a typed instruction for the original caret or selection. If the field must
+    /// Drafts from a reviewed instruction for the original caret or selection. If the field must
     /// stay local, use a prompt that has no field, app, window, or memory data.
     public func compose(instruction: String, selection: NSRange?, request r: RewriteRequest) async throws -> RewriteOutput {
         guard instruction.contains(where: { !$0.isWhitespace }) else { throw RewriteError.emptyQuestion }

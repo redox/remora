@@ -138,7 +138,7 @@ public enum FeatureGuide {
             Select text and tap the rewrite key to open the writing popover in Edit. Type an instruction \
             such as "shorter" or "translate to French", then press Return or choose Rewrite selection. \
             With no selection, the popover opens in Insert. Type what you want written and press Return \
-            to draft and insert it at the caret. Where field text must stay on-device, typed Insert \
+            to draft and insert it at the caret. Where field text must stay on-device, Insert \
             can use ChatGPT with only the prompt you submit. In Edit, the popover stays open for more rounds. \
             Tap the rewrite key to switch modes. Esc or a click outside closes the popover. \
             Configure gestures in Settings › Shortcuts.
@@ -151,14 +151,14 @@ public enum FeatureGuide {
         GuideSection(id: "dictation", title: "Dictation", body: """
             Off by default: turn it on in Settings › Dictation. Hold the rewrite key to speak. The \
             writing popover shows the live transcript using your Mac. Release to review the final \
-            text in Insert mode. Tap the key again to switch to Edit if the text is an instruction. \
-            Return runs the selected action, and Esc discards the draft. For hands-free dictation, \
-            tap to open the popover, then choose Record and Stop.
+            text in Insert mode. Press Return to draft from the spoken prompt, or choose Insert transcript \
+            to put the words into the field. Switch to Edit to apply a spoken instruction to existing text. \
+            Esc discards the draft. For hands-free dictation, choose Record and Stop.
 
             Pick English or French using the menu bar or the popover's language button while \
             recording; otherwise Remora uses the last language in that app or your default. If \
             you enable cleanup or save an OpenAI transcription key, eligible unmodified dictation \
-            can be processed after you choose Insert. Audio for edits stays on the Mac.
+            can be processed after you choose Insert transcript. Drafting and editing use the reviewed text.
             """),
         GuideSection(id: "chat-bar", title: "Chat bar", body: """
             A slim bar docked at a screen edge, under the notch by default. Hovering expands it (can be \

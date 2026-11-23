@@ -30,6 +30,7 @@ final class EditBarPanel {
         var finalizing = false
         var handsFree = false
         var recordingLocale: DictationLocale?
+        var microphoneReady = false
         var isWorking = false
         var canUndo = false
         var notice: RewriteNotice?
@@ -50,9 +51,10 @@ final class EditBarPanel {
         }
 
         var submission: EditVoiceRoute.Submission {
-            mode.submission(spoken: draftIsSpoken || listening || finalizing, hasFallback: fallbackActionTitle != nil)
+            mode.submission(hasFallback: fallbackActionTitle != nil)
         }
 
+        var offersTranscriptInsertion: Bool { draftIsSpoken && submission == .compose && !listening && !finalizing }
         var promptOnly: Bool { submission == .compose && onDeviceOnly }
 
         var actionTitle: String {
@@ -63,13 +65,13 @@ final class EditBarPanel {
         var inputLabel: String {
             switch submission {
             case .edit: "Edit instruction"
-            case .compose: "Drafting prompt"
+            case .compose: draftIsSpoken ? "Dictated prompt" : "Drafting prompt"
             case .insertText: "Text to insert"
             }
         }
 
         var placeholder: String {
-            if listening { return "Listening…" }
+            if listening { return microphoneReady ? "Listening…" : "Opening microphone…" }
             if finalizing { return "Finishing transcript…" }
             switch submission {
             case .edit: return "What should change?"
@@ -199,6 +201,7 @@ final class EditBarPanel {
         model.finalizing = false
         model.handsFree = false
         model.recordingLocale = nil
+        model.microphoneReady = false
         model.isWorking = false
         model.canUndo = false
         model.notice = nil
@@ -376,13 +379,14 @@ struct EditBarView: View {
             .disabled(model.isWorking || !model.allowsEdit)
             .help(model.triggerName.map { "Tap \($0) to switch modes" } ?? "Switch modes")
 
-            if model.listening, let locale = model.recordingLocale {
+            if let locale = model.recordingLocale {
                 Button {
                     actions?.switchLanguage()
                 } label: {
                     Text(locale.badge).padding(.horizontal, 8).frame(minHeight: 26)
                 }
                 .buttonStyle(QuietButtonStyle())
+                .disabled(model.isWorking || model.finalizing || (model.listening && !model.microphoneReady))
                 .help("Switch dictation language")
                 .accessibilityLabel("Dictation language: \(locale.name). Switch language.")
             }
@@ -441,7 +445,9 @@ struct EditBarView: View {
     private var composer: some View {
         HStack(spacing: 8) {
             if model.listening {
-                Image(systemName: "mic.fill").foregroundStyle(.red).accessibilityLabel("Listening")
+                Image(systemName: model.microphoneReady ? "mic.fill" : "mic")
+                    .foregroundStyle(model.microphoneReady ? Color.red : Color.secondary)
+                    .accessibilityLabel(model.placeholder)
             } else {
                 RemoraGlyph().frame(width: 18, height: 18).foregroundStyle(accent).accessibilityHidden(true)
             }
@@ -474,7 +480,18 @@ struct EditBarView: View {
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 5) {
-            if model.canRemember { rememberButton }
+            if model.canRemember || model.offersTranscriptInsertion {
+                HStack {
+                    if model.canRemember { rememberButton }
+                    Spacer(minLength: 0)
+                    if model.offersTranscriptInsertion {
+                        Button("Insert transcript") { actions?.submit(model.instruction, .insertText) }
+                            .buttonStyle(.link)
+                            .disabled(!model.canSubmit)
+                            .help("Insert your words using your dictation settings")
+                    }
+                }
+            }
             if let notice = model.notice {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "exclamationmark.circle").foregroundStyle(.orange).accessibilityHidden(true)
@@ -489,7 +506,9 @@ struct EditBarView: View {
                 }
             } else {
                 HStack(alignment: .top, spacing: 6) {
-                    if model.promptOnly {
+                    if model.listening || model.finalizing {
+                        Text("Transcribing on this Mac")
+                    } else if model.promptOnly {
                         Text("Prompt only")
                             .help("Only the text you enter here can go to ChatGPT.")
                     } else if model.submission != .insertText {
@@ -501,8 +520,9 @@ struct EditBarView: View {
                     }
                     Spacer(minLength: 0)
                     undoButton
-                    if model.promptOnly || (model.submission != .insertText
-                        && model.backend != .onDevice && !model.onDeviceOnly) {
+                    if !model.listening, !model.finalizing,
+                       model.promptOnly || (model.submission != .insertText
+                           && model.backend != .onDevice && !model.onDeviceOnly) {
                         Button("Manage usage") { actions?.noticeAction(.manageUsage) }.buttonStyle(.link)
                     }
                 }

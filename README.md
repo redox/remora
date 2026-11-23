@@ -66,9 +66,10 @@ never asks for Screen Recording, Input Monitoring or Full Disk Access.
 
 ## Dictation
 
-Hold **right ⌥** to dictate. The live transcript appears in the writing popover. Release to review
-it before pressing Return. If the popover is already open, the draft uses the current mode. Tap the
-key to switch modes, or choose **Record** and **Stop** for hands-free dictation.
+Hold **right ⌥** to dictate and release to review the transcript. In **Insert**, press Return to
+draft from your spoken prompt, or choose **Insert transcript** to put your words into the field.
+Tap the key to switch to **Edit** for changes to existing text. Choose **Record** and **Stop** for
+hands-free dictation.
 
 Dictation uses the Mac's speech model for the live preview and final text by default. To use
 OpenAI's `gpt-transcribe` for the final transcript, paste a project key into **Settings › Dictation ›
@@ -76,10 +77,10 @@ OpenAI transcription** and choose **Save and enable**. The key needs write acces
 `POST /v1/audio/transcriptions`. Use a key from your linked API organization to draw on its credits.
 Remora stores the key in Keychain. **Remove key** switches back to Mac transcription.
 
-Remora sends eligible recordings after you choose Insert with the unchanged transcript. If the
-request fails, it uses the Mac transcript. Private, paused, excluded or unverified contexts and spoken Edit-mode instructions
-use Mac speech recognition. Audio is held in memory. Transcript cleanup still uses its existing
-model setting.
+Remora sends eligible recordings after you choose **Insert transcript** with the unchanged
+transcript. If the request fails, it uses the Mac transcript. Private, paused, excluded or
+unverified contexts use Mac speech recognition. Drafting and editing from speech use the reviewed
+text. Audio is held in memory. Transcript cleanup uses its own model setting.
 
 ## Privacy
 

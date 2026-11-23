@@ -4,8 +4,14 @@ import Input
 import Rewrite
 
 extension DictationNotice {
-    /// How long the HUD shows the notice: 4 s when it has an action button, else 2 s.
-    public var displayDuration: Duration { action == nil ? .seconds(2) : .seconds(4) }
+    public var writingNotice: RewriteNotice {
+        let writingAction: RewriteNotice.Action? = switch action {
+        case .openMicrophoneSettings: .openMicrophoneSettings
+        case .openDictationSettings: .openDictationSettings
+        case nil: nil
+        }
+        return RewriteNotice(text: text, action: writingAction)
+    }
 }
 
 extension CleanupRoute {
@@ -78,9 +84,9 @@ public enum EditVoiceRoute {
             replacesSelection ? .edit : .insert
         }
 
-        public func submission(spoken: Bool, hasFallback: Bool) -> Submission {
+        public func submission(hasFallback: Bool) -> Submission {
             if self == .edit { return .edit }
-            return spoken || hasFallback ? .insertText : .compose
+            return hasFallback ? .insertText : .compose
         }
 
         public func actionTitle(replacesSelection: Bool) -> String {

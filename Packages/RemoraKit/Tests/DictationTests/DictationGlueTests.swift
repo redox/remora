@@ -4,12 +4,12 @@ import Input
 import Testing
 @testable import Dictation
 
-// MARK: - How long a notice stays
+// MARK: - Writing popover notices
 
-@Test func noticeDisplayDuration() {
-    #expect(DictationNotice.nothingHeard.displayDuration == .seconds(2))
-    #expect(DictationNotice.microphoneDenied.displayDuration == .seconds(4))
-    #expect(DictationNotice.assetMissing(.fr).displayDuration == .seconds(4))
+@Test func dictationNoticesKeepTheirActionsInTheWritingPopover() {
+    #expect(DictationNotice.nothingHeard.writingNotice.text == DictationNotice.nothingHeard.text)
+    #expect(DictationNotice.microphoneDenied.writingNotice.action == .openMicrophoneSettings)
+    #expect(DictationNotice.assetMissing(.fr).writingNotice.action == .openDictationSettings)
 }
 
 // MARK: - Insertion target at insertion time
@@ -181,10 +181,9 @@ func dictationCleanupRoute(_ context: WindowContext?, contextPID: pid_t?, fieldP
     #expect(selection == .edit && selection.actionTitle(replacesSelection: true) == "Rewrite selection")
 }
 
-@Test func insertDraftsFromTypedPromptsAndKeepsTranscriptInsertion() {
+@Test func insertDraftsWhenTheFieldCanBeVerified() {
     let mode = EditVoiceRoute.Mode.insert
-    #expect(mode.submission(spoken: false, hasFallback: false) == .compose)
-    #expect(mode.submission(spoken: true, hasFallback: false) == .insertText)
-    #expect(mode.submission(spoken: false, hasFallback: true) == .insertText)
-    #expect(EditVoiceRoute.Mode.edit.submission(spoken: true, hasFallback: false) == .edit)
+    #expect(mode.submission(hasFallback: false) == .compose)
+    #expect(mode.submission(hasFallback: true) == .insertText)
+    #expect(EditVoiceRoute.Mode.edit.submission(hasFallback: false) == .edit)
 }

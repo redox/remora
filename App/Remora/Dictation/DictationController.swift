@@ -9,11 +9,11 @@ import os
 import Rewrite
 import Storage
 
-/// Records a local draft for the writing popover. An explicit Insert can use the configured
-/// transcription and cleanup services. Edits and discarded recordings never upload audio.
+/// Records a local draft for the writing popover. Insert transcript can use the configured
+/// transcription and cleanup services. Drafting and editing use the reviewed text.
 @MainActor @Observable
 final class DictationController {
-    enum Phase: Equatable { case idle, listening, finishing, transcribing, cleaning, message(DictationNotice) }
+    enum Phase: Equatable { case idle, starting, listening, finishing, transcribing, cleaning }
 
     private(set) var phase: Phase = .idle
     private(set) var sessionLocale: DictationLocale?
@@ -39,7 +39,6 @@ final class DictationController {
     @ObservationIgnored private let openDictationSettings: @MainActor () -> Void
     @ObservationIgnored private let transcriber = SpeechAnalyzerTranscriber()
     @ObservationIgnored private let openAITranscription = OpenAITranscription()
-    @ObservationIgnored private lazy var hud = DictationHUDPanel(controller: self, windows: windows)
     @ObservationIgnored private var observers: [(center: NotificationCenter, token: any NSObjectProtocol)] = []
 
     // MARK: State
@@ -47,7 +46,6 @@ final class DictationController {
     private var run: Run?
     @ObservationIgnored private var accessibilityGranted = false
     private var localeMemory: LocaleMemory
-    @ObservationIgnored private var messageTask: Task<Void, Never>?
     private static let log = Logger(subsystem: "dev.remora", category: "dictation")
 
     @MainActor
@@ -184,7 +182,6 @@ final class DictationController {
             cancelSession()
             for observer in observers { observer.center.removeObserver(observer.token) }
             observers.removeAll()
-            dismissMessage()
         }
     }
 
@@ -205,14 +202,16 @@ final class DictationController {
 
     // MARK: - Recording
 
-    func beginRecording(field: FocusedField?) -> Bool {
+    var preferredLocale: DictationLocale { chooseLocale(Self.frontmost().appKey) }
+
+    func beginRecording(field: FocusedField?, locale: DictationLocale?) -> Bool {
         guard isRunning, !isRecording, !IsSecureEventInputEnabled() else { return false }
         cancelSession()
-        dismissMessage()
         let front = Self.frontmost()
-        let recording = Run(locale: chooseLocale(front.appKey), appKey: front.appKey,
+        let recording = Run(locale: locale ?? chooseLocale(front.appKey), appKey: front.appKey,
                             frontmostPID: front.pid, field: field)
         run = recording
+        phase = .starting
         recording.work = Task { [weak self] in await self?.startChecked(recording) }
         return true
     }
@@ -259,14 +258,11 @@ final class DictationController {
 
     private func listen(_ r: Run) async {
         // Released during the start checks: leave the microphone off.
-        if r.finishRequested { return end(r, notice: nil) }
+        if r.finishRequested { return end(r, notice: .microphoneNotReady) }
         guard !IsSecureEventInputEnabled(), Self.frontmost().pid == r.frontmostPID else {
             return end(r, notice: nil)
         }
-        Sounds.dictationStart(enabled: soundsEnabled)
         sessionLocale = r.locale
-        phase = .listening
-        rewrite.setRecordingLocale(r.locale)
         let session = DictationSession(audio: EngineAudioCapture(), transcriber: transcriber, locale: r.locale)
         r.session = session
         r.events = Task { [weak self] in
@@ -300,8 +296,11 @@ final class DictationController {
         guard isCurrent(r) else { return }
         switch event {
         case .listening(let locale):
+            guard !r.finishing, !r.finishRequested else { return }
+            if phase == .starting { Sounds.dictationStart(enabled: soundsEnabled) }
+            phase = .listening
             sessionLocale = locale
-            rewrite.setRecordingLocale(locale)
+            rewrite.recordingIsReady(locale)
         case .transcript(let update): rewrite.showTranscript(update.text)
         case .level: break
         case .interrupted:
@@ -324,7 +323,6 @@ final class DictationController {
         }
         r.finishing = true
         let retainAudio = r.cloudContext != nil && r.notice == nil
-        Sounds.dictationStop(enabled: soundsEnabled)
         phase = .finishing
         rewrite.finalizeTranscript()
         r.work = Task { [weak self] in
@@ -335,8 +333,9 @@ final class DictationController {
 
     private func finishDraft(_ r: Run, result: CompletedDictation) {
         guard isCurrent(r) else { return }
+        if result.receivedAudio { Sounds.dictationStop(enabled: soundsEnabled) }
         guard let raw = EditVoiceRoute.settleFinal(result.text) else {
-            return end(r, notice: r.notice ?? .nothingHeard)
+            return end(r, notice: r.notice ?? (result.receivedAudio ? .nothingHeard : .microphoneNotReady))
         }
         let locale = sessionLocale ?? r.locale
         remember(locale, for: r.appKey)
@@ -356,7 +355,7 @@ final class DictationController {
         let notice: DictationNotice?
     }
 
-    /// The preview is always local. Only an unchanged transcript explicitly committed as Insert
+    /// The preview is always local. Only an unchanged transcript committed for direct insertion
     /// can use its audio or the configured cleanup. A correction in the preview wins.
     func prepareInsertion(_ text: String, field: FocusedField?) async -> InsertionText? {
         guard let r = run, let raw = r.raw else {
@@ -465,35 +464,12 @@ final class DictationController {
     private func end(_ r: Run, notice: DictationNotice?) {
         guard isCurrent(r) else { return }
         cancelSession()
-        if let notice { show(notice) }
+        if let notice { rewrite.showDictationNotice(notice) }
     }
 
     private func isCurrent(_ r: Run) -> Bool { run === r }
 
-    // MARK: - HUD
-
-    /// Shows `n` for 2 s (4 s with an action button), unless a new session starts first.
-    func show(_ n: DictationNotice) {
-        messageTask?.cancel()
-        phase = .message(n)
-        hud.show()
-        messageTask = Task { [weak self] in
-            try? await Task.sleep(for: n.displayDuration)
-            guard !Task.isCancelled, let self, self.phase == .message(n) else { return }
-            self.dismissMessage()
-        }
-    }
-
-    func dismissMessage() {
-        messageTask?.cancel()
-        messageTask = nil
-        guard case .message = phase else { return }
-        phase = .idle
-        hud.hide()
-    }
-
     func perform(_ action: NoticeAction) {
-        dismissMessage()
         switch action {
         case .openMicrophoneSettings: permissions.openMicrophoneSettings()
         case .openDictationSettings: openDictationSettings()
@@ -549,6 +525,7 @@ final class DictationController {
         case .assetDownloading(let l, _): "assetDownloading-\(l.rawValue)"
         case .assetMissing(let l): "assetMissing-\(l.rawValue)"
         case .localeUnsupported(let l): "localeUnsupported-\(l.rawValue)"
+        case .microphoneNotReady: "microphoneNotReady"
         case .nothingHeard: "nothingHeard"
         case .cleanupSkipped: "cleanupSkipped"
         case .openAITranscriptionUnavailable: "openAITranscriptionUnavailable"
