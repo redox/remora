@@ -268,7 +268,9 @@ and expanded card use matching frame and content geometry at each transition so 
 clear of the camera housing, including with a hidden menu bar. Mouse delivery is set explicitly
 because transparent borderless windows can otherwise pass scroll gesture starts through. Native
 selection colors, Reduce Transparency, Increase Contrast, and Reduce Motion guide the overlay
-surfaces. The visual identity uses the app's own fish mark and sea-glass accents.
+surfaces. Composer focus uses a neutral outline that follows the field's rounded shape, with
+stronger contrast when Increase Contrast is enabled. The visual identity uses the app's own
+fish mark and sea-glass accents.
 
 **Stream answers over bounded local history.** Chat tools read memory, inspect sources, and report
 activity. Long conversations are folded into a shorter summary, and local chat history is kept

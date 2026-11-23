@@ -73,11 +73,13 @@ import Testing
         #expect(appearance.contains("contrast == .increased"))
     }
 
-    @Test func composerFocusRemainsVisibleAtStandardContrast() throws {
+    @Test func composerFocusFollowsTheRoundedOutline() throws {
         let appearance = try source("App/Remora/Appearance/OverlayAppearance.swift")
-        #expect(appearance.contains(".overlay(alignment: .bottom)"))
-        #expect(appearance.contains("else if focused"))
-        #expect(appearance.contains("Capsule()"))
+        let start = try #require(appearance.range(of: "struct OverlayComposerBackground"))
+        let end = try #require(appearance.range(of: "struct QuietButtonStyle", range: start.upperBound..<appearance.endIndex))
+        let composer = appearance[start.lowerBound..<end.lowerBound]
+        #expect(composer.contains("shape.strokeBorder(Color.primary.opacity(borderOpacity))"))
+        #expect(!composer.contains(".overlay(alignment: .bottom)"))
     }
 
     @Test func quietButtonsCanShowSelectionWhileDisabled() throws {

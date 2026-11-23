@@ -28,17 +28,12 @@ struct OverlayComposerBackground: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        shape.fill(Color.primary.opacity(focused ? 0.035 : 0.06))
-            .overlay(alignment: .bottom) {
-                if contrast == .increased {
-                    shape.strokeBorder(Color.primary.opacity(focused ? 0.80 : 0.52))
-                } else if focused {
-                    Capsule()
-                        .fill(Color(nsColor: .secondaryLabelColor))
-                        .frame(height: 1.5)
-                        .padding(.horizontal, cornerRadius)
-                        .padding(.bottom, 1)
-                }
+        let borderOpacity = contrast == .increased
+            ? (focused ? 0.80 : 0.52)
+            : (focused ? 0.38 : 0.10)
+        shape.fill(Color.primary.opacity(focused ? 0.07 : 0.045))
+            .overlay {
+                shape.strokeBorder(Color.primary.opacity(borderOpacity))
             }
             .allowsHitTesting(false)
     }
