@@ -56,7 +56,9 @@ never asks for Screen Recording, Input Monitoring or Full Disk Access.
 ## Writing and chat
 
 - Tap **right ⌥** to open the writing popover in **Edit** for selected text or **Insert** at the
-  caret. Tap again to switch modes and press Return to run the selected action.
+  caret. Type a prompt in **Insert** and press Return to draft text at the caret. When the
+  footer says **Prompt only**, the model receives only the text you submit in the popover.
+  Tap again to switch modes.
 - Double-tap **right ⌥** with the popover closed to rewrite a selection. With nothing selected,
   Remora uses the text around the caret to continue the sentence or fill a gap.
 - Click the bar under the notch or at the top center on displays without a notch. You can also

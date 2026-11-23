@@ -55,7 +55,7 @@ public struct RewriteAccess: Sendable, Equatable {
     public var memoryAllowed: Bool
     /// The result may be stored in `inline_outputs`.
     public var logAllowed: Bool
-    /// The cloud model may be used; false means the on-device model or nothing (fail closed).
+    /// The field's text may go to a cloud model. Prompt-only Insert needs no field text.
     public var cloudAllowed: Bool
 
     public init(windowContextAllowed: Bool, memoryAllowed: Bool, logAllowed: Bool, cloudAllowed: Bool) {
@@ -185,7 +185,7 @@ public enum RewriteFlow {
     }
 
     /// U+FFFC OBJECT REPLACEMENT CHARACTER: how AX values show an attachment (image, file, mention chip).
-    static let objectReplacement: Character = "\u{FFFC}"
+    public static let objectReplacement: Character = "\u{FFFC}"
 
     // MARK: Privacy gate
 
@@ -306,6 +306,7 @@ public enum RewriteFlow {
             switch e {
             case .tooLong: return .tooLong
             case .emptyQuestion: return .emptyQuestion
+            case .unreadableField: return .unreadable
             case .selectionOutOfBounds: return .fieldChanged
             case .emptyResult: return .generic
             case .richContent: return .richField

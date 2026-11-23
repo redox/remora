@@ -3,6 +3,15 @@ import Testing
 
 /// Guards on App sources that have no test target of their own: they read the Swift files.
 @Suite struct AppSourceGuardTests {
+    @Test func typedInsertSubmitsThePromptForDrafting() throws {
+        let panel = try source("App/Remora/Rewrite/EditBarPanel.swift")
+        #expect(panel.contains("actions?.submit(model.instruction, model.submission)"))
+        let controller = try source("App/Remora/Rewrite/RewriteController.swift")
+        let compose = try #require(controller.range(of: "case .compose:"))
+        let literal = try #require(controller.range(of: "case .insertText:", range: compose.upperBound..<controller.endIndex))
+        #expect(controller[compose.upperBound..<literal.lowerBound].contains("composeDraft(text, context: ctx)"))
+    }
+
     @Test func rememberingASelectionUsesAnExplicitSaveButton() throws {
         let panel = try source("App/Remora/Rewrite/EditBarPanel.swift")
         let editor = try source("App/Remora/Memory/SavedNoteEditor.swift")

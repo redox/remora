@@ -55,10 +55,13 @@ Everything is stored on your Mac, in `~/Library/Application Support/Remora/remor
 ## What leaves your Mac
 
 - **Model requests to `api.openai.com`, and sign-in at `auth.openai.com`**, under your own ChatGPT
-  account. A request holds only the excerpts that task needs (for example the field being
-  rewritten and the relevant memory). OpenAI's terms for your plan apply to it. In excluded,
-  private or unverifiable contexts, work stays on-device or fails closed. While capture is paused,
-  a rewrite sends only the field's text, with no context or memory. If you enable meeting access
+  account. A request holds the input and excerpts that task needs, such as a writing prompt, the
+  text around the caret, and relevant memory. OpenAI's terms for your plan apply to it. In excluded,
+  private or unverifiable contexts, any text Remora reads stays on-device. If you submit a typed
+  Insert prompt in a supported field there, a cloud request contains only your prompt as user data.
+  Field text, app and site information, and memory stay on your Mac. While capture is paused in an
+  otherwise allowed context, writing requests use only the field text and any prompt you enter.
+  If you enable meeting access
   in Settings › Meeting sources, interactive chat can send relevant meeting excerpts to OpenAI.
   Imported meetings stay local by default. The separate **Use saved notes in chat** option
   allows relevant excerpts from saved notes in interactive chat. It is off by default.

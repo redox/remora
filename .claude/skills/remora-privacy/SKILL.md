@@ -37,10 +37,12 @@ Every job that could send captured content decides its access first (`RewriteAcc
 |---|---|---|---|---|
 | Normal, captured | yes | yes | yes | tier from the routing table |
 | Capture paused | yes | **no** | **no** | cloud allowed (`fieldOnlyCloud`) |
-| Excluded app or site, private window, unverifiable page | yes | **no** | **no** | **on-device only** (`fieldOnlyOnDevice`); if unavailable, fail with a notice and send nothing |
+| Excluded app or site, private window, unverifiable page | yes | **no** | **no** | **on-device only** for field text (`fieldOnlyOnDevice`) |
+| Typed Insert where field text must stay on-device | **no** | **no** | **no** | Configured tier with only the submitted prompt. Omit app and site identity too. |
 | Password manager, secure field, vault page | refused outright (`RewriteGate`, `FieldRefusal`) | | | |
 
-Never "fall back" from on-device to the cloud. A failure to decide is a refusal.
+Never fall back to the cloud with an on-device-only payload. Typed Insert builds the prompt-only
+request separately before calling a model. The writing gate still has to approve the target.
 
 ## 3. Exclusions are read fresh, and failure denies everything
 

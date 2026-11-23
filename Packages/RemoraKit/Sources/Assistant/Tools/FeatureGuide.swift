@@ -137,9 +137,11 @@ public enum FeatureGuide {
         GuideSection(id: "edit-mode", title: "Edit mode", body: """
             Select text and tap the rewrite key to open the writing popover in Edit. Type an instruction \
             such as "shorter" or "translate to French", then press Return or choose Rewrite selection. \
-            With no selection, the popover opens in Insert. \
-            The popover stays open for more rounds. Tap the rewrite key to switch between Insert \
-            and Edit. Esc or a click outside closes the popover. Configure gestures in Settings › Shortcuts.
+            With no selection, the popover opens in Insert. Type what you want written and press Return \
+            to draft and insert it at the caret. Where field text must stay on-device, typed Insert \
+            can use ChatGPT with only the prompt you submit. In Edit, the popover stays open for more rounds. \
+            Tap the rewrite key to switch modes. Esc or a click outside closes the popover. \
+            Configure gestures in Settings › Shortcuts.
             """),
         GuideSection(id: "ask-in-field", title: "Ask in a field", body: """
             In any text field, type `/q` followed by a question, then double-tap the rewrite key. Remora \

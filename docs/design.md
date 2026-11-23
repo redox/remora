@@ -117,7 +117,8 @@ preference falls back within its family when possible and surfaces the change in
 | --- | --- | --- |
 | Verifiable and eligible | Field, permitted window context, and relevant memory | Configured tier |
 | Capture paused, context otherwise eligible | Field only, with no writing history recorded | Cloud allowed |
-| Excluded, private, or unverifiable | Field only, with no writing history recorded | On-device only |
+| Excluded, private, or unverifiable | Field only, with no writing history recorded | On-device only for field operations |
+| Typed Insert where field text must stay on-device | Only the submitted prompt, with no writing history recorded | Configured tier |
 | Secure field, password manager, or vault page | Writing is refused | None |
 
 A forced on-device request fails with a notice if the model is unavailable or cannot handle the
@@ -206,6 +207,13 @@ and a tap inside the popover switches modes. A clean gesture rules out other key
 so ordinary Option typing, including on AZERTY, stays intact. The optional Shift-Command-G
 fallback is off by default because apps assign it other meanings. No gesture requires Input
 Monitoring.
+
+**Draft from typed prompts in Insert.** Submit a typed prompt to generate text for the original
+caret or selection. Existing text outside the target stays in place. Insert uses the Edit mode
+model settings and checks that the target is safe to write to. In places where field text must stay
+on-device, typed Insert sends just the submitted prompt with generic drafting instructions. It
+uses the field locally to verify the insertion target. A failed draft leaves the prompt in the
+popover for retry. Insert keeps the transcript workflow when dictation produced the draft.
 
 **Finish the result before touching the target.** The original focused field, its text, and the
 selected range or caret are checked before applying a result. In a populated field, an unreadable
@@ -351,7 +359,7 @@ unsigned Debug build. [Verification guidance](../.claude/skills/remora-verify/SK
 
 | Area | Manual checks |
 | --- | --- |
-| Capture and insertion | Safari, Chrome, Arc if installed, Mail, Messages, Notes, Slack, VS Code/Cursor, Terminal, and web composers such as Gmail and LinkedIn. Exercise private windows, secure fields, pause, selections, the caret, pasteboard restoration, undo, and the onboarding practice field. |
+| Capture and insertion | Safari, Chrome, Arc if installed, Mail, Messages, Notes, Slack, VS Code/Cursor, Terminal, and web composers such as Gmail and LinkedIn. Submit a typed Insert prompt at a caret and over a selection. In an excluded app, verify that Insert shows Prompt only and can draft with Apple Intelligence unavailable. Exercise private windows, secure fields, pause, pasteboard restoration, undo, and the onboarding practice field. |
 | Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Insert and Edit, cancel, and a mode switch followed immediately by Return. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
 | Chat and indicators | Real notch and secondary displays, hide and show the menu bar, hover and pin, IME, trackpad scroll, min size with 150% text, caption and badge placement, light and dark appearance, and accessibility display options. Return must never approve a card. |
 | Notifications and MCP | In the installed app, use Settings › Notifications › Send a test notification and check for the Remora app icon in the banner and Notification Center. Verify the permission prompt, wake catch-up, reminders with proactive messages off, sharing suppression, and delete-all cleanup. Test Connect and Update in real clients. For meeting sources, use test accounts and synthetic meetings to exercise authorization, resync, pause, forget, and disconnect. |

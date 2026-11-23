@@ -72,8 +72,6 @@ final class RewriteController {
     @ObservationIgnored private var holdOpenedBar = false
     /// The draft that a cancelled or empty recording should restore.
     @ObservationIgnored private var draftBeforeRecording: String?
-    /// Corrections to a transcript are still speech-derived and must never be stored as instructions.
-    @ObservationIgnored private var draftIsSpoken = false
 
     private static let chordID: UInt32 = 1
     private static let escapeID: UInt32 = 2
@@ -428,7 +426,6 @@ final class RewriteController {
         hotKeys.unregister(id: Self.escapeID)
         edit = EditContext(generation: mine, field: field, fallback: fallback, originalPID: pid,
                            noteSource: noteSource, session: session)
-        draftIsSpoken = false
         let focus = EditVoiceRoute.barTakesFocus(barOpen: true, voiceHold: voiceHold, holdOpenedBar: holdOpenedBar)
         let replacesSelection = (field?.selection?.length ?? 0) > 0
         let mode = initialMode ?? EditVoiceRoute.Mode.preferred(replacesSelection: replacesSelection)
@@ -443,7 +440,7 @@ final class RewriteController {
                  replacesSelection: replacesSelection, allowsEdit: session != nil,
                  recordEnabled: dictationEnabled, triggerName: shortcuts.rewriteKeyEnabled ? shortcuts.trigger.title : nil,
                  actions: EditBarPanel.Actions(
-                    submit: { [weak self] in self?.submitDraft($0, mode: $1) },
+                    submit: { [weak self] in self?.submitDraft($0, submission: $1) },
                     record: { [weak self] in self?.toggleRecording() },
                     switchLanguage: { [weak self] in self?.dictation?.switchSessionLocale() },
                     undo: { [weak self] in self?.undoRound() ?? false },
@@ -544,18 +541,57 @@ final class RewriteController {
         }
     }
 
-    private func submitDraft(_ draft: String, mode: EditVoiceRoute.Mode) {
+    private func submitDraft(_ draft: String, submission: EditVoiceRoute.Submission) {
         guard bar.model.canSubmit, let ctx = edit, ctx.round == nil, !IsSecureEventInputEnabled() else { return }
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        switch mode {
+        switch submission {
         case .edit:
             dictation?.cancelSession()
-            submitRound(text, spoken: draftIsSpoken)
-        case .insert:
+            submitRound(text, spoken: bar.model.draftIsSpoken)
+        case .compose:
+            dictation?.cancelSession()
+            bar.model.isWorking = true
+            bar.model.notice = nil
+            edit?.round = Task { [weak self] in await self?.composeDraft(text, context: ctx) }
+        case .insertText:
             bar.model.isWorking = true
             bar.model.notice = nil
             edit?.round = Task { [weak self] in await self?.insertDraft(text, context: ctx) }
         }
+    }
+
+    private func composeDraft(_ instruction: String, context: EditContext) async {
+        let mine = context.generation
+        guard let field = context.field, let expected = field.value else {
+            return endRound(mine, notice: .unreadable)
+        }
+        let handle = field.handle
+        let unchanged = await Task.detached(priority: .userInitiated) {
+            handle.value() == expected
+        }.value
+        guard edit?.generation == mine, !Task.isCancelled else { return }
+        guard unchanged else { return endRound(mine, notice: .fieldChanged) }
+        guard let request = await preparePopoverRequest(field: field, value: expected, context: context) else { return }
+
+        let output: RewriteOutput
+        do {
+            output = try await engine.compose(instruction: instruction, selection: field.selection, request: request)
+            try Task.checkCancellation()
+        } catch {
+            return endRound(mine, notice: RewriteFlow.notice(for: error))
+        }
+        let currentGate = await gate(field)
+        guard edit?.generation == mine, !Task.isCancelled else { return }
+        guard !IsSecureEventInputEnabled(), case .proceed = currentGate else {
+            return endRound(mine, notice: nil)
+        }
+
+        let outcome = await write(output.replacement, target: .caret, expected: expected,
+                                  expectedSelection: field.selection, field, generation: mine)
+        guard edit?.generation == mine else { return }
+        if let notice = RewriteFlow.notice(for: outcome) { return endRound(mine, notice: notice) }
+        if RewriteFlow.didInsert(outcome) { Sounds.play(.done, enabled: shortcuts.soundsEnabled) }
+        closeEditBar()
     }
 
     private func insertDraft(_ text: String, context: EditContext) async {
@@ -662,34 +698,7 @@ final class RewriteController {
         do { round = try RewriteFlow.editRound(session, currentValue: current, selection: selection) } catch {
             return endRound(mine, notice: RewriteFlow.notice(for: error))
         }
-        let access: RewriteAccess
-        switch await preflight(field, job: .editMode) {
-        case .refuse: return endRound(mine, notice: nil)
-        case .notice(let notice): return endRound(mine, notice: notice)
-        case .proceed(let allowed): access = allowed
-        }
-        guard edit?.generation == mine, !Task.isCancelled else { return }
-        guard !IsSecureEventInputEnabled() else { return endRound(mine, notice: nil) }
-        var base = await makeRequest(field: field, mode: .full, fieldValue: current, access: access,
-                                     includeLiveText: !ctx.wrote)
-        let stillFocused = await Task.detached(priority: .userInitiated) {
-            handle.pid == ProcessInfo.processInfo.processIdentifier || handle.isFocusedInApp()
-        }.value
-        let latest = await gate(field)
-        guard edit?.generation == mine, !Task.isCancelled else { return }
-        guard stillFocused, !IsSecureEventInputEnabled(), case .proceed(let allowed) = latest else {
-            return endRound(mine, notice: nil)
-        }
-        if !allowed.windowContextAllowed {
-            base.windowTitle = nil
-            base.liveWindowText = nil
-        }
-        base.cloudAllowed = base.cloudAllowed && allowed.cloudAllowed
-        base.memoryAllowed = base.memoryAllowed && allowed.memoryAllowed
-        base.logAllowed = base.logAllowed && allowed.logAllowed
-        let request = RewriteFlow.roundRequest(base, fieldValue: current, paused: isPaused(), wroteBefore: ctx.wrote)
-        bar.model.onDeviceOnly = !request.cloudAllowed
-        bar.model.fieldOnly = RewriteFlow.isFieldOnly(request)
+        guard let request = await preparePopoverRequest(field: field, value: current, context: ctx) else { return }
         let output: RewriteOutput
         do {
             output = try await engine.edit(instruction: instruction, text: round.text, fullRange: round.range, request: request)
@@ -723,9 +732,51 @@ final class RewriteController {
         guard edit?.generation == mine else { return }
         if RewriteFlow.notice(for: outcome) == nil {
             bar.model.instruction = ""
-            draftIsSpoken = false
+            bar.model.draftIsSpoken = false
         }
         endRound(mine, notice: RewriteFlow.notice(for: outcome))
+    }
+
+    private func preparePopoverRequest(field: FocusedField, value: String, context: EditContext) async -> RewriteRequest? {
+        let mine = context.generation
+        let access: RewriteAccess
+        switch await preflight(field, job: .editMode) {
+        case .refuse:
+            endRound(mine, notice: nil)
+            return nil
+        case .notice(let notice):
+            endRound(mine, notice: notice)
+            return nil
+        case .proceed(let allowed): access = allowed
+        }
+        guard edit?.generation == mine, !Task.isCancelled else { return nil }
+        guard !IsSecureEventInputEnabled() else {
+            endRound(mine, notice: nil)
+            return nil
+        }
+        var base = await makeRequest(field: field, mode: .full, fieldValue: value, access: access,
+                                     includeLiveText: !context.wrote)
+        let handle = field.handle
+        let stillFocused = await Task.detached(priority: .userInitiated) {
+            handle.pid == ProcessInfo.processInfo.processIdentifier || handle.isFocusedInApp()
+        }.value
+        let latest = await gate(field)
+        guard edit?.generation == mine, !Task.isCancelled else { return nil }
+        guard stillFocused, !IsSecureEventInputEnabled(), case .proceed(let allowed) = latest else {
+            endRound(mine, notice: nil)
+            return nil
+        }
+        if !allowed.windowContextAllowed {
+            base.windowTitle = nil
+            base.liveWindowText = nil
+        }
+        base.cloudAllowed = base.cloudAllowed && allowed.cloudAllowed
+        base.memoryAllowed = base.memoryAllowed && allowed.memoryAllowed
+        base.logAllowed = base.logAllowed && allowed.logAllowed
+        let request = RewriteFlow.roundRequest(base, fieldValue: value, paused: isPaused(), wroteBefore: context.wrote)
+        bar.model.onDeviceOnly = !request.cloudAllowed
+        bar.model.fieldOnly = RewriteFlow.isFieldOnly(request)
+        return request
     }
 
     /// ⌘Z in the bar: writes the value before the last round back. False when there is nothing to undo.
@@ -776,15 +827,17 @@ final class RewriteController {
         bar.model.replacesSelection = (selection?.length ?? 0) > 0
     }
 
-    /// Writes a whole new value from Edit mode. The bar holds key focus, so the write goes through
-    /// the paste path: the bar steps aside first and takes focus back after.
+    /// Writes the result into the original field. If pasting, the bar steps aside to let the
+    /// field take key focus again.
     private func write(_ value: String, target: InsertionTarget = .whole, expected: String?,
                        expectedSelection: NSRange? = nil, _ field: FocusedField, generation: Int) async -> InsertionOutcome {
         let inserter = inserter
+        let preferPaste = field.isWebBacked
+            || (target == .caret && expected?.contains(RewriteFlow.objectReplacement) == true)
         return await Task.detached(priority: .userInitiated) {
             await inserter.insert(value, target: target, expectedValue: expected,
                                   expectedSelection: expectedSelection, into: field.handle,
-                                  preferPaste: field.isWebBacked,
+                                  preferPaste: preferPaste,
                                   beforePaste: {
                                       await MainActor.run { [weak self] in
                                           if self?.edit?.generation == generation { self?.bar.hideForPaste() }
@@ -824,7 +877,6 @@ final class RewriteController {
             indicator.hide()
         }
         edit = nil
-        draftIsSpoken = false
         bar.close()
         endVoiceForBar()
         guard wasEditing else { return }
@@ -922,7 +974,7 @@ final class RewriteController {
     func showFinalTranscript(_ text: String) {
         guard bar.isOpen else { return }
         draftBeforeRecording = nil
-        draftIsSpoken = true
+        bar.model.draftIsSpoken = true
         bar.setInstruction(text)
         finishRecordingUI()
     }

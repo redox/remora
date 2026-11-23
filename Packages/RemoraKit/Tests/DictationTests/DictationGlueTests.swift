@@ -180,3 +180,11 @@ func dictationCleanupRoute(_ context: WindowContext?, contextPID: pid_t?, fieldP
     #expect(caret == .insert && caret.actionTitle(replacesSelection: false) == "Insert at caret")
     #expect(selection == .edit && selection.actionTitle(replacesSelection: true) == "Rewrite selection")
 }
+
+@Test func insertDraftsFromTypedPromptsAndKeepsTranscriptInsertion() {
+    let mode = EditVoiceRoute.Mode.insert
+    #expect(mode.submission(spoken: false, hasFallback: false) == .compose)
+    #expect(mode.submission(spoken: true, hasFallback: false) == .insertText)
+    #expect(mode.submission(spoken: false, hasFallback: true) == .insertText)
+    #expect(EditVoiceRoute.Mode.edit.submission(spoken: true, hasFallback: false) == .edit)
+}

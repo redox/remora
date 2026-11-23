@@ -14,6 +14,8 @@ final class EditBarPanel {
     @MainActor @Observable
     final class Model {
         var instruction = ""
+        /// Corrections to a transcript are still speech-derived and must never be stored as instructions.
+        var draftIsSpoken = false
         var mode: EditVoiceRoute.Mode = .edit
         var replacesSelection = false
         var allowsEdit = true
@@ -36,7 +38,7 @@ final class EditBarPanel {
         var backend: LLMBackend? = .siwc
         /// No window title or text goes with the rounds.
         var fieldOnly = false
-        /// An excluded context: rounds run on the on-device model only.
+        /// The field's contents can only be used on-device.
         var onDeviceOnly = false
         /// Bumped to move keyboard focus to the text field.
         var focusToken = 0
@@ -47,19 +49,38 @@ final class EditBarPanel {
             !isWorking && !listening && !finalizing && !instruction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
 
+        var submission: EditVoiceRoute.Submission {
+            mode.submission(spoken: draftIsSpoken || listening || finalizing, hasFallback: fallbackActionTitle != nil)
+        }
+
+        var promptOnly: Bool { submission == .compose && onDeviceOnly }
+
         var actionTitle: String {
-            fallbackActionTitle ?? mode.actionTitle(replacesSelection: replacesSelection)
+            if submission == .compose { return "Draft and insert" }
+            return fallbackActionTitle ?? mode.actionTitle(replacesSelection: replacesSelection)
+        }
+
+        var inputLabel: String {
+            switch submission {
+            case .edit: "Edit instruction"
+            case .compose: "Drafting prompt"
+            case .insertText: "Text to insert"
+            }
         }
 
         var placeholder: String {
             if listening { return "Listening…" }
             if finalizing { return "Finishing transcript…" }
-            return mode == .edit ? "What should change?" : "Text to insert"
+            switch submission {
+            case .edit: return "What should change?"
+            case .compose: return "What should I write?"
+            case .insertText: return "Text to insert"
+            }
         }
     }
 
     struct Actions {
-        var submit: @MainActor (String, EditVoiceRoute.Mode) -> Void
+        var submit: @MainActor (String, EditVoiceRoute.Submission) -> Void
         var record: @MainActor () -> Void
         var switchLanguage: @MainActor () -> Void
         /// Returns false when there is nothing to undo (⌘Z then goes to the text field).
@@ -163,6 +184,7 @@ final class EditBarPanel {
               recordEnabled: Bool, triggerName: String?, actions: Actions, focus: Bool = true) {
         self.actions = actions
         model.instruction = ""
+        model.draftIsSpoken = false
         model.mode = mode
         model.replacesSelection = replacesSelection
         model.allowsEdit = allowsEdit
@@ -229,7 +251,7 @@ final class EditBarPanel {
 
     private func submit() {
         guard model.noteDraft == nil, model.savedNoteID == nil, model.canSubmit else { return }
-        actions?.submit(model.instruction, model.mode)
+        actions?.submit(model.instruction, model.submission)
     }
 
     func close() {
@@ -428,12 +450,12 @@ struct EditBarView: View {
                 .textFieldStyle(.plain)
                 .font(.body)
                 .lineLimit(1...6)
-                .accessibilityLabel(model.mode == .edit ? "Edit instruction" : "Text to insert")
+                .accessibilityLabel(model.inputLabel)
                 .focused($focused)
                 .disabled(model.isWorking || model.listening || model.finalizing)
             if model.isWorking {
                 ProgressView().controlSize(.small)
-                    .accessibilityLabel(model.mode == .edit ? "Applying instruction" : "Preparing text")
+                    .accessibilityLabel(model.submission == .insertText ? "Preparing text" : "Writing")
             } else {
                 Button(action: onSubmit) {
                     Text(model.actionTitle)
@@ -467,7 +489,10 @@ struct EditBarView: View {
                 }
             } else {
                 HStack(alignment: .top, spacing: 6) {
-                    if model.mode == .edit {
+                    if model.promptOnly {
+                        Text("Prompt only")
+                            .help("Only the text you enter here can go to ChatGPT.")
+                    } else if model.submission != .insertText {
                         Text(RewriteFlow.editBarFooter(backend: model.backend, fieldOnly: model.fieldOnly,
                                                        onDeviceOnly: model.onDeviceOnly))
                             .fixedSize(horizontal: false, vertical: true)
@@ -476,7 +501,8 @@ struct EditBarView: View {
                     }
                     Spacer(minLength: 0)
                     undoButton
-                    if model.mode == .edit, model.backend != .onDevice, !model.onDeviceOnly {
+                    if model.promptOnly || (model.submission != .insertText
+                        && model.backend != .onDevice && !model.onDeviceOnly) {
                         Button("Manage usage") { actions?.noticeAction(.manageUsage) }.buttonStyle(.link)
                     }
                 }

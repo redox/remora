@@ -18,7 +18,7 @@ public struct RewriteRequest: Sendable {
     public var memoryAllowed: Bool
     /// False for excluded contexts: nothing is stored in `inline_outputs`.
     public var logAllowed: Bool
-    /// False for excluded, private or unverifiable contexts: the on-device model only, never the cloud.
+    /// Whether field context may go to a cloud model. Typed Insert can instead send the prompt alone.
     public var cloudAllowed: Bool
     public init(mode: RewriteMode, fieldValue: String, app: String, bundleID: String?, surface: String,
                 windowTitle: String?, liveWindowText: String?, memoryAllowed: Bool, logAllowed: Bool,
@@ -42,7 +42,7 @@ public struct RewriteOutput: Sendable, Equatable {
 }
 
 public enum RewriteError: Error, Sendable, Equatable {
-    case emptyResult, emptyQuestion, tooLong
+    case emptyResult, emptyQuestion, tooLong, unreadableField
     /// The selection lies wholly outside the field (it changed since it was read): nothing to rewrite.
     case selectionOutOfBounds
     /// The text to replace holds an attachment (U+FFFC) that a plain-text write would drop.
@@ -120,6 +120,31 @@ public actor RewriteEngine {
         let ctx = await assemble(r, fieldText: text)
         let prompt = RewritePrompt.edit(instruction: instruction, text: text, context: ctx, app: r.app, now: now())
         return try await run(.editMode, prompt, original: text, range: fullRange, cloudAllowed: r.cloudAllowed, onDelta: nil)
+    }
+
+    /// Drafts from a typed instruction for the original caret or selection. If the field must
+    /// stay local, use a prompt that has no field, app, window, or memory data.
+    public func compose(instruction: String, selection: NSRange?, request r: RewriteRequest) async throws -> RewriteOutput {
+        guard instruction.contains(where: { !$0.isWhitespace }) else { throw RewriteError.emptyQuestion }
+        let length = r.fieldValue.utf16.count
+        guard length <= Self.maxFieldChars else { throw RewriteError.tooLong }
+        guard selection != nil || length == 0 else { throw RewriteError.unreadableField }
+        let range = selection ?? NSRange(location: 0, length: 0)
+        guard range == SelectionRange.clamp(range, to: length) else { throw RewriteError.selectionOutOfBounds }
+        let original = (r.fieldValue as NSString).substring(with: range)
+        try RewriteFlow.checkEditable(original)
+
+        let prompt: PromptParts
+        if r.cloudAllowed {
+            let ctx = await assemble(r, fieldText: instruction)
+            prompt = RewritePrompt.compose(instruction: instruction, fieldValue: r.fieldValue, range: range,
+                                           context: ctx, app: r.app, windowTitle: r.windowTitle.map(redactor.redact),
+                                           now: now())
+        } else {
+            prompt = RewritePrompt.composePromptOnly(instruction)
+        }
+        return try await run(.editMode, prompt, original: original, range: range, cloudAllowed: true,
+                             keepsDraftSpacing: true, onDelta: nil)
     }
 
     /// Writes a redacted `inline_outputs` row and links the call to it; nil when logging is not allowed.

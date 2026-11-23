@@ -65,6 +65,10 @@ extension DictationSpacing {
 
 /// Routes the shared rewrite key while the popover owns a draft.
 public enum EditVoiceRoute {
+    public enum Submission: Sendable {
+        case edit, compose, insertText
+    }
+
     public enum Mode: Hashable, Sendable {
         case insert, edit
 
@@ -72,6 +76,11 @@ public enum EditVoiceRoute {
 
         public static func preferred(replacesSelection: Bool) -> Mode {
             replacesSelection ? .edit : .insert
+        }
+
+        public func submission(spoken: Bool, hasFallback: Bool) -> Submission {
+            if self == .edit { return .edit }
+            return spoken || hasFallback ? .insertText : .compose
         }
 
         public func actionTitle(replacesSelection: Bool) -> String {
