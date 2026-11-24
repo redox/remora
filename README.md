@@ -10,6 +10,14 @@ wiki of people and projects, and open items. You use that memory to rewrite or d
 field with one key, to dictate, to ask questions in a chat bar under the notch, and to give other AI
 apps read-only access over MCP. Remora uses your ChatGPT plan for rewrite, cleanup, memory, and chat.
 
+| Rewrite in place | Insert or edit with a prompt |
+|---|---|
+| ![A selected sentence in a Mail reply with Remora's Writing badge below it](docs/images/remora-rewrite.png) | ![The writing popover in Insert, drafting at the caret, and in Edit, rewriting a selection](docs/images/remora-popover.png) |
+| Double-tap **right ⌥** to rewrite the selection, or continue your sentence at the caret. | Tap **right ⌥** once for the writing popover: **Insert** drafts from your prompt, **Edit** changes the selection. Tap again to switch. |
+| **Speak where you type** | **Ask about your work** |
+| ![The writing popover listening, with a live transcript under the caret](docs/images/remora-dictation.png) | ![The chat bar under the notch listing three open items](docs/images/remora-chat.png) |
+| Hold **right ⌥** to dictate, review the live transcript, then insert it or use it as an edit. | Open the chat bar to recall a decision, find what you left open, or see where your time went. |
+
 Ask chat “What routines have you noticed?” for possible recurring work with dates and window
 titles. You can rename or dismiss a suggestion, ask for a draft, or set a recurring prompt.
 With Background memory and Proactive messages on, Remora checks in the background after seven
