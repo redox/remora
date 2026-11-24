@@ -13,3 +13,4 @@ Config/Local.xcconfig
 docs/private/
 /docs/superpowers/
 .public-denylist
+node_modules/

@@ -9,8 +9,10 @@
   <title>@TITLE@</title>
   <link rel="icon" type="image/png" sizes="16x16" href="@ROOT@assets/favicon-16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="@ROOT@assets/favicon.png">
+  <link rel="stylesheet" href="@ROOT@assets/search.css">
   <link rel="stylesheet" href="@ROOT@assets/site.css">
   <script src="@ROOT@assets/site.js" defer></script>
+  <script src="@ROOT@assets/search.js" type="module"></script>
 </head>
 <body class="@KIND@">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -24,9 +26,7 @@
         <a href="@ROOT@docs/privacy/">Privacy</a>
         @GITHUB@
       </nav>
-      <button class="search-trigger" type="button" aria-haspopup="dialog" hidden>
-        <span class="search-icon" aria-hidden="true"></span><span class="search-label">Search docs</span><kbd class="search-keys" aria-hidden="true">⌘ K</kbd>
-      </button>
+      <div class="search-slot"></div>
       <a class="button header-install" href="@DOWNLOAD@">Get Remora</a>
     </div>
   </header>
@@ -42,17 +42,5 @@
       <p>Open source under the MIT License.</p>
     </div>
   </footer>
-  <dialog class="search-dialog" aria-labelledby="search-title">
-    <form class="search-form" role="search">
-      <label id="search-title" for="search-input">Search documentation</label>
-      <div class="search-row">
-        <span class="search-icon" aria-hidden="true"></span>
-        <input id="search-input" type="search" placeholder="Try “dictation” or “exclusions”" autocomplete="off">
-        <button type="button" class="search-close">Close</button>
-      </div>
-    </form>
-    <p class="search-status" role="status"></p>
-    <ul class="search-results"></ul>
-  </dialog>
 </body>
 </html>

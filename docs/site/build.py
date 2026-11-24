@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the public site using Python's standard library."""
+"""Build the public site with Python's standard library and bundle its search with npm."""
 
 import argparse
 import json
@@ -7,6 +7,7 @@ import os
 import posixpath
 import re
 import shutil
+import subprocess
 from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
@@ -17,6 +18,7 @@ from urllib.request import Request, urlopen
 SOURCE = Path(__file__).resolve().parent
 REPO = SOURCE.parents[1]
 OUTPUT = REPO / "dist/site"
+SEARCH = SOURCE / "search"
 DEFAULT_REPOSITORY = "https://github.com/redox/remora"
 
 GROUPS = {
@@ -50,8 +52,9 @@ GROUPS = {
 class Article(HTMLParser):
     """Collect heading links and searchable text from one article."""
 
-    def __init__(self, title):
+    def __init__(self, title, group):
         super().__init__()
+        self.group = group
         self.headings = []
         self.sections = [{"heading": "", "id": "", "text": []}]
         self.in_heading = False
@@ -82,7 +85,7 @@ class Article(HTMLParser):
 
     def index(self, path):
         return [
-            {"title": self.title, "heading": section["heading"],
+            {"title": self.title, "heading": section["heading"], "group": self.group,
              "url": path + ("#" + section["id"] if section["id"] else ""),
              "text": " ".join("".join(section["text"]).split())}
             for section in self.sections
@@ -169,9 +172,50 @@ def latest_download_url(repository):
     return next((asset["browser_download_url"] for asset in release["assets"] if asset["name"].endswith(".dmg")), "")
 
 
+def bundle_search():
+    """Bundle the Docspot search module into assets/search.js and assets/search.css."""
+    npm = shutil.which("npm")
+    if not npm:
+        raise SystemExit("The site search needs Node.js and npm. Install Node.js, then build again.")
+    if not (SEARCH / "node_modules").is_dir():
+        subprocess.run([npm, "ci", "--no-audit", "--no-fund"], cwd=SEARCH, check=True)
+    # Chunk names carry a content hash, so clear the previous build's chunks before writing new ones.
+    for chunk in (OUTPUT / "assets").glob("search-*.js"):
+        chunk.unlink()
+    metafile = OUTPUT / "search-meta.json"
+    subprocess.run([npm, "run", "--silent", "build", "--", f"--outdir={OUTPUT / 'assets'}", f"--metafile={metafile}"],
+                   cwd=SEARCH, check=True)
+    write_search_licenses(json.loads(metafile.read_text(encoding="utf-8")))
+    metafile.unlink()
+
+
+def write_search_licenses(metafile):
+    """Publish the license of every npm package bundled into the search, as their MIT terms require."""
+    packages = set()
+    for source in metafile["inputs"]:
+        parts = Path(source).parts
+        if "node_modules" in parts:
+            start = parts.index("node_modules") + 1
+            packages.add("/".join(parts[start:start + (2 if parts[start].startswith("@") else 1)]))
+    notices = []
+    for name in sorted(packages):
+        folder = SEARCH / "node_modules" / name
+        manifest = json.loads((folder / "package.json").read_text(encoding="utf-8"))
+        if "license" not in manifest:
+            raise SystemExit(f"{name} declares no license, so the site search can't publish it")
+        files = sorted(folder.glob("LICEN[CS]E*")) + sorted(folder.glob("license*"))
+        # A few packages ship only the license name; point to their source for the full text.
+        text = files[0].read_text(encoding="utf-8").strip() if files else \
+            f"The package ships no license file. See {manifest.get('homepage') or 'its repository'}."
+        notices.append(f"{name} {manifest['version']} ({manifest['license']})\n\n{text}")
+    (OUTPUT / "assets/search-licenses.txt").write_text(
+        "The site search bundles these packages.\n\n" + "\n\n---\n\n".join(notices) + "\n", encoding="utf-8")
+
+
 def build(repository, branch, download_url):
     OUTPUT.mkdir(parents=True, exist_ok=True)
     shutil.copytree(SOURCE / "assets", OUTPUT / "assets", dirs_exist_ok=True)
+    bundle_search()
     icons = REPO / "App/Remora/Assets.xcassets/AppIcon.appiconset"
     glyph = icons.parent / "RemoraGlyph.imageset" / "remora_2x.png"
     shutil.copyfile(icons / "icon_128x128_2x.png", OUTPUT / "assets/remora.png")
@@ -217,7 +261,8 @@ def build(repository, branch, download_url):
             else:
                 download = f'Download the Remora disk image (<code>.dmg</code>) from {releases} when a release is available.'
             body = render(body, install_download=download)
-        article = Article(title)
+        group = next(label for label, links in GROUPS.items() if (slug, title) in links)
+        article = Article(title, group)
         article.feed(body)
         results = article.index(path)
         search.extend(results)
@@ -228,7 +273,6 @@ def build(repository, branch, download_url):
         if repository:
             url = f"{repository}/edit/{quote(branch, safe='')}/docs/site/pages/{source_file}"
             edit = f'<a class="edit-link" href="{url}">Edit this page on GitHub</a>'
-        group = next(label for label, links in GROUPS.items() if (slug, title) in links)
         crumb = f'<a href="{root}docs/">Documentation</a><span aria-hidden="true">/</span>{group}' if slug else ""
         content = render(article_layout, sidebar=sidebar(root, slug), toc=toc, crumb=crumb,
                          article_title=escape(title if slug else "Remora documentation"),

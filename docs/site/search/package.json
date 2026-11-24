@@ -1,0 +1,17 @@
+{
+  "name": "remora-site-search",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild search.jsx --bundle --minify --format=esm --target=es2022 --jsx=automatic --splitting --chunk-names=search-[hash] --log-level=warning --banner:js=\"/*! Licenses: search-licenses.txt */\""
+  },
+  "dependencies": {
+    "docspot": "0.4.0",
+    "minisearch": "^7.1.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

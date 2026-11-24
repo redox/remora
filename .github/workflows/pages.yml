@@ -42,6 +42,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs/site/search/package-lock.json
       - name: Build and check internal links
         env:
           REMORA_SITE_REPOSITORY: ${{ github.server_url }}/${{ github.repository }}
