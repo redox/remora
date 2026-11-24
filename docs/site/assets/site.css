@@ -18,6 +18,23 @@
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
   --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  /* Docspot (the search dialog) follows the site palette in both color schemes. */
+  --docspot-font: var(--sans);
+  --docspot-font-mono: var(--mono);
+  --docspot-background: var(--surface);
+  --docspot-foreground: var(--ink);
+  --docspot-muted: var(--muted);
+  --docspot-subtle: var(--subtle);
+  --docspot-border: var(--line);
+  --docspot-border-strong: var(--line-strong);
+  --docspot-surface: var(--page);
+  --docspot-surface-elevated: var(--surface);
+  --docspot-accent: var(--soft);
+  --docspot-accent-active: var(--line);
+  --docspot-primary: var(--button);
+  --docspot-primary-foreground: var(--button-ink);
+  --docspot-focus: var(--accent);
+  --docspot-mark: color-mix(in oklab, var(--accent) 22%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -68,6 +85,9 @@ button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visibl
   outline: 2px solid var(--accent);
   outline-offset: 4px;
 }
+
+/* Docspot draws its own focus state for the search field. */
+.docspot-search input:focus-visible { outline: none; }
 
 img { display: block; max-width: 100%; }
 
@@ -189,45 +209,7 @@ kbd {
 
 .header-install { min-height: 2.25rem; padding-inline: .75rem; }
 
-.search-trigger {
-  min-height: 2.25rem;
-  display: inline-flex;
-  align-items: center;
-  gap: .55rem;
-  border: 1px solid var(--line);
-  border-radius: .53rem;
-  background: var(--surface);
-  padding: .32rem .51rem .32rem .65rem;
-  color: var(--muted);
-  font-size: .88rem;
-  text-align: left;
-}
-
-.search-trigger:hover { border-color: var(--line-strong); background: var(--soft); }
-
-.search-keys { margin-left: .42rem; color: var(--subtle); font-size: .73rem; }
-
-.search-icon {
-  flex: none;
-  width: .81rem;
-  height: .81rem;
-  border: 1.5px solid currentColor;
-  border-radius: 50%;
-  position: relative;
-  margin-right: .17rem;
-}
-
-.search-icon::after {
-  content: "";
-  position: absolute;
-  width: .33rem;
-  height: 1.5px;
-  top: .56rem;
-  left: .52rem;
-  background: currentColor;
-  transform: rotate(45deg);
-  transform-origin: left center;
-}
+.search-slot { display: flex; flex: none; }
 
 .hero-inner { padding-top: clamp(2.3rem, 6.5vw, 5.2rem); }
 
@@ -567,7 +549,7 @@ kbd {
   background: var(--surface);
 }
 
-.demo-controls button, .search-close {
+.demo-controls button {
   border: 1px solid transparent;
   border-radius: .43rem;
   background: transparent;
@@ -577,7 +559,7 @@ kbd {
   font-weight: 520;
 }
 
-.demo-controls button:hover, .search-close:hover { background: var(--soft); }
+.demo-controls button:hover { background: var(--soft); }
 
 .demo-controls button[aria-pressed="true"] {
   color: var(--accent-strong);
@@ -594,9 +576,9 @@ kbd {
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 1.45rem;
-  gap: clamp(1rem, 3.4vw, 2.85rem);
+  gap: clamp(2rem, 4vw, 3.25rem) clamp(1rem, 3.4vw, 2.85rem);
 }
 
 .feature-grid article {
@@ -607,28 +589,160 @@ kbd {
   padding: 1.15rem 0 0;
 }
 
-.feature-symbol {
-  width: 2.16rem;
-  height: 2.16rem;
-  display: grid;
-  place-content: center;
-  border-radius: .55rem;
-  background: var(--soft);
-  color: var(--accent);
-  font: 540 .91rem/1 var(--mono);
-  margin-bottom: .67rem;
-}
-
-.feature-chat { grid-auto-flow: column; gap: .18rem; }
-
-.feature-chat span { width: .19rem; height: .19rem; background: currentColor; border-radius: 50%; }
-
 .feature-grid h3 { font-size: 1.13rem; font-weight: 610; line-height: 1.25; }
 
-.feature-grid article > p:not(.feature-symbol) { margin-block: .41rem .63rem; color: var(--muted); }
+.feature-grid article > p { margin-block: .41rem .63rem; color: var(--muted); }
 
 .feature-grid a, .privacy-inner a { font-size: .92rem; font-weight: 550; }
 .feature-grid a { margin-top: auto; }
+
+/* Card screenshots reuse the hero demo's pieces at a smaller scale, so they follow the theme
+   and stay sharp. They show the app's real labels: keep them in step with the UI. */
+.shot {
+  --desktop-chrome: light-dark(#eef0ef, #2f3634);
+  --desktop-selection: light-dark(#c8e0fc, #264c72);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  margin: 0 0 1.05rem;
+  border: 1px solid var(--line);
+  border-radius: .95rem;
+  background: var(--soft);
+  font: .72rem/1.45 var(--sans);
+}
+
+.shot-backdrop {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 18% 40%;
+}
+
+.shot-dictation .shot-backdrop { object-position: 55% 60%; }
+.shot-chat .shot-backdrop { object-position: 82% 30%; }
+
+.shot-window {
+  position: absolute;
+  inset: 1.1rem auto auto 1.1rem;
+  width: min(23rem, 100% - 2.2rem);
+  box-shadow: 0 12px 30px #10272230, 0 2px 6px #10272214;
+}
+
+.shot-window .demo-titlebar { padding-block: .34rem; font-size: .68rem; }
+.shot-window .demo-document { padding: .7rem .85rem .95rem; }
+.shot-window .demo-document > p + p { margin-top: .35rem; }
+.shot-field { padding-bottom: .4rem; border-bottom: 1px solid var(--line); color: var(--subtle); }
+
+.shot-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .32rem;
+  margin-top: .45rem;
+  padding: .18rem .55rem .18rem .22rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  box-shadow: 0 3px 10px #1427251f;
+  font-size: .66rem;
+  font-weight: 560;
+}
+
+.shot-spinner {
+  display: grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  border-top-color: var(--accent);
+  border-right-color: var(--accent);
+  color: var(--accent);
+}
+
+.shot-spinner .demo-glyph { width: .72rem; height: .72rem; }
+
+.shot-keys {
+  position: absolute;
+  inset: auto .7rem .65rem auto;
+  display: flex;
+  gap: .25rem;
+}
+
+.shot-keys kbd {
+  padding: .16rem .45rem;
+  border-color: color-mix(in srgb, var(--ink) 18%, transparent);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--ink) 14%, transparent), 0 4px 12px #10272226;
+  font-size: .68rem;
+}
+
+.shot-dictation .shot-window { inset-block-start: 1.6rem; inset-inline-start: auto; inset-inline-end: 1.1rem; }
+.shot-dictation .demo-editor { margin: .5rem -.35rem 0; font-size: .7rem; }
+.shot-dictation .demo-toolbar { font-size: .68rem; }
+.shot-dictation .demo-edit-composer { align-items: start; }
+.shot-muted { color: var(--subtle); opacity: .7; font-size: .66rem; white-space: nowrap; }
+.shot-partial { color: var(--subtle); }
+
+.shot-mic {
+  width: .5rem;
+  height: .78rem;
+  margin: .2rem .15rem 0;
+  border: 1.5px solid #e5483f;
+  border-radius: 999px;
+  background: #e5483f;
+}
+
+.shot-menubar {
+  position: relative;
+  height: 1.3rem;
+  background: light-dark(#f2f6f1d9, #1b2221d9);
+}
+
+.shot-menubar .demo-notch { width: 24%; height: 1.05rem; border-radius: 0 0 .5rem .5rem; }
+
+.shot-chat-panel {
+  position: absolute;
+  inset: 1.75rem 50% auto auto;
+  transform: translateX(50%);
+  width: min(23rem, 82%);
+  gap: .5rem;
+  padding: .55rem;
+  border-radius: .8rem;
+  font-size: .7rem;
+}
+
+.shot-chat-panel .demo-toolbar { font-size: .7rem; }
+.shot-chat-panel .demo-chat-question { padding: .3rem .5rem; }
+.shot-chat-panel .demo-chat-reply ul { margin: .2rem 0 0; padding-inline-start: 1rem; color: var(--muted); }
+.shot-chat-panel .demo-composer { min-height: 1.7rem; padding-block: .2rem; }
+
+.shot-popover .shot-backdrop { object-position: 35% 70%; }
+
+.shot-modes {
+  position: absolute;
+  inset: .9rem auto auto 1.1rem;
+  width: min(21rem, 100% - 2.2rem);
+  display: grid;
+  gap: .6rem;
+}
+
+.shot-field-card {
+  padding: .5rem .6rem .1rem;
+  border: 1px solid var(--line);
+  border-radius: .65rem;
+  background: var(--surface);
+  box-shadow: 0 10px 26px #10272230, 0 2px 6px #10272214;
+}
+
+.shot-field-card mark { background: var(--desktop-selection); color: inherit; }
+.shot-field-card .demo-editor { margin: .35rem -.3rem .2rem; padding: .3rem; gap: .25rem; }
+.shot-field-card .demo-toolbar { font-size: .66rem; }
+.shot-field-card .demo-edit-composer { padding-block: .25rem; min-height: 1.6rem; }
+.shot-field-card .demo-composer .demo-glyph { width: .85rem; height: .85rem; }
 
 .privacy-inner {
   display: grid;
@@ -863,67 +977,10 @@ kbd {
 .pager span { margin: 0 0 .24rem; font-weight: 450; }
 .edit-link { display: inline-block; margin-top: .8rem; font-size: .89rem; }
 
-.search-dialog {
-  position: fixed;
-  top: min(13vh, 7rem);
-  bottom: auto;
-  width: min(37rem, calc(100% - 2rem));
-  max-height: min(75dvh, 41rem);
-  padding: 0;
-  border: 1px solid var(--line-strong);
-  border-radius: .9rem;
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: 0 1.4rem 5rem #192e3060;
-}
-
-.search-dialog::backdrop { background: #23393670; }
-
-.search-form { padding: 1rem 1.15rem .8rem; border-bottom: 1px solid var(--line); }
-
-.search-form label { display: block; margin-bottom: .4rem; font-size: .88rem; font-weight: 600; }
-
-.search-row { display: flex; align-items: center; gap: .63rem; color: var(--accent); }
-
-.search-row input {
-  flex: 1;
-  min-width: 0;
-  border: 1px solid var(--line-strong);
-  border-radius: .45rem;
-  background: var(--page);
-  color: var(--ink);
-  padding: .43rem .62rem;
-}
-
-.search-close { border-color: var(--line); padding: .41rem .62rem; }
-
-.search-status { color: var(--muted); font-size: .9rem; margin: .7rem 1.15rem; }
-
-.search-results { padding: 0 .62rem .65rem; margin: 0; list-style: none; }
-
-.search-results a {
-  display: block;
-  padding: .55rem .56rem;
-  border-radius: .4rem;
-  color: var(--accent-strong);
-  text-decoration: none;
-  font-weight: 570;
-  line-height: 1.36;
-}
-
-.search-results a:hover, .search-results a:focus { background: var(--soft); }
-
-.search-results span {
-  display: block;
-  margin-top: .15rem;
-  color: var(--muted);
-  font-size: .88rem;
-  font-weight: 400;
-}
-
 @media (max-width: 63rem) {
   .header-inner, .footer-inner, .landing-width, .docs-layout { width: calc(100% - 3rem); }
   .docs-layout { grid-template-columns: 10.6rem minmax(0, 1fr) 8.45rem; }
+  .shot { aspect-ratio: 4 / 3; }
 }
 
 @media (max-width: 56rem) {
@@ -943,11 +1000,12 @@ kbd {
   :root { --header-height: 3.7rem; }
   .header-inner, .footer-inner, .landing-width, .docs-layout { width: calc(100% - 2rem); }
   .header-inner, .top-nav { gap: .8rem; }
-  .header-install, .top-nav .github-link, .search-keys { display: none; }
+  .header-install, .top-nav .github-link, .docspot-trigger-kbd { display: none; }
   .hero h1 { font-size: clamp(2.6rem, 9.5vw, 4.1rem); }
   .demo-stage { border-radius: 1rem; }
   .feature-grid { grid-template-columns: 1fr; gap: .82rem; }
   .feature-grid article { padding-top: .88rem; }
+  .shot { max-width: 26rem; }
   .privacy-inner { grid-template-columns: 1fr; gap: 1.25rem; }
   .start-section { align-items: flex-start; flex-direction: column; }
   .footer-inner { flex-wrap: wrap; }
@@ -982,8 +1040,7 @@ kbd {
 }
 
 @media (max-width: 25rem) {
-  .search-label { display: none; }
-  .search-trigger { padding-inline: .67rem; }
+  .docspot-trigger-text { display: none; }
   .demo-day { display: none; }
   .demo-edit-composer { grid-template-columns: auto minmax(0, 1fr); }
   .demo-edit-composer .demo-selected { grid-column: 2; justify-self: end; }

@@ -111,19 +111,112 @@
     <h2 id="workflow">Work in the apps you already use</h2>
     <div class="feature-grid">
       <article>
-        <p class="feature-symbol" aria-hidden="true">⌥</p>
+        <figure class="shot shot-rewrite" aria-label="A selected sentence in a Mail reply, with the Writing badge below it">
+          <img class="shot-backdrop" src="@ROOT@assets/golden-gate.webp" alt="" width="1920" height="1080" loading="lazy">
+          <div class="demo-window shot-window" aria-hidden="true">
+            <div class="demo-titlebar">
+              <div class="window-controls"><i></i><i></i><i></i></div>
+              <span>Re: Pilot kickoff</span>
+            </div>
+            <div class="demo-document">
+              <p class="shot-field">To: Maya</p>
+              <p>Hi Maya,</p>
+              <p><mark>sso is ready on our side. can ur IT team test it by thurs</mark><span class="demo-caret"></span></p>
+              <span class="shot-badge"><span class="shot-spinner"><span class="demo-glyph"></span></span>Writing…</span>
+            </div>
+          </div>
+          <figcaption class="shot-keys"><kbd>right ⌥</kbd><kbd>right ⌥</kbd></figcaption>
+        </figure>
         <h3>Rewrite in place</h3>
         <p>Double-tap right Option to rewrite selected text. With no selection, Remora continues your sentence or fills a gap at the cursor.</p>
-        <a href="@ROOT@docs/rewrite/">Rewrite and Edit mode</a>
+        <a href="@ROOT@docs/rewrite/#choose-what-to-rewrite">The rewrite key</a>
       </article>
       <article>
-        <p class="feature-symbol" aria-hidden="true">↵</p>
+        <figure class="shot shot-popover" aria-label="The writing popover in Insert, drafting at the caret, and in Edit, rewriting a selection">
+          <img class="shot-backdrop" src="@ROOT@assets/golden-gate.webp" alt="" width="1920" height="1080" loading="lazy">
+          <div class="shot-modes" aria-hidden="true">
+            <div class="shot-field-card">
+              <p>Thanks for the call. <span class="demo-caret"></span></p>
+              <section class="demo-remora demo-editor">
+                <div class="demo-toolbar">
+                  <span class="demo-selected">Insert</span><span>Edit</span><span class="demo-dismiss">×</span>
+                </div>
+                <div class="demo-composer demo-edit-composer">
+                  <span class="demo-glyph"></span>
+                  <span>Add the kickoff date we agreed on</span>
+                  <span class="demo-selected">Draft and insert</span>
+                </div>
+              </section>
+            </div>
+            <div class="shot-field-card">
+              <p><mark>kickoff monday if IT is ready</mark></p>
+              <section class="demo-remora demo-editor">
+                <div class="demo-toolbar">
+                  <span>Insert</span><span class="demo-selected">Edit</span><span class="demo-dismiss">×</span>
+                </div>
+                <div class="demo-composer demo-edit-composer">
+                  <span class="demo-glyph"></span>
+                  <span>Make this a full sentence</span>
+                  <span class="demo-selected">Rewrite selection</span>
+                </div>
+              </section>
+            </div>
+          </div>
+          <figcaption class="shot-keys"><kbd>tap right ⌥</kbd></figcaption>
+        </figure>
+        <h3>Insert or edit with a prompt</h3>
+        <p>Tap right Option once to open the writing popover. Insert drafts new text at the cursor from your prompt. Edit applies your instruction to the selection. Tap again to switch modes.</p>
+        <a href="@ROOT@docs/rewrite/#edit-mode">Insert and Edit</a>
+      </article>
+      <article>
+        <figure class="shot shot-dictation" aria-label="The writing popover listening, with a live transcript under the caret">
+          <img class="shot-backdrop" src="@ROOT@assets/golden-gate.webp" alt="" width="1920" height="1080" loading="lazy">
+          <div class="demo-window shot-window" aria-hidden="true">
+            <div class="demo-titlebar">
+              <div class="window-controls"><i></i><i></i><i></i></div>
+              <span>Rollout plan</span>
+            </div>
+            <div class="demo-document">
+              <p>After IT signs off, <span class="demo-caret"></span></p>
+              <section class="demo-remora demo-editor">
+                <div class="demo-toolbar">
+                  <span class="demo-selected">Insert</span><span>Edit</span><span>EN</span><span class="shot-muted">Record</span><span class="demo-dismiss">×</span>
+                </div>
+                <div class="demo-composer demo-edit-composer">
+                  <span class="shot-mic"></span>
+                  <span>we’ll invite the first team and check in after two <span class="shot-partial">weeks</span></span>
+                  <span class="shot-muted">Draft and insert</span>
+                </div>
+              </section>
+            </div>
+          </div>
+          <figcaption class="shot-keys"><kbd>hold right ⌥</kbd></figcaption>
+        </figure>
         <h3>Speak where you type</h3>
         <p>Hold <kbd>right ⌥</kbd> to dictate in English or French. Review the live transcript, then insert your words or use them as an edit instruction.</p>
         <a href="@ROOT@docs/dictation/">Voice dictation</a>
       </article>
       <article>
-        <p class="feature-symbol feature-chat" aria-hidden="true"><span></span><span></span><span></span></p>
+        <figure class="shot shot-chat" aria-label="The chat bar under the notch listing three open items">
+          <img class="shot-backdrop" src="@ROOT@assets/golden-gate.webp" alt="" width="1920" height="1080" loading="lazy">
+          <div class="shot-menubar" aria-hidden="true"><span class="demo-notch"></span></div>
+          <section class="demo-remora demo-chat shot-chat-panel" aria-hidden="true">
+            <div class="demo-toolbar">
+              <span class="demo-chat-name"><span class="demo-glyph"></span>Remora</span>
+              <span class="demo-accessories">··· ⌃</span>
+            </div>
+            <p class="demo-chat-question">What did I leave open this week?</p>
+            <div class="demo-chat-reply">
+              <p>Three things are still open:</p>
+              <ul>
+                <li>Send Maya the SSO test plan</li>
+                <li>Review the pricing draft from Sam</li>
+                <li>Book the pilot check-in</li>
+              </ul>
+            </div>
+            <div class="demo-composer"><span>Ask Remora</span><span class="demo-send">↑</span></div>
+          </section>
+        </figure>
         <h3>Ask about your work</h3>
         <p>Open the chat bar to recall a decision, find what you left open, or see where your time went.</p>
         <a href="@ROOT@docs/chat/">Chat and recall</a>

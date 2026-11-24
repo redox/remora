@@ -1,7 +1,12 @@
 # Remora website
 
-The website and its documentation are built with Python 3. The build copies Remora’s app icon and
-glyph, renders static HTML, validates local links and anchors, and creates a browser-side search index.
+The website and its documentation are built with Python 3 and Node.js. The build copies Remora’s app
+icon and glyph, renders static HTML, validates local links and anchors, and writes the search index.
+
+Search uses [Docspot](https://github.com/francoischalifour/docspot) with a MiniSearch index built in
+the browser from `assets/search.json`, so it needs no search service. `search/search.jsx` sets it up,
+and the build bundles it with esbuild into `assets/search.js` and `assets/search.css`, running
+`npm ci` in `search/` the first time. Docspot's Ask AI chat is off because the site has no backend.
 
 ## Preview
 
@@ -22,8 +27,13 @@ to build offline.
 - Edit the homepage in `pages/home.html` and documentation in the other files under `pages/`.
 - The homepage demo uses Apple's macOS 27 Golden Gate wallpaper and built-in app icons. The
   repository README image is a render of the demo's Recall view.
+- The four cards under "Work in the apps you already use" carry small screenshots built the same
+  way (`.shot` in `assets/site.css`). The README's `docs/images/remora-{rewrite,popover,dictation,chat}.png`
+  are 2× renders of those figures at 480 × 300. Re-render them when you change the cards.
 - Give each article section an `h2` with a stable `id`. The build uses these for the table of
   contents and search results.
+- Restyle search through the `--docspot-*` variables at the top of `assets/site.css`. They map to
+  the site palette, so light and dark mode follow it.
 - Use `@ROOT@` for links to this site. For example, link to `@ROOT@docs/rewrite/#edit-mode`.
   The build makes links relative so they work on a GitHub Pages project path or a custom domain.
 - Register new articles in `GROUPS` in `build.py`.
