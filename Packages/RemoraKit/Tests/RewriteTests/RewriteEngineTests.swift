@@ -154,6 +154,7 @@ func typedInsertDraftsOnlyForTheTarget(target: String) async throws {
     #expect(out.range == selection && out.replacement == " new ")
     #expect(try LLMCallStore(e.db).calls(since: .distantPast, limit: 1).first?.jobType == "edit_mode")
     let request = try #require(e.fake.requests.first)
+    #expect(request.model == "gpt-6.1-terra")
     #expect(request.instructions.contains("untrusted, fixed context"))
     guard case .user(let input) = try #require(request.input.first) else {
         Issue.record("Expected the instruction and field context in user input")
@@ -193,6 +194,20 @@ func typedInsertDraftsOnlyForTheTarget(target: String) async throws {
     #expect(!request.instructions.contains("selected"))
     #expect(request.tools.isEmpty)
     #expect(try InlineOutputStore(e.db).recent(limit: 1).isEmpty)
+}
+
+@Test(arguments: [true, false])
+func insertAsksTheModelToDevelopRoughNotesIntoADraft(cloudAllowed: Bool) async throws {
+    let e = try env([.delta("Could we move the demo to Thursday?"), .complete(usage)])
+    var request = req(.draft, "", memory: false)
+    request.cloudAllowed = cloudAllowed
+    _ = try await e.engine.compose(instruction: "demo moved to Thursday? ask team", selection: nil, request: request)
+
+    let instructions = try #require(e.fake.requests.first).instructions
+    #expect(instructions.contains("Develop rough notes, fragments, or bullet points into a complete draft"))
+    #expect(instructions.contains("audience, format, and level of detail"))
+    #expect(instructions.contains("Preserve finished wording"))
+    #expect(instructions.contains("Keep facts and commitments grounded"))
 }
 
 @Test func partialOutputIsNeverReturned() async throws {

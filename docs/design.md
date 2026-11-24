@@ -228,11 +228,13 @@ fallback is off by default because apps assign it other meanings. No gesture req
 Monitoring.
 
 **Draft from typed or spoken prompts in Insert.** Submit a typed prompt or reviewed transcript
-to generate text for the original caret or selection. Existing text outside the target stays in
-place. Insert uses the Edit mode
-model settings and checks that the target is safe to write to. In places where field text must stay
-on-device, Draft and insert sends just the submitted prompt with generic drafting instructions. It
-uses the field locally to verify the insertion target. A failed draft leaves the prompt in the
+to generate text for the original caret or selection. Insert treats rough notes as a brief and
+develops them into a draft for the audience and format suggested by the available context. It
+preserves finished wording supplied for direct insertion and grounds facts and commitments in
+the prompt and available context. Existing text outside the target stays in place. Insert uses the
+Edit mode model settings and checks that the target is safe to write to. In places where field text
+must stay on-device, Draft and insert sends just the submitted prompt with the drafting guidance.
+It uses the field locally to verify the insertion target. A failed draft leaves the prompt in the
 popover for retry. Insert transcript puts the user's words into the field using dictation settings.
 
 **Finish the result before touching the target.** The original focused field, its text, and the
