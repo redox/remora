@@ -722,27 +722,12 @@ kbd {
 
 .shot-popover .shot-backdrop { object-position: 35% 70%; }
 
-.shot-modes {
-  position: absolute;
-  inset: .9rem auto auto 1.1rem;
-  width: min(21rem, 100% - 2.2rem);
-  display: grid;
-  gap: .6rem;
-}
-
-.shot-field-card {
-  padding: .5rem .6rem .1rem;
-  border: 1px solid var(--line);
-  border-radius: .65rem;
-  background: var(--surface);
-  box-shadow: 0 10px 26px #10272230, 0 2px 6px #10272214;
-}
-
-.shot-field-card mark { background: var(--desktop-selection); color: inherit; }
-.shot-field-card .demo-editor { margin: .35rem -.3rem .2rem; padding: .3rem; gap: .25rem; }
-.shot-field-card .demo-toolbar { font-size: .66rem; }
-.shot-field-card .demo-edit-composer { padding-block: .25rem; min-height: 1.6rem; }
-.shot-field-card .demo-composer .demo-glyph { width: .85rem; height: .85rem; }
+.shot-popover .shot-window { inset-block-start: .8rem; }
+.shot-popover .demo-document { padding-block: .55rem .4rem; }
+.shot-popover .demo-editor { margin: .3rem -.55rem .55rem; padding: .3rem; gap: .25rem; box-shadow: 0 10px 24px #142a2538, 0 2px 6px #142a2518; }
+.shot-popover .demo-toolbar { font-size: .66rem; }
+.shot-popover .demo-edit-composer { padding-block: .25rem; min-height: 1.6rem; }
+.shot-popover .demo-composer .demo-glyph { width: .85rem; height: .85rem; }
 
 .privacy-inner {
   display: grid;
