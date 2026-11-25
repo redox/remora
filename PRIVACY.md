@@ -6,7 +6,10 @@ where it keeps it, and what leaves your Mac.
 ## What Remora reads
 
 - **The frontmost window's text**, through the macOS Accessibility API, while you work in it.
-- **Text you copy** to the clipboard.
+- **Text you copy** to the clipboard. When you submit an edit in Google Docs and Accessibility
+  exposes only a selection range, Remora can temporarily copy the passage in Chromium browsers.
+  It checks the document URL, restores the previous clipboard after a verified copy, and applies
+  the same privacy settings as other edits.
 - **Meeting transcripts and generated notes** from sources you connect in Settings › Meeting
   sources. Remora reads meeting identifiers, titles and dates for sync and search.
 

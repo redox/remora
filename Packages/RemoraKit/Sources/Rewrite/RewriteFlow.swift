@@ -373,6 +373,17 @@ public enum RewriteFlow {
 
     // MARK: Layout (Cocoa coordinates: bottom-left origin)
 
+    static func hasReadableText(_ text: String) -> Bool {
+        text.unicodeScalars.contains { !$0.properties.isWhitespace && $0.properties.generalCategory != .format }
+    }
+
+    public static func needsGoogleDocsSelectionCopy(value: String?, selection: NSRange?, context: WindowContext?) -> Bool {
+        guard isGoogleDocsEditor(context), BrowserCatalog.isChromiumBrowser(context?.bundleID),
+              let selection, selection.length > 0 else { return false }
+        guard let value, SelectionRange.clamp(selection, to: value.utf16.count) == selection else { return true }
+        return !hasReadableText((value as NSString).substring(with: selection))
+    }
+
     public static func isGoogleDocsEditor(_ context: WindowContext?) -> Bool {
         let path = context?.url?.pathComponents
         return context?.domain == "docs.google.com" && path?.dropFirst().first == "document" && path?.last == "edit"

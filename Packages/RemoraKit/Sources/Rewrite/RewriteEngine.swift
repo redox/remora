@@ -117,8 +117,7 @@ public actor RewriteEngine {
     public func edit(instruction: String, text: String, fullRange: NSRange, request r: RewriteRequest) async throws -> RewriteOutput {
         if instruction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { throw RewriteError.emptyQuestion }
         guard text.utf16.count <= Self.maxFieldChars else { throw RewriteError.tooLong }
-        guard text.unicodeScalars.contains(where: { !$0.properties.isWhitespace && $0.properties.generalCategory != .format })
-        else { throw RewriteError.unreadableField }
+        guard RewriteFlow.hasReadableText(text) else { throw RewriteError.unreadableField }
         let ctx = await assemble(r, fieldText: text)
         let prompt = RewritePrompt.edit(instruction: instruction, text: text, context: ctx, app: r.app, now: now())
         return try await run(.editMode, prompt, original: text, range: fullRange, cloudAllowed: r.cloudAllowed, onDelta: nil)

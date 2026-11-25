@@ -11,6 +11,16 @@ import Testing
         #expect(rewrite.contains("bar.model.notice = notice.writingNotice"))
     }
 
+    @Test func docsPasteRequiresTheSamePassageAndTargetsOnlyTheActiveSelection() throws {
+        let controller = try source("App/Remora/Rewrite/RewriteController.swift")
+        let start = try #require(controller.range(of: "private func replaceDocsSelection("))
+        let body = try #require(controller[start.upperBound...].components(separatedBy: "\n    }").first)
+        let check = try #require(body.range(of: "guard (try? await readDocsSelection(source, field: field)) == original"))
+        let paste = try #require(body.range(of: "inserter.insert(replacement, target: .caret"))
+        #expect(check.upperBound < paste.lowerBound)
+        #expect(body.contains("expectedSelection: field.selection"))
+    }
+
     @Test func writingPopoverOffersLanguageSwitchingOnlyWithMacTranscription() throws {
         let panel = try source("App/Remora/Rewrite/EditBarPanel.swift")
         #expect(panel.contains("if actions?.showsDictationLanguage() == true, let locale = model.recordingLocale"))

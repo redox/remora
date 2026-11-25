@@ -561,3 +561,14 @@ func onDeviceOnlyDraftFailureNamesInsertion(mode: RewriteMode) throws {
                              selectedText: "", placeholder: nil)
     }
 }
+
+@Test func docsCopiesOnlySelectionsWhoseWordsAreMissingFromTheInputProxy() {
+    let docs = WindowContext(app: "Chrome", bundleID: "com.google.Chrome",
+                             url: URL(string: "https://docs.google.com/document/d/example/edit"))
+    let selected = NSRange(location: 0, length: 1)
+    #expect(RewriteFlow.needsGoogleDocsSelectionCopy(value: "\u{200B}", selection: selected, context: docs))
+    #expect(RewriteFlow.needsGoogleDocsSelectionCopy(value: nil, selection: selected, context: docs))
+    #expect(!RewriteFlow.needsGoogleDocsSelectionCopy(value: "words", selection: selected, context: docs))
+    #expect(!RewriteFlow.needsGoogleDocsSelectionCopy(value: "", selection: NSRange(location: 0, length: 0), context: docs))
+    #expect(!RewriteFlow.needsGoogleDocsSelectionCopy(value: "", selection: selected, context: nil))
+}

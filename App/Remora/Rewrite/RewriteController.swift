@@ -87,6 +87,8 @@ final class RewriteController {
         let originalPID: pid_t?
         var noteSource: FrontmostWindowReader.ContextSample?
         var session: EditSession?
+        /// The original document when Edit must read the passage through Copy.
+        var docsSource: FrontmostWindowReader.ContextSample?
         var round: Task<Void, Never>?
         /// A round was written: the live window text read at open is stale from then on.
         var wrote = false
@@ -395,11 +397,17 @@ final class RewriteController {
         let fallback: DictationTarget?
         var access: RewriteAccess?
         var session: EditSession?
+        var docsSource: FrontmostWindowReader.ContextSample?
         if let field {
             guard !field.isSecure else { return finish(mine, nil) }
             if case .proceed(let allowed) = gate(field, sample: context, rules: rules) {
                 access = allowed
-                if let value = field.value { session = try? EditSession(value: value, selection: field.selection) }
+                if RewriteFlow.needsGoogleDocsSelectionCopy(value: field.value, selection: field.selection, context: placementContext),
+                   let context, context.identity.window != nil {
+                    docsSource = context
+                } else if let value = field.value {
+                    session = try? EditSession(value: value, selection: field.selection)
+                }
             }
             fallback = nil
         } else if case .refused(let reason) = read {
@@ -425,7 +433,8 @@ final class RewriteController {
         } else {
             noteSource = nil
         }
-        guard session != nil || dictationEnabled || noteSource != nil else {
+        let allowsEdit = session != nil || docsSource != nil
+        guard allowsEdit || dictationEnabled || noteSource != nil else {
             return finish(mine, field == nil ? nil : .unreadable, at: field)
         }
 
@@ -433,7 +442,7 @@ final class RewriteController {
         cancellable = false
         hotKeys.unregister(id: Self.escapeID)
         edit = EditContext(generation: mine, field: field, fallback: fallback, originalPID: pid,
-                           noteSource: noteSource, session: session)
+                           noteSource: noteSource, session: session, docsSource: docsSource)
         let focus = EditVoiceRoute.barTakesFocus(barOpen: true, voiceHold: voiceHold, holdOpenedBar: holdOpenedBar)
         let replacesSelection = (field?.selection?.length ?? 0) > 0
         let mode = initialMode ?? EditVoiceRoute.Mode.preferred(replacesSelection: replacesSelection)
@@ -445,8 +454,8 @@ final class RewriteController {
             preferNearbyPointer: replacesSelection || placement?.selectedText?.isEmpty == false || placement?.role == "AXWebArea",
             pointer: pointer, context: placementContext,
             googleDocsCaret: googleDocsCaret.map(ScreenPlacement.cocoa(fromAX:)))
-        bar.open(over: anchor, mode: session == nil ? .insert : mode,
-                 replacesSelection: replacesSelection, allowsEdit: session != nil,
+        bar.open(over: anchor, mode: allowsEdit ? mode : .insert,
+                 replacesSelection: replacesSelection, allowsEdit: allowsEdit,
                  recordEnabled: dictationEnabled, triggerName: shortcuts.rewriteKeyEnabled ? shortcuts.trigger.title : nil,
                  actions: EditBarPanel.Actions(
                     submit: { [weak self] in self?.submitDraft($0, submission: $1) },
@@ -461,7 +470,7 @@ final class RewriteController {
                     noticeAction: { [weak self] in self?.perform($0) }),
                  focus: focus)
         bar.model.canRemember = noteSource != nil
-        bar.model.selectionOnly = session == nil && !dictationEnabled
+        bar.model.selectionOnly = !allowsEdit && !dictationEnabled
         if dictationEnabled { bar.model.recordingLocale = dictation?.preferredLocale }
         if let fallback { bar.model.fallbackActionTitle = fallback == .nowhere ? "Copy text" : "Insert text" }
         bar.model.onDeviceOnly = access?.cloudAllowed == false
@@ -695,7 +704,7 @@ final class RewriteController {
     /// False when no round started (one is running, or the instruction is empty).
     @discardableResult
     private func submitRound(_ instruction: String, spoken: Bool) -> Bool {
-        guard var ctx = edit, ctx.session != nil, ctx.round == nil,
+        guard var ctx = edit, ctx.session != nil || ctx.docsSource != nil, ctx.round == nil,
               !instruction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
         bar.model.isWorking = true
         bar.model.notice = nil
@@ -706,14 +715,25 @@ final class RewriteController {
     }
 
     private func runRound(_ instruction: String, spoken: Bool, _ mine: Int) async {
-        guard let ctx = edit, ctx.generation == mine, let field = ctx.field, let session = ctx.session else { return }
+        guard let ctx = edit, ctx.generation == mine, let field = ctx.field else { return }
         let handle = field.handle
-        let (current, selection) = await Task.detached(priority: .userInitiated) {
-            (handle.value(), handle.selectedRange())
-        }.value
-        guard let current else { return endRound(mine, notice: .unreadable) }
-        let round: EditRound
-        do { round = try RewriteFlow.editRound(session, currentValue: current, selection: selection) } catch {
+        let current: String, round: EditRound
+        do {
+            if let source = ctx.docsSource {
+                bar.hideForPaste()
+                defer { if edit?.generation == mine { bar.restoreAfterPaste() } }
+                current = try await readDocsSelection(source, field: field)
+                round = try RewriteFlow.editRound(EditSession(value: current, selection: nil), currentValue: current, selection: nil)
+            } else {
+                guard let session = ctx.session else { throw RewriteError.unreadableField }
+                let (value, selection) = await Task.detached(priority: .userInitiated) {
+                    (handle.value(), handle.selectedRange())
+                }.value
+                guard let value else { throw RewriteError.unreadableField }
+                current = value
+                round = try RewriteFlow.editRound(session, currentValue: value, selection: selection)
+            }
+        } catch {
             return endRound(mine, notice: RewriteFlow.notice(for: error))
         }
         guard let request = await preparePopoverRequest(field: field, value: current, context: ctx) else { return }
@@ -727,6 +747,14 @@ final class RewriteController {
         guard edit?.generation == mine else { return }
         guard !IsSecureEventInputEnabled() else { return endRound(mine, notice: nil) }
         if let backend = output.backend { bar.model.backend = backend }
+        if let source = ctx.docsSource {
+            let outcome = await replaceDocsSelection(round.text, with: output.replacement, field: field, source: source, generation: mine)
+            guard edit?.generation == mine else { return }
+            if let notice = RewriteFlow.notice(for: outcome) { return endRound(mine, notice: notice) }
+            if RewriteFlow.didInsert(outcome) { Sounds.play(.done, enabled: shortcuts.soundsEnabled) }
+            // The proxy cannot track the pasted passage for another round. Docs owns the undo.
+            return closeEditBar()
+        }
         let (next, newValue) = round.applying(output.replacement, to: current)
         let outcome = await write(newValue, expected: current, field, generation: mine)
         if RewriteFlow.didInsert(outcome) {
@@ -755,6 +783,37 @@ final class RewriteController {
         endRound(mine, notice: RewriteFlow.notice(for: outcome))
     }
 
+    private func docsSourceIsCurrent(_ source: FrontmostWindowReader.ContextSample, field: FocusedField) async -> Bool {
+        guard let current = await windows.readContext(), current.identity == source.identity,
+              case .proceed = gate(field, sample: current, rules: policy()) else { return false }
+        return !Task.isCancelled && !IsSecureEventInputEnabled()
+    }
+
+    /// The panel is hidden so Copy reaches the same selection the user saw in the document.
+    private func readDocsSelection(_ source: FrontmostWindowReader.ContextSample, field: FocusedField) async throws -> String {
+        try await Task.sleep(for: .milliseconds(80))
+        guard let page = source.context.url, await docsSourceIsCurrent(source, field: field) else {
+            throw RewriteError.selectionOutOfBounds
+        }
+        guard let text = await GoogleDocsSelection.read(from: field, page: page) else { throw RewriteError.unreadableField }
+        guard await docsSourceIsCurrent(source, field: field) else { throw RewriteError.selectionOutOfBounds }
+        return text
+    }
+
+    private func replaceDocsSelection(_ original: String, with replacement: String, field: FocusedField,
+                                      source: FrontmostWindowReader.ContextSample, generation: Int) async -> InsertionOutcome {
+        bar.hideForPaste()
+        defer { if edit?.generation == generation { bar.restoreAfterPaste() } }
+        guard (try? await readDocsSelection(source, field: field)) == original,
+              edit?.generation == generation else { return .fieldChanged }
+        if replacement == original { return .noChange }
+        let inserter = inserter
+        return await Task.detached(priority: .userInitiated) {
+            await inserter.insert(replacement, target: .caret, expectedValue: nil, expectedSelection: field.selection,
+                                  into: field.handle, preferPaste: true)
+        }.value
+    }
+
     private func preparePopoverRequest(field: FocusedField, value: String, context: EditContext) async -> RewriteRequest? {
         let mine = context.generation
         let access: RewriteAccess
@@ -778,8 +837,13 @@ final class RewriteController {
         let stillFocused = await Task.detached(priority: .userInitiated) {
             handle.pid == ProcessInfo.processInfo.processIdentifier || handle.isFocusedInApp()
         }.value
-        let latest = await gate(field)
+        let sample = await windows.readContext()
         guard edit?.generation == mine, !Task.isCancelled else { return nil }
+        if let source = context.docsSource, source.identity != sample?.identity {
+            endRound(mine, notice: .fieldChanged)
+            return nil
+        }
+        let latest = gate(field, sample: sample, rules: policy())
         guard stillFocused, !IsSecureEventInputEnabled(), case .proceed(let allowed) = latest else {
             endRound(mine, notice: nil)
             return nil

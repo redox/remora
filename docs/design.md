@@ -229,7 +229,11 @@ Monitoring.
 
 In Edit, a short instruction applies to the selected passage, or to the field when there is no
 selection. For example, “in French” requests a translation of the passage with its line breaks.
-If the edit target contains no readable text, Remora leaves the field alone.
+When Google Docs in a Chromium browser exposes only a selected range in its blank input proxy,
+Edit temporarily copies the selection and checks the clipboard’s source URL against the document.
+Before pasting, it checks the document, range and copied text again. The paste replaces the
+active selection and the popover closes. Docs handles Undo because the proxy cannot track the
+replacement for another round. If Remora cannot verify the passage, it leaves the field alone.
 
 **Anchor the Google Docs popover to text geometry when available.** In Chrome, Docs moves its
 input frame to the visible caret when **Turn on screen magnifier support** is enabled in

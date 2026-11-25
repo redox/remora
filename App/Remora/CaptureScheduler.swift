@@ -51,8 +51,6 @@ final class CaptureScheduler {
         kAXTitleChangedNotification,
     ]
 
-    nonisolated private static let pasteboardQueue = DispatchQueue(label: "dev.remora.pasteboard", qos: .utility)
-
     /// Cached pause state from the app (re-read on pause/resume, expiry and every 2 s). Fails
     /// closed until wired. The engine re-checks the stored pause before every write.
     var isPaused: @MainActor () -> Bool = { true }
@@ -181,7 +179,7 @@ final class CaptureScheduler {
     nonisolated private static func readPasteboard(_ watcher: ClipboardWatcher) async
         -> (String?, ContinuousClock.Instant) {
         await withCheckedContinuation { continuation in
-            pasteboardQueue.async {
+            SystemPasteboard.queue.async {
                 let at = ContinuousClock.now
                 continuation.resume(returning: (watcher.poll(), at))
             }

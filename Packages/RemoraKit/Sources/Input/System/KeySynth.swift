@@ -17,17 +17,21 @@ public struct KeySynth: KeySynthesizing {
         // Text Input Sources must be queried on the main thread.
         let code = await MainActor.run { Self.resolve(character) }
         guard let code else { return false }
+        return Self.postCommand(code, to: nil)
+    }
+
+    static func postCommand(_ code: CGKeyCode, to pid: pid_t?) -> Bool {
         let source = CGEventSource(stateID: .privateState)
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: true),
               let up = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: false) else { return false }
         for event in [down, up] {
             event.flags = .maskCommand
-            event.post(tap: .cghidEventTap)
+            if let pid { event.postToPid(pid) } else { event.post(tap: .cghidEventTap) }
         }
         return true
     }
 
-    @MainActor private static func resolve(_ character: Character) -> CGKeyCode? {
+    @MainActor static func resolve(_ character: Character) -> CGKeyCode? {
         guard let source = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?.takeRetainedValue(),
               let property = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else { return nil }
         let layoutData = Unmanaged<CFData>.fromOpaque(property).takeUnretainedValue() as Data
