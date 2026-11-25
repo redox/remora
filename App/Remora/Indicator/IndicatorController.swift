@@ -14,14 +14,11 @@ final class IndicatorController {
     private(set) var state: IndicatorState = .initial
     private(set) var dot: IndicatorDot?
 
-    /// Receives the text of the transient switch label.
-    @ObservationIgnored var onAnnounce: @MainActor (String) -> Void = { _ in }
     @ObservationIgnored var onStateChange: @MainActor (IndicatorState) -> Void = { _ in }
 
     @ObservationIgnored private let engine: CaptureEngine
     @ObservationIgnored private let isPaused: @MainActor () -> Bool
     @ObservationIgnored private let accessibilityGranted: @MainActor () -> Bool
-    @ObservationIgnored private var announcer = IndicatorAnnouncer()
     @ObservationIgnored private var frontmost: FrontmostApp?
     @ObservationIgnored private var observed: ObservedWindow?
     @ObservationIgnored private var activationGeneration = 0
@@ -138,7 +135,6 @@ final class IndicatorController {
         state = next
         let newDot = next.dot(previous: dot)
         if newDot != dot { dot = newDot }
-        if let text = announcer.update(next) { onAnnounce(text) }
         if changed {
             logger.debug("indicator state changed: \(next.status.kind, privacy: .public)")
             onStateChange(next)

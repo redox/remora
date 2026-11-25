@@ -3,6 +3,11 @@ import Testing
 
 /// Guards on App sources that have no test target of their own: they read the Swift files.
 @Suite struct AppSourceGuardTests {
+    @Test func windowSwitchesDoNotPresentCaptureStatusPopups() throws {
+        let environment = try source("App/Remora/AppEnvironment.swift")
+        #expect(!environment.contains("SwitchLabelPanel()"))
+    }
+
     @Test func dictationFailuresUseTheWritingPopoverNotice() throws {
         let controller = try source("App/Remora/Dictation/DictationController.swift")
         #expect(controller.contains("rewrite.showDictationNotice(notice)"))

@@ -62,7 +62,6 @@ final class AppEnvironment {
     let bar: ChatBarController
     /// Briefs, nudges, reminders and macOS notifications.
     let proactive: ProactiveController
-    @ObservationIgnored private let switchLabel = SwitchLabelPanel()
     @ObservationIgnored private let badge: WindowBadgeController
     /// Optional per-window badge. Read once at launch; setting it persists and applies at once.
     var windowBadgeEnabled = false {
@@ -209,7 +208,6 @@ final class AppEnvironment {
         }
         scheduler.onWindowEvent = { [weak self] in self?.badge.windowEvent($0) }
         indicator.onStateChange = { [weak self] _ in self?.badge.stateChanged() }
-        indicator.onAnnounce = { [switchLabel] in switchLabel.show($0) }
         scheduler.isPaused = { [weak self] in self?.isPaused ?? true }
         scheduler.onContextSample = { [weak self] in self?.indicator.contextSampled($0) }
         scheduler.onContextSwitch = { [weak self] in self?.dictation.invalidateCloudTranscription() }

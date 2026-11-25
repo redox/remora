@@ -3,58 +3,6 @@ import CoreGraphics
 import Testing
 @testable import Indicator
 
-private let size = CGSize(width: 140, height: 24)
-
-@Test func labelCenteredUnderStatusItem() {
-    let f = SwitchLabelLayout.frame(
-        labelSize: size,
-        statusItemFrame: .init(x: 1200, y: 1093, width: 30, height: 24),
-        visibleFrame: .init(x: 0, y: 0, width: 1512, height: 1093))
-    #expect(f == CGRect(x: 1145, y: 1063, width: 140, height: 24))
-}
-
-@Test func labelClampedToScreenEdge() {
-    let f = SwitchLabelLayout.frame(
-        labelSize: size,
-        statusItemFrame: .init(x: 1490, y: 1093, width: 30, height: 24),
-        visibleFrame: .init(x: 0, y: 0, width: 1512, height: 1093))
-    #expect(f.maxX == CGFloat(1504))
-}
-
-@Test func labelClampedToLeftEdge() {
-    let f = SwitchLabelLayout.frame(
-        labelSize: size,
-        statusItemFrame: .init(x: 0, y: 1093, width: 30, height: 24),
-        visibleFrame: .init(x: 0, y: 0, width: 1512, height: 1093))
-    #expect(f.minX == 8)
-}
-
-@Test func labelFallbackWithoutStatusItem() {
-    let visible = CGRect(x: 0, y: 0, width: 1512, height: 1093)
-    let f = SwitchLabelLayout.frame(labelSize: size, statusItemFrame: nil, visibleFrame: visible)
-    #expect(f.maxX == visible.maxX - 8)
-    #expect(f.maxY == visible.maxY - 6)
-}
-
-@Test func labelOnSecondaryScreen() {
-    let visible = CGRect(x: -1920, y: 0, width: 1920, height: 1055)
-    let f = SwitchLabelLayout.frame(labelSize: size, statusItemFrame: nil, visibleFrame: visible)
-    #expect(f.minX >= -1912)
-    #expect(f.maxX <= -8)
-    #expect(f.maxY == CGFloat(1049))
-}
-
-@Test func labelTopClampedWhenStatusItemFrameIsStale() {
-    let visible = CGRect(x: 0, y: 0, width: 1512, height: 982)
-    // Status item still reports the (hidden) menu bar position above the visible frame.
-    let f = SwitchLabelLayout.frame(
-        labelSize: size, statusItemFrame: .init(x: 1200, y: 1200, width: 30, height: 24),
-        visibleFrame: visible)
-    #expect(f.maxY == visible.maxY - SwitchLabelLayout.gap)
-}
-
-// MARK: - Window badge
-
 @Test func axToCocoaOnPrimary() {
     #expect(WindowBadge.cocoaFrame(ofAXFrame: .init(x: 100, y: 50, width: 800, height: 600), primaryScreenHeight: 1000)
             == CGRect(x: 100, y: 350, width: 800, height: 600))

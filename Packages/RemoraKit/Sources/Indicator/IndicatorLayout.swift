@@ -1,25 +1,6 @@
 import Capture
 import CoreGraphics
 
-/// Placement of the transient switch label. Cocoa coordinates (origin bottom-left, y up).
-public enum SwitchLabelLayout {
-    public static let gap: CGFloat = 6
-    public static let margin: CGFloat = 8
-
-    /// The label hangs `gap` below the status item (or below the top of the visible frame
-    /// when the status item is unknown), centred on it, clamped inside `margin` of the screen.
-    public static func frame(labelSize: CGSize, statusItemFrame: CGRect?, visibleFrame: CGRect) -> CGRect {
-        // A stale or off-screen status-item frame (menu bar hidden over a full-screen app)
-        // must not push the label above the visible area.
-        let top = min(statusItemFrame?.minY ?? visibleFrame.maxY, visibleFrame.maxY) - gap
-        let minX = visibleFrame.minX + margin
-        let maxX = max(minX, visibleFrame.maxX - margin - labelSize.width)
-        let desired = statusItemFrame.map { $0.midX - labelSize.width / 2 } ?? maxX
-        let x = min(max(desired, minX), maxX)
-        return CGRect(x: x, y: top - labelSize.height, width: labelSize.width, height: labelSize.height)
-    }
-}
-
 /// Everything that decides whether the per-window badge is visible.
 public struct BadgeConditions: Sendable, Equatable {
     public var enabled: Bool
