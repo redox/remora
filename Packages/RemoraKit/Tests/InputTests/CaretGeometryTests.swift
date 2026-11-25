@@ -63,3 +63,16 @@ private func expectThin(_ r: CGRect?, x: CGFloat, y: CGFloat? = nil, sourceLocat
     #expect(CaretGeometry.caret(beforeRect: nil, beforeChar: "a", atRect: nil, atChar: "b") == nil)
     #expect(CaretGeometry.caret(beforeRect: nil, beforeChar: nil, atRect: nil, atChar: nil) == nil)
 }
+
+@Test func googleDocsMagnifierFrameLocatesTheCaretAtItsLeadingEdge() {
+    let frame = CGRect(x: 925, y: 345, width: 625, height: 1)
+    let viewport = CGRect(x: 100, y: 120, width: 1_200, height: 700)
+    let caret = CaretGeometry.caret(inMagnifierFrame: frame, viewport: viewport)
+    #expect(caret == CGRect(x: 925, y: 345, width: CaretGeometry.caretWidth, height: 16))
+}
+
+@Test(arguments: [-10_000.0, 120.0]) func googleDocsOffscreenInputDoesNotAnchorThePopover(y: CGFloat) {
+    let frame = CGRect(x: 300, y: y, width: 625, height: 1)
+    let viewport = CGRect(x: 100, y: 120, width: 1_200, height: 700)
+    #expect(CaretGeometry.caret(inMagnifierFrame: frame, viewport: viewport) == nil)
+}

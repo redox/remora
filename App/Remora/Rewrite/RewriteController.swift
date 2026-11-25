@@ -381,9 +381,16 @@ final class RewriteController {
         let read = await fields.readField(includeWindowIdentity: before?.identity.window != nil,
                                          includeSelectionBounds: true)
         let context = await windows.readContext()
+        let field = read.field
+        let placementContext = context?.identity.pid == pid ? context?.context : nil
+        let googleDocsCaret: CGRect? = if let field, field.handle.pid == pid,
+                                          RewriteFlow.isGoogleDocsEditor(placementContext), let page = placementContext?.url {
+            await fields.readGoogleDocsCaret(in: field, page: page)
+        } else {
+            nil
+        }
         guard isCurrent(mine), NSWorkspace.shared.frontmostApplication?.processIdentifier == pid,
               !IsSecureEventInputEnabled() else { return finish(mine, nil) }
-        let field = read.field
         let rules = policy()
         let fallback: DictationTarget?
         var access: RewriteAccess?
@@ -436,7 +443,8 @@ final class RewriteController {
             selection: placement?.selectionBounds.map(ScreenPlacement.cocoa(fromAX:)),
             caret: placement?.caretRect.map(ScreenPlacement.cocoa(fromAX:)),
             preferNearbyPointer: replacesSelection || placement?.selectedText?.isEmpty == false || placement?.role == "AXWebArea",
-            pointer: pointer, context: context?.identity.pid == pid ? context?.context : nil)
+            pointer: pointer, context: placementContext,
+            googleDocsCaret: googleDocsCaret.map(ScreenPlacement.cocoa(fromAX:)))
         bar.open(over: anchor, mode: session == nil ? .insert : mode,
                  replacesSelection: replacesSelection, allowsEdit: session != nil,
                  recordEnabled: dictationEnabled, triggerName: shortcuts.rewriteKeyEnabled ? shortcuts.trigger.title : nil,

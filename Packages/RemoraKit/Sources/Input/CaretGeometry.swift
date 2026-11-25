@@ -10,6 +10,15 @@ enum CaretGeometry {
 
     static func isNewline(_ c: Character) -> Bool { newlines.contains(c) || c.isNewline }
 
+    /// Google Docs positions its input frame at the caret when screen magnifier support is on.
+    /// Chrome can clip an off-screen frame to the viewport edge, so require an interior origin.
+    static func caret(inMagnifierFrame frame: CGRect, viewport: CGRect) -> CGRect? {
+        guard !frame.isEmpty, !frame.isInfinite, !viewport.isEmpty, !viewport.isInfinite,
+              viewport.contains(frame.origin), frame.minY > viewport.minY, frame.minX > viewport.minX else { return nil }
+        // Only one pixel of the input frame may be visible. Leave room for a line below its top.
+        return CGRect(x: frame.minX, y: frame.minY, width: caretWidth, height: max(16, frame.height))
+    }
+
     /// A thin caret rect at the insertion point, or nil when nothing usable is known.
     /// - beforeRect/beforeChar: bounds and character just before the caret (nil at location 0).
     /// - atRect/atChar: bounds and character at the caret (nil at the end of the text).

@@ -34,6 +34,33 @@ public struct FocusedFieldReader: Sendable {
         return read
     }
 
+    /// Reads the caret coordinates Docs exposes for magnifiers through its focused input iframe.
+    public func readGoogleDocsCaret(in field: FocusedField, page: URL) async -> CGRect? {
+        guard field.role == kAXTextAreaRole, BrowserCatalog.isChromiumBrowser(field.bundleID),
+              let handle = field.handle as? SystemFieldHandle, handle.pid != getpid() else { return nil }
+        return try? await AXQueue.run(qos: .userInitiated) { s -> CGRect? in
+            guard let focused = Self.focusedElement(s), CFEqual(focused, handle.element),
+                  let input = Self.relatedElement(focused, kAXParentAttribute, s),
+                  s.copyAttribute(input, kAXRoleAttribute) as? String == "AXWebArea",
+                  Self.url(of: input, s)?.absoluteString == "about:blank",
+                  let frame = Self.frame(input, s) else { return nil }
+
+            // Verify the enclosing page and its viewport before treating iframe geometry as text bounds.
+            var node = input
+            for _ in 0..<8 {
+                guard let parent = Self.relatedElement(node, kAXParentAttribute, s),
+                      let role = s.copyAttribute(parent, kAXRoleAttribute) as? String else { return nil }
+                if role == "AXWebArea" {
+                    guard Self.url(of: parent, s) == page, let viewport = Self.frame(parent, s),
+                          !s.isUnresponsive, !s.isCancelled else { return nil }
+                    return CaretGeometry.caret(inMagnifierFrame: frame, viewport: viewport)
+                }
+                node = parent
+            }
+            return nil
+        }
+    }
+
     /// The system-wide focused element, with the messaging timeout applied (AX queue only).
     /// Applying it to the system-wide element sets the process-wide default to the same 0.25 s.
     static func focusedElement(_ session: AXReadSession) -> AXUIElement? {
@@ -139,6 +166,11 @@ public struct FocusedFieldReader: Sendable {
         return related
     }
 
+    private static func url(of element: AXUIElement, _ s: AXReadSession) -> URL? {
+        let value = s.copyAttribute(element, kAXURLAttribute)
+        return value as? URL ?? (value as? String).flatMap { URL(string: $0) }
+    }
+
     /// Read-only elements sometimes expose their window only through their parents. In browsers,
     /// also verify the web area so a frame or sidebar cannot inherit the main page's permissions.
     private static func selectionSource(for field: AXUIElement, browser: Bool,
@@ -156,9 +188,7 @@ public struct FocusedFieldReader: Sendable {
                 return (Int(bitPattern: CFHash(node)), page)
             }
             if browser, role == "AXWebArea" {
-                let value = session.copyAttribute(node, kAXURLAttribute)
-                let url = value as? URL ?? (value as? String).flatMap { URL(string: $0) }
-                guard let url, page == nil || page == url else { return nil }
+                guard let url = url(of: node, session), page == nil || page == url else { return nil }
                 page = url
             }
             guard let parent = relatedElement(node, kAXParentAttribute, session) else { return nil }

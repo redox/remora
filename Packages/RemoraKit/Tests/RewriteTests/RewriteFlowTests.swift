@@ -264,6 +264,19 @@ private let visible = CGRect(x: 0, y: 0, width: 1440, height: 900)
     #expect(frame.minY == pointer.y + 20)
 }
 
+@Test func googleDocsEditBarPrefersTheMagnifierCaretToTheInputFieldBounds() {
+    let context = WindowContext(app: "Chrome", bundleID: "com.google.Chrome",
+                                url: URL(string: "https://docs.google.com/document/d/example/edit"))
+    let input = CGRect(x: 0, y: 700, width: 625, height: 1)
+    let caret = CGRect(x: 510, y: 570, width: 2, height: 16)
+    let anchor = RewriteFlow.editBarAnchor(field: input, selection: nil, caret: input,
+                                          preferNearbyPointer: false, pointer: CGPoint(x: 200, y: 220),
+                                          context: context, googleDocsCaret: caret)
+    let frame = RewriteFlow.editBarFrame(field: anchor, height: 88, visible: visible)
+    #expect(frame.minX == caret.minX)
+    #expect(frame.minY == caret.maxY + 8)
+}
+
 @Test func editBarStillAnchorsToTheFieldForAnUnselectedComposer() {
     let field = CGRect(x: 140, y: 300, width: 500, height: 100)
     let caret = CGRect(x: 220, y: 352, width: 2, height: 16)
