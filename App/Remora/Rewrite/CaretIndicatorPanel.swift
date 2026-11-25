@@ -3,22 +3,6 @@ import Input
 import Rewrite
 import SwiftUI
 
-/// AX rects (top-left origin) to Cocoa screen coordinates, and the screen they sit on.
-@MainActor
-enum ScreenPlacement {
-    static func cocoa(fromAX r: CGRect) -> CGRect {
-        let height = NSScreen.screens.first?.frame.height ?? 0
-        return ScreenGeometry.cocoaRect(fromAX: r, primaryScreenHeight: height)
-    }
-
-    /// The visible frame of the screen holding the rect's centre (else the main screen).
-    static func visibleFrame(for r: CGRect) -> CGRect {
-        let center = CGPoint(x: r.midX, y: r.midY)
-        let screen = NSScreen.screens.first { $0.frame.contains(center) } ?? NSScreen.main ?? NSScreen.screens.first
-        return screen?.visibleFrame ?? r
-    }
-}
-
 /// The small fish at the caret while a rewrite works (click to cancel), the subtle hold hint, and
 /// the short notice bubble after a rewrite. Borderless, non-activating, never key, `.statusBar` level.
 @MainActor
@@ -72,10 +56,10 @@ final class CaretIndicatorPanel {
     }
 
     /// A short note for 4 s, with its action button when it has one.
-    func showNotice(_ notice: RewriteNotice, at anchor: CGRect?, onAction: @escaping @MainActor (RewriteNotice.Action) -> Void) {
+    func showNotice(_ notice: RewriteNotice, in field: FocusedField?, onAction: @escaping @MainActor (RewriteNotice.Action) -> Void) {
         hideTask?.cancel()
         content = .notice
-        let caret = anchor.map(ScreenPlacement.cocoa(fromAX:)) ?? Self.mouseRect()
+        let caret = ScreenPlacement.placement(for: field).indicatorAnchor(pointer: NSEvent.mouseLocation)
         let visible = ScreenPlacement.visibleFrame(for: caret)
         let width = min(Self.noticeWidth, visible.width)
         host.rootView = IndicatorView(kind: .notice(notice, width: width, onAction: { [weak self] action in
@@ -84,7 +68,7 @@ final class CaretIndicatorPanel {
         }, onDismiss: { [weak self] in self?.hide() }))
         panel.ignoresMouseEvents = false
         let size = host.fittingSize
-        let origin = Self.noticeOrigin(size: size, caret: caret, visible: visible)
+        let origin = Self.noticeOrigin(size: size, anchor: caret, visible: visible)
         panel.setFrame(CGRect(origin: origin, size: size), display: true)
         panel.orderFrontRegardless()
         hideTask = Task { [weak self] in
@@ -113,13 +97,9 @@ final class CaretIndicatorPanel {
         content = c
         host.rootView = IndicatorView(kind: kind)
         panel.ignoresMouseEvents = c == .hint
-        let caret = field.caretRect.map(ScreenPlacement.cocoa(fromAX:))
-        let anchor = caret ?? field.frame.map(ScreenPlacement.cocoa(fromAX:))
-            ?? CGRect(origin: NSEvent.mouseLocation, size: .zero)
-        // If only the field frame is available, keep the badge near the start of its text.
-        let insertionPoint = caret ?? CGRect(x: anchor.minX, y: anchor.maxY, width: 0, height: 0)
+        let anchor = ScreenPlacement.placement(for: field).indicatorAnchor(pointer: NSEvent.mouseLocation)
         let size = c == .working ? Self.workingSize : Self.hintSize
-        let frame = RewriteFlow.indicatorFrame(caret: insertionPoint, size: size,
+        let frame = RewriteFlow.indicatorFrame(caret: anchor, size: size,
                                                visible: ScreenPlacement.visibleFrame(for: anchor))
         panel.setFrame(frame, display: true)
         host.layoutSubtreeIfNeeded()
@@ -127,18 +107,12 @@ final class CaretIndicatorPanel {
     }
 
     /// Below the caret, or above it when that would leave the screen; kept on screen.
-    private static func noticeOrigin(size: CGSize, caret: CGRect, visible: CGRect) -> CGPoint {
-        let anchor = caret.height > 40 ? CGRect(x: caret.minX, y: caret.maxY - 20, width: 0, height: 20) : caret
+    private static func noticeOrigin(size: CGSize, anchor: CGRect, visible: CGRect) -> CGPoint {
         var y = anchor.minY - 6 - size.height
         if y < visible.minY { y = anchor.maxY + 6 }
         let x = min(max(anchor.minX, visible.minX), max(visible.minX, visible.maxX - size.width))
         y = min(max(y, visible.minY), max(visible.minY, visible.maxY - size.height))
         return CGPoint(x: x, y: y)
-    }
-
-    private static func mouseRect() -> CGRect {
-        let p = NSEvent.mouseLocation
-        return CGRect(x: p.x, y: p.y, width: 1, height: 16)
     }
 }
 

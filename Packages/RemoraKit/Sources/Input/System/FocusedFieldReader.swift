@@ -121,7 +121,10 @@ public struct FocusedFieldReader: Sendable {
         let selectedText = s.copyAttribute(element, kAXSelectedTextAttribute) as? String
         let placeholder = s.copyAttribute(element, kAXPlaceholderValueAttribute) as? String
         let frame = frame(element, s)
-        let caret = selection.flatMap { caretRect(element, $0, value, s) }
+        let caret = CaretGeometry.read(
+            selection: selection, value: value,
+            isGhosttySurface: FocusedField.isGhosttySurface(bundleID: app?.bundleIdentifier, role: role), fieldFrame: frame,
+            bounds: { Self.bounds(element, range: $0, s) }, lineBounds: { lineRect(element, $0, s) })
         let canSetValue = s.isSettable(element, kAXValueAttribute)
         let canSetSelectedText = s.isSettable(element, kAXSelectedTextAttribute)
         if s.isUnresponsive || s.isCancelled { return .refused(.notResponding) }
@@ -219,39 +222,6 @@ public struct FocusedFieldReader: Sendable {
         guard let param = AXValueCreate(.cfRange, &cf) else { return nil }
         return axValue(s.copyParameterizedAttribute(element, kAXBoundsForRangeParameterizedAttribute, param),
                        .cgRect, CGRect.zero)
-    }
-
-    /// A thin rect at the insertion point (see `CaretGeometry`); nil when the app reports no usable
-    /// bounds (the caller falls back to the field's frame).
-    private static func caretRect(_ element: AXUIElement, _ selection: NSRange, _ value: String?,
-                                  _ s: AXReadSession) -> CGRect? {
-        let text = value as NSString?
-        let loc = selection.location
-        func char(_ r: NSRange) -> Character? {
-            guard let text, r.length > 0, r.location >= 0, NSMaxRange(r) <= text.length else { return nil }
-            return text.substring(with: r).first
-        }
-        func bounds(_ location: Int, _ length: Int) -> CGRect? {
-            guard let rect = Self.bounds(element, range: NSRange(location: location, length: length), s),
-                  rect.width > 0 || rect.height > 0 else { return nil }
-            return rect
-        }
-        var beforeRange = NSRange(location: max(loc - 1, 0), length: loc > 0 ? 1 : 0)
-        if loc > 0, let text, loc <= text.length { beforeRange = text.rangeOfComposedCharacterSequence(at: loc - 1) }
-        let beforeChar = loc > 0 ? char(beforeRange) : nil
-        let atChar = char(NSRange(location: loc, length: 1))
-        let beforeRect = beforeChar != nil ? bounds(beforeRange.location, beforeRange.length) : nil
-        let atRect = atChar != nil ? bounds(loc, 1) : nil
-        if let r = CaretGeometry.caret(beforeRect: beforeRect, beforeChar: beforeChar, atRect: atRect, atChar: atChar) {
-            return r
-        }
-        let zero = bounds(loc, 0)
-        if let r = CaretGeometry.caret(beforeRect: nil, beforeChar: nil, atRect: nil, atChar: nil, zeroRect: zero) {
-            return r
-        }
-        // A non-nil zero-range rect can still be unusably wide. Try the line in that case too.
-        return CaretGeometry.caret(beforeRect: nil, beforeChar: nil, atRect: nil, atChar: nil,
-                                   lineRect: lineRect(element, loc, s))
     }
 
     private static func lineRect(_ element: AXUIElement, _ location: Int, _ s: AXReadSession) -> CGRect? {

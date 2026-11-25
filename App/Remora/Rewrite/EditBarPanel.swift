@@ -157,7 +157,7 @@ final class EditBarPanel {
     private let host: NSHostingView<EditBarView>
     private var monitors: [Any] = []
     private var actions: Actions?
-    private var anchor: CGRect?
+    private var target: (placement: WritingOverlayPlacement, pointer: CGPoint)?
 
     init() {
         let model = Model()
@@ -183,7 +183,7 @@ final class EditBarPanel {
     /// Opens the bar over the selection or field anchor in Cocoa screen coordinates.
     /// `focus: false` shows it without taking key focus (a spoken instruction while the rewrite key
     /// is still held: a key typed meanwhile must still reach the user's app); `focus()` takes it later.
-    func open(over anchor: CGRect, mode: EditVoiceRoute.Mode, replacesSelection: Bool, allowsEdit: Bool,
+    func open(placement: WritingOverlayPlacement, pointer: CGPoint, mode: EditVoiceRoute.Mode, replacesSelection: Bool, allowsEdit: Bool,
               recordEnabled: Bool, triggerName: String?, actions: Actions, focus: Bool = true) {
         self.actions = actions
         model.instruction = ""
@@ -217,10 +217,8 @@ final class EditBarPanel {
             guard model?.noteDraft == nil, model?.savedNoteID == nil else { return false }
             return actions.undo()
         }
-        self.anchor = anchor
-        let frame = RewriteFlow.editBarFrame(field: anchor, height: Self.height,
-                                             visible: ScreenPlacement.visibleFrame(for: anchor))
-        panel.setFrame(frame, display: true)
+        target = (placement, pointer)
+        resize(to: Self.height)
         if focus {
             panel.makeKeyAndOrderFront(nil)
             model.focusToken += 1
@@ -233,10 +231,10 @@ final class EditBarPanel {
     /// Measure the content, not the window: wrapped text can grow the panel without an
     /// animation or a focus change. The scroll view keeps it usable on very small screens.
     private func resize(to height: CGFloat) {
-        guard isOpen, let anchor, height > 0 else { return }
-        let frame = RewriteFlow.editBarFrame(field: anchor, height: ceil(height),
-                                             visible: ScreenPlacement.visibleFrame(for: anchor))
-        guard abs(panel.frame.height - frame.height) > 0.5 else { return }
+        guard isOpen, let target, height > 0 else { return }
+        let frame = target.placement.editBarFrame(pointer: target.pointer, height: ceil(height),
+                                                  visibleFrame: ScreenPlacement.visibleFrame(for:))
+        guard panel.frame != frame else { return }
         panel.setFrame(frame, display: panel.isVisible)
     }
 
@@ -268,7 +266,7 @@ final class EditBarPanel {
         model.finalizing = false
         model.handsFree = false
         model.recordingLocale = nil
-        anchor = nil
+        target = nil
         panel.orderOut(nil)
         host.rootView = EditBarView(model: model, actions: nil)
     }

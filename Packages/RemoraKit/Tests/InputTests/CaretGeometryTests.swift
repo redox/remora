@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 @testable import Input
 
@@ -75,4 +76,34 @@ private func expectThin(_ r: CGRect?, x: CGFloat, y: CGFloat? = nil, sourceLocat
     let frame = CGRect(x: 300, y: y, width: 625, height: 1)
     let viewport = CGRect(x: 100, y: 120, width: 1_200, height: 700)
     #expect(CaretGeometry.caret(inMagnifierFrame: frame, viewport: viewport) == nil)
+}
+
+@Test func ghosttyEmptySelectionReadsOnlyTheCursorBounds() {
+    let pane = CGRect(x: 10, y: 40, width: 520, height: 800)
+    let cursor = CGRect(x: 150, y: 700, width: 0, height: 16)
+    for reported in [cursor, pane, nil] {
+        var queries = [NSRange]()
+        let result = CaretGeometry.read(
+            selection: NSRange(location: 0, length: 0), value: "Old output\nPrompt", isGhosttySurface: true,
+            fieldFrame: pane, bounds: { range in
+                queries.append(range)
+                return range.length == 0 ? reported : glyph
+            }, lineBounds: { _ in Issue.record("A terminal selection offset cannot identify the cursor line"); return nil })
+        #expect(queries == [NSRange(location: 0, length: 0)])
+        if reported == cursor {
+            expectThin(result, x: 150, y: 700)
+        } else {
+            #expect(result == nil)
+        }
+    }
+}
+
+@Test func invalidInsertionOffsetsNeverQueryAX() {
+    for offset in [-1, NSNotFound] {
+        let rect = CaretGeometry.read(selection: NSRange(location: offset, length: 0), value: "a",
+                                      isGhosttySurface: false, fieldFrame: nil,
+                                      bounds: { _ in Issue.record("Invalid range"); return nil },
+                                      lineBounds: { _ in Issue.record("Invalid index"); return nil })
+        #expect(rect == nil)
+    }
 }

@@ -1,5 +1,4 @@
 import Capture
-import CoreGraphics
 import Foundation
 import Input
 import LLM
@@ -387,63 +386,5 @@ public enum RewriteFlow {
     public static func isGoogleDocsEditor(_ context: WindowContext?) -> Bool {
         let path = context?.url?.pathComponents
         return context?.domain == "docs.google.com" && path?.dropFirst().first == "document" && path?.last == "edit"
-    }
-
-    /// A document-sized AX element is a poor anchor for a selection. Prefer the text bounds,
-    /// then a nearby pointer for mouse selections or a caret when the pointer is elsewhere.
-    public static func editBarAnchor(field: CGRect?, selection: CGRect?, caret: CGRect?,
-                                     preferNearbyPointer: Bool, pointer: CGPoint, context: WindowContext? = nil,
-                                     googleDocsCaret: CGRect? = nil) -> CGRect {
-        let field = field.flatMap { usableAnchor($0) ? $0 : nil }
-        if let selection, usableAnchor(selection),
-           field.map({ $0.intersects(selection) && !selection.contains($0) }) ?? true {
-            return selection
-        }
-        // In Google Docs the focused element can span the canvas without identifying the
-        // insertion point. Only text bounds anchor the bar there; otherwise use the pointer.
-        if isGoogleDocsEditor(context) {
-            if let googleDocsCaret, usableAnchor(googleDocsCaret) { return googleDocsCaret }
-            if let caret, usableAnchor(caret), field.map({ $0.intersects(caret) && !caret.contains($0) }) ?? true {
-                return caret
-            }
-        } else if let field {
-            if !preferNearbyPointer { return field }
-            if !field.contains(pointer) {
-                if let caret, usableAnchor(caret), field.intersects(caret) { return caret }
-                return field
-            }
-        }
-        // Leave room for the line under the pointer when a document does not give text bounds.
-        return CGRect(x: pointer.x - 180, y: pointer.y - 12, width: 360, height: 24)
-    }
-
-    /// The Edit bar: 8 pt from its anchor, preferring above when it fits, kept on screen.
-    public static func editBarFrame(field: CGRect, height: CGFloat, visible: CGRect) -> CGRect {
-        let height = min(height, visible.height)
-        let width = min(max(field.width, 360), 560, visible.width)
-        let gap: CGFloat = 8
-        let above = visible.maxY - field.maxY - gap
-        let below = field.minY - visible.minY - gap
-        let useAbove = above >= height || (below < height && above > below)
-        let y = useAbove ? field.maxY + gap : field.minY - gap - height
-        let x = clamp(field.minX, visible.minX, visible.maxX - width)
-        return CGRect(x: x, y: clamp(y, visible.minY, visible.maxY - height), width: width, height: height)
-    }
-
-    /// Keep the indicator above and to the right of the caret. At the top of the screen, move it
-    /// below the line so clamping at either horizontal edge cannot cover the caret.
-    public static func indicatorFrame(caret: CGRect, size: CGSize, visible: CGRect) -> CGRect {
-        let gap: CGFloat = 3
-        let x = clamp(caret.maxX + gap, visible.minX, visible.maxX - size.width)
-        var y = caret.maxY + gap
-        if y + size.height > visible.maxY { y = caret.minY - gap - size.height }
-        y = clamp(y, visible.minY, visible.maxY - size.height)
-        return CGRect(origin: CGPoint(x: x, y: y), size: size)
-    }
-
-    private static func clamp(_ v: CGFloat, _ lo: CGFloat, _ hi: CGFloat) -> CGFloat { max(lo, min(v, max(lo, hi))) }
-
-    private static func usableAnchor(_ rect: CGRect) -> Bool {
-        !rect.isEmpty && !rect.isInfinite && rect.midX.isFinite && rect.midY.isFinite
     }
 }

@@ -328,7 +328,7 @@ final class RewriteController {
         }
         Sounds.play(.error, enabled: shortcuts.soundsEnabled)
         phase = .message(notice.text)
-        indicator.showNotice(notice, at: field.flatMap { $0.caretRect ?? $0.frame }) { [weak self] action in
+        indicator.showNotice(notice, in: field) { [weak self] action in
             self?.perform(action)
         }
         let shown = generation
@@ -446,15 +446,9 @@ final class RewriteController {
         let focus = EditVoiceRoute.barTakesFocus(barOpen: true, voiceHold: voiceHold, holdOpenedBar: holdOpenedBar)
         let replacesSelection = (field?.selection?.length ?? 0) > 0
         let mode = initialMode ?? EditVoiceRoute.Mode.preferred(replacesSelection: replacesSelection)
-        let placement = field.flatMap { $0.handle.pid == pid ? $0 : nil }
-        let anchor = RewriteFlow.editBarAnchor(
-            field: placement?.frame.map(ScreenPlacement.cocoa(fromAX:)),
-            selection: placement?.selectionBounds.map(ScreenPlacement.cocoa(fromAX:)),
-            caret: placement?.caretRect.map(ScreenPlacement.cocoa(fromAX:)),
-            preferNearbyPointer: replacesSelection || placement?.selectedText?.isEmpty == false || placement?.role == "AXWebArea",
-            pointer: pointer, context: placementContext,
-            googleDocsCaret: googleDocsCaret.map(ScreenPlacement.cocoa(fromAX:)))
-        bar.open(over: anchor, mode: allowsEdit ? mode : .insert,
+        let placementField = field.flatMap { $0.handle.pid == pid ? $0 : nil }
+        let placement = ScreenPlacement.placement(for: placementField, context: placementContext, googleDocsCaret: googleDocsCaret)
+        bar.open(placement: placement, pointer: pointer, mode: allowsEdit ? mode : .insert,
                  replacesSelection: replacesSelection, allowsEdit: allowsEdit,
                  recordEnabled: dictationEnabled, triggerName: shortcuts.rewriteKeyEnabled ? shortcuts.trigger.title : nil,
                  actions: EditBarPanel.Actions(
@@ -694,7 +688,7 @@ final class RewriteController {
     private func finishDictationInsertion(_ notice: DictationNotice?, at field: FocusedField?) {
         closeEditBar()
         if let notice {
-            indicator.showNotice(notice.writingNotice, at: field.flatMap { $0.caretRect ?? $0.frame }) { [weak self] in
+            indicator.showNotice(notice.writingNotice, in: field) { [weak self] in
                 self?.perform($0)
             }
         }

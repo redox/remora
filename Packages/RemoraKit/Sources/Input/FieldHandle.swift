@@ -60,6 +60,10 @@ public struct FocusedField: Sendable {
         self.selectionBounds = selectionBounds
     }
 
+    public static func isGhosttySurface(bundleID: String?, role: String?) -> Bool {
+        bundleID == "com.mitchellh.ghostty" && role == "AXTextArea"
+    }
+
     /// Some editors expose only a selected UTF-16 range, others only AXSelectedText.
     private var selectedExcerpt: String? {
         // A read-only document can expose selected text without an editable range.
