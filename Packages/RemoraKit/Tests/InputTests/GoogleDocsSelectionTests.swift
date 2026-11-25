@@ -42,3 +42,49 @@ func docsCopyIgnoresAStaleClipboardOrAnotherDocument(stale: Bool) {
     #expect(result == nil)
     #expect(board.restores == 0)
 }
+
+@Test func docsCopyAllowsTheOriginalSelectionToReturnAfterCopy() {
+    let board = FakePasteboard(items: [])
+    var checksAfterCopy = 0
+    var copies = 0
+    let result = GoogleDocsSelection.copy(from: page, board: board, sourceURL: { page },
+        copiedText: { "A selected passage" }, stillSelected: {
+            guard copies > 0 else { return true }
+            checksAfterCopy += 1
+            return checksAfterCopy > 1
+        }, sendCopy: {
+            copies += 1
+            board.userCopy("A selected passage")
+            return true
+        })
+    #expect(result == "A selected passage")
+    #expect(copies == 1)
+    #expect(board.restores == 1)
+}
+
+@Test func docsCopyRejectsASelectionThatStaysChangedAfterCopy() {
+    let board = FakePasteboard(items: [])
+    var selected = true
+    let result = GoogleDocsSelection.copy(from: page, board: board, sourceURL: { page },
+        copiedText: { "A selected passage" }, stillSelected: { selected }, sendCopy: {
+            board.userCopy("A selected passage")
+            selected = false
+            return true
+        }, timeout: .zero)
+    #expect(result == nil)
+    #expect(board.restores == 1)
+}
+
+@Test func docsCopyPreservesANewerCopyWhileTheSelectionReturns() {
+    let board = FakePasteboard(items: [])
+    let result = GoogleDocsSelection.copy(from: page, board: board, sourceURL: { page },
+        copiedText: { "A selected passage" }, stillSelected: {
+            if board.restores > 0 { board.userCopy("A newer copy") }
+            return true
+        }, sendCopy: {
+            board.userCopy("A selected passage")
+            return true
+        }, timeout: .zero)
+    #expect(result == nil)
+    #expect(board.restores == 1)
+}

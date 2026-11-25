@@ -1,10 +1,13 @@
 import AppKit
 import Capture
 import Carbon.HIToolbox
+import os
 
 /// The Docs canvas can expose a selected range in its input proxy without exposing the words
 /// it represents. Chromium includes the top-level source URL when it copies the actual selection.
 public enum GoogleDocsSelection {
+    private static let log = Logger(subsystem: "dev.remora", category: "input")
+
     public static func read(from field: FocusedField, page: URL) async -> String? {
         guard let selection = field.selection, selection.length > 0,
               let key = await KeySynth.resolve("c"), !Task.isCancelled else { return nil }
@@ -38,8 +41,19 @@ public enum GoogleDocsSelection {
                 guard source == page else { return nil }
                 let text = copiedText()
                 guard board.changeCount == count else { return nil }
-                _ = board.restore(saved)
-                return stillSelected() ? text : nil
+                let restored = board.restore(saved)
+                guard let text else { return nil }
+                // Docs can publish the copy before its input proxy reports the original
+                // selection again. Restore the clipboard first and never send Copy twice.
+                let settleBy = min(deadline, ContinuousClock.now + .milliseconds(200))
+                while !stillSelected() {
+                    guard ContinuousClock.now < settleBy else {
+                        log.info("Docs copy discarded: original selection did not return")
+                        return nil
+                    }
+                    Thread.sleep(forTimeInterval: 0.015)
+                }
+                return board.changeCount == restored ? text : nil
             }
             if ContinuousClock.now >= deadline { return nil }
             Thread.sleep(forTimeInterval: 0.015)
