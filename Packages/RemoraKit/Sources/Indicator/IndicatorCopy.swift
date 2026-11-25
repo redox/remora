@@ -65,6 +65,7 @@ public struct IndicatorAnnouncer: Sendable {
             }
         }
         baseline = s
+        guard s.status == .capturing else { return nil }
         return IndicatorCopy.label(s)
     }
 }

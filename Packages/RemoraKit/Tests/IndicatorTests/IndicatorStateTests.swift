@@ -93,10 +93,11 @@ func reasons(v: CaptureVerdict, text: String) { #expect(IndicatorCopy.reason(v) 
     #expect(a.update(s(.capturing, "Slack", pid: 1, window: 7)) == nil)
 }
 
-@Test func appSwitchAnnounces() {
+@Test func excludedAppSwitchIsSilentAndReturningToCaptureAnnounces() {
     var a = IndicatorAnnouncer()
     _ = a.update(s(.capturing, "Slack", pid: 1, window: 7))
-    #expect(a.update(s(.notCapturing(.passwordManager), "1Password", pid: 2)) == "Not capturing 1Password")
+    #expect(a.update(s(.notCapturing(.passwordManager), "1Password", pid: 2)) == nil)
+    #expect(a.update(s(.capturing, "Slack", pid: 1, window: 7)) == "Capturing Slack")
 }
 
 @Test func windowSwitchAnnounces() {
@@ -111,11 +112,11 @@ func reasons(v: CaptureVerdict, text: String) { #expect(IndicatorCopy.reason(v) 
     #expect(a.update(s(.capturing, "Slack", pid: 1, window: 7)) == nil)
 }
 
-@Test func sameWindowTabToExcludedSiteAnnounces() {
+@Test func sameWindowTabToExcludedSiteIsSilent() {
     var a = IndicatorAnnouncer()
     _ = a.update(s(.capturing, "Safari", pid: 1, window: 1, site: "github.com"))
     #expect(a.update(s(.notCapturing(.sensitiveSite), "Safari", pid: 1, window: 1, site: "boursorama.com"))
-            == "Not capturing boursorama.com")
+            == nil)
 }
 
 @Test func sameWindowTabSameBucketIsSilent() {
@@ -145,12 +146,13 @@ func reasons(v: CaptureVerdict, text: String) { #expect(IndicatorCopy.reason(v) 
     #expect(a.update(s(.capturing, "Mail", pid: 3, window: 2)) == "Capturing Mail")
 }
 
-@Test func pausingAndResumingAnnounce() {
+@Test func pausedAppSwitchIsSilentAndResumingAnnounces() {
     var a = IndicatorAnnouncer()
     _ = a.update(s(.capturing, "Slack", pid: 1, window: 7))
-    #expect(a.update(s(.paused, "Slack", pid: 1)) == "Not capturing Slack (paused)")
-    #expect(a.update(s(.pending, "Slack", pid: 1)) == nil)
-    #expect(a.update(s(.capturing, "Slack", pid: 1, window: 7)) == "Capturing Slack")
+    #expect(a.update(s(.paused, "Slack", pid: 1)) == nil)
+    #expect(a.update(s(.paused, "Mail", pid: 2)) == nil)
+    #expect(a.update(s(.pending, "Mail", pid: 2)) == nil)
+    #expect(a.update(s(.capturing, "Mail", pid: 2, window: 4)) == "Capturing Mail")
 }
 
 @Test func appOnlyRulesUnavailableIsNotCapturing() {

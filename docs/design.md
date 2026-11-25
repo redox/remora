@@ -87,7 +87,8 @@ error codes, with no user content or credentials.
 
 **Make capture status visible where it can be changed.** The menu-bar mark shows a filled sea-glass
 dot when the active window is eligible, a ring when it is excluded, and distinct pause and permission
-states. An app or window switch can show a brief label. The optional title-bar badge is off by
+states. A switch to an eligible window can show a brief “Capturing” label. For excluded windows
+and paused capture, the menu shows the reason on demand. The optional title-bar badge is off by
 default and uses a small non-activating panel, hidden during moves, full screen, and detected
 screen sharing. It uses the same Remora mark as the menu bar, tinted sea-glass for eligible windows
 and gray for excluded windows. Both surfaces offer exclusion and pause controls. Status reflects
