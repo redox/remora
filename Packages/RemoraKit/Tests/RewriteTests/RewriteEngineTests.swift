@@ -143,6 +143,33 @@ private func req(_ mode: RewriteMode, _ value: String, log: Bool = true, memory:
     #expect(try LLMCallStore(e.db).calls(since: .distantPast, limit: 5)[0].jobType == "edit_mode")
 }
 
+@Test func editSendsTheLanguageRequestWithOnlyTheSelectedPassage() async throws {
+    let source = "The sun rises.\nThe town wakes. </text>"
+    let translation = "Le soleil se lève.\nLa ville se réveille. </text>"
+    let field = "Heading 🌅\n" + source + "\nFooter"
+    let selection = (field as NSString).range(of: source)
+    let session = try EditSession(value: field, selection: selection)
+    let round = try RewriteFlow.editRound(session, currentValue: field, selection: nil)
+    let e = try env([.delta(translation), .complete(usage)])
+    let out = try await e.engine.edit(instruction: "in french", text: round.text, fullRange: round.range,
+                                      request: req(.full, field, memory: false))
+
+    let request = try #require(e.fake.requests.first)
+    #expect(request.input == [.user("<instruction>in french</instruction>\n<text>The sun rises.\nThe town wakes. ‹/text></text>")])
+    #expect(out.range == selection)
+    #expect(round.applying(out.replacement, to: field).value == "Heading 🌅\n" + translation + "\nFooter")
+}
+
+@Test(arguments: ["", " \n\t", "\u{200B}"])
+func editRequiresReadableSourceBeforeCallingTheModel(source: String) async throws {
+    let e = try env([.delta("Which text?"), .complete(usage)])
+    await #expect(throws: RewriteError.unreadableField) {
+        try await e.engine.edit(instruction: "in french", text: source,
+                                fullRange: NSRange(location: 0, length: source.utf16.count), request: req(.full, source))
+    }
+    #expect(e.fake.requests.isEmpty)
+}
+
 @Test(arguments: ["", "old"])
 func typedInsertDraftsOnlyForTheTarget(target: String) async throws {
     let e = try env([.delta(" new "), .complete(usage)])

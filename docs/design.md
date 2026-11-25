@@ -227,6 +227,10 @@ so ordinary Option typing, including on AZERTY, stays intact. The optional Shift
 fallback is off by default because apps assign it other meanings. No gesture requires Input
 Monitoring.
 
+In Edit, a short instruction applies to the selected passage, or to the field when there is no
+selection. For example, “in French” requests a translation of the passage with its line breaks.
+If the edit target contains no readable text, Remora leaves the field alone.
+
 **Anchor the Google Docs popover to text geometry when available.** In Chrome, Docs moves its
 input frame to the visible caret when **Turn on screen magnifier support** is enabled in
 **Tools › Accessibility**. Use the top-left corner of that frame after verifying it belongs to the
