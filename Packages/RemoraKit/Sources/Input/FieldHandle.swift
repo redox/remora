@@ -34,6 +34,7 @@ public struct FocusedField: Sendable {
     public var isSecure: Bool
     /// AX coordinates (top-left origin); see `ScreenGeometry`.
     public var frame: CGRect?
+    /// Bounds of the insertion point in AX screen coordinates, when available.
     public var caretRect: CGRect?
     /// Bounds of the highlighted text, in AX screen coordinates, when available.
     public var selectionBounds: CGRect?

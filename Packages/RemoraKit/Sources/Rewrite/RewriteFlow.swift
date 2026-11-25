@@ -376,13 +376,22 @@ public enum RewriteFlow {
     /// A document-sized AX element is a poor anchor for a selection. Prefer the text bounds,
     /// then a nearby pointer for mouse selections or a caret when the pointer is elsewhere.
     public static func editBarAnchor(field: CGRect?, selection: CGRect?, caret: CGRect?,
-                                     preferNearbyPointer: Bool, pointer: CGPoint) -> CGRect {
+                                     preferNearbyPointer: Bool, pointer: CGPoint, context: WindowContext? = nil) -> CGRect {
         let field = field.flatMap { usableAnchor($0) ? $0 : nil }
         if let selection, usableAnchor(selection),
            field.map({ $0.intersects(selection) && !selection.contains($0) }) ?? true {
             return selection
         }
-        if let field {
+        // In Google Docs the focused element can span the canvas without identifying the
+        // insertion point. Only text bounds anchor the bar there; otherwise use the pointer.
+        let path = context?.url?.pathComponents
+        let isGoogleDocsEditor = context?.domain == "docs.google.com" && path?.dropFirst().first == "document"
+            && path?.last == "edit"
+        if isGoogleDocsEditor {
+            if let caret, usableAnchor(caret), field.map({ $0.intersects(caret) && !caret.contains($0) }) ?? true {
+                return caret
+            }
+        } else if let field {
             if !preferNearbyPointer { return field }
             if !field.contains(pointer) {
                 if let caret, usableAnchor(caret), field.intersects(caret) { return caret }

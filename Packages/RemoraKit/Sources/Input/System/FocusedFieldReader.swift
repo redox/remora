@@ -94,7 +94,7 @@ public struct FocusedFieldReader: Sendable {
         let selectedText = s.copyAttribute(element, kAXSelectedTextAttribute) as? String
         let placeholder = s.copyAttribute(element, kAXPlaceholderValueAttribute) as? String
         let frame = frame(element, s)
-        let caret = selection.flatMap { caretRect(element, $0, value, s) } ?? frame
+        let caret = selection.flatMap { caretRect(element, $0, value, s) }
         let canSetValue = s.isSettable(element, kAXValueAttribute)
         let canSetSelectedText = s.isSettable(element, kAXSelectedTextAttribute)
         if s.isUnresponsive || s.isCancelled { return .refused(.notResponding) }
@@ -110,14 +110,26 @@ public struct FocusedFieldReader: Sendable {
         let localized = app?.localizedName.map(AppName.normalize) ?? ""
         let handle = SystemFieldHandle(element: element, pid: pid, canSetValue: canSetValue,
                                        canSetSelectedText: canSetSelectedText)
-        let bounds = includeSelectionBounds ? selectionBounds(
-            element, range: selection, tryWebMarkers: role == "AXWebArea" || selectedText?.isEmpty == false, s) : nil
+        let hasSelectedText = selectedText?.isEmpty == false
+        let hasSelection = (selection?.length ?? 0) > 0 || hasSelectedText
+        let tryWebMarkers = role == "AXWebArea" || hasSelectedText || (caret == nil && BrowserCatalog.isBrowser(bundleID))
+        let bounds = includeSelectionBounds ? textBounds(element, range: selection, tryWebMarkers: tryWebMarkers, s) : nil
+        // A browser's marker range can describe the insertion point even when the focused
+        // element provides no range-based caret. Collapsed bounds can be zero pixels wide.
+        let markerCaret: CGRect? = if !hasSelection, let bounds, bounds.width <= CaretGeometry.caretWidth {
+            CaretGeometry.caret(beforeRect: nil, beforeChar: nil, atRect: nil, atChar: nil, zeroRect: bounds)
+        } else {
+            nil
+        }
+        let canHaveSelectionBounds = hasSelection || (selection == nil && role == "AXWebArea")
+        let selectionBounds = canHaveSelectionBounds && markerCaret == nil && bounds?.isEmpty == false ? bounds : nil
+        if s.isUnresponsive || s.isCancelled { return .refused(.notResponding) }
         return .field(FocusedField(
             handle: handle, value: value, selection: selection, selectedText: selectedText, placeholder: placeholder,
-            role: role, isSecure: false, frame: frame, caretRect: caret,
+            role: role, isSecure: false, frame: frame, caretRect: caret ?? markerCaret,
             app: localized.isEmpty ? (bundleID ?? "Unknown") : localized, bundleID: bundleID, bundleURL: bundleURL,
             isWebBacked: AppKind.isWebBacked(bundleID: bundleID, bundleURL: bundleURL), windowIdentity: source?.window,
-            selectionPageURL: source?.page, selectionBounds: bounds))
+            selectionPageURL: source?.page, selectionBounds: selectionBounds))
     }
 
     private static func relatedElement(_ element: AXUIElement, _ attribute: String, _ s: AXReadSession) -> AXUIElement? {
@@ -161,16 +173,14 @@ public struct FocusedFieldReader: Sendable {
         return CGRect(origin: origin, size: size)
     }
 
-    private static func selectionBounds(_ element: AXUIElement, range: NSRange?, tryWebMarkers: Bool,
-                                        _ s: AXReadSession) -> CGRect? {
+    private static func textBounds(_ element: AXUIElement, range: NSRange?, tryWebMarkers: Bool,
+                                   _ s: AXReadSession) -> CGRect? {
         if let range, range.length > 0, let rect = bounds(element, range: range, s), !rect.isEmpty {
             return rect
         }
         // Chromium and WebKit can expose the document selection as opaque text markers.
-        guard tryWebMarkers, let markers = s.copyAttribute(element, "AXSelectedTextMarkerRange"),
-              let rect = axValue(s.copyParameterizedAttribute(element, "AXBoundsForTextMarkerRange", markers),
-                                 .cgRect, CGRect.zero), !rect.isEmpty else { return nil }
-        return rect
+        guard tryWebMarkers, let markers = s.copyAttribute(element, "AXSelectedTextMarkerRange") else { return nil }
+        return axValue(s.copyParameterizedAttribute(element, "AXBoundsForTextMarkerRange", markers), .cgRect, CGRect.zero)
     }
 
     private static func bounds(_ element: AXUIElement, range: NSRange, _ s: AXReadSession) -> CGRect? {

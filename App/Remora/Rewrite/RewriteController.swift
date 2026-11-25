@@ -436,7 +436,7 @@ final class RewriteController {
             selection: placement?.selectionBounds.map(ScreenPlacement.cocoa(fromAX:)),
             caret: placement?.caretRect.map(ScreenPlacement.cocoa(fromAX:)),
             preferNearbyPointer: replacesSelection || placement?.selectedText?.isEmpty == false || placement?.role == "AXWebArea",
-            pointer: pointer)
+            pointer: pointer, context: context?.identity.pid == pid ? context?.context : nil)
         bar.open(over: anchor, mode: session == nil ? .insert : mode,
                  replacesSelection: replacesSelection, allowsEdit: session != nil,
                  recordEnabled: dictationEnabled, triggerName: shortcuts.rewriteKeyEnabled ? shortcuts.trigger.title : nil,

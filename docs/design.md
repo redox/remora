@@ -227,6 +227,10 @@ so ordinary Option typing, including on AZERTY, stays intact. The optional Shift
 fallback is off by default because apps assign it other meanings. No gesture requires Input
 Monitoring.
 
+**Anchor the Google Docs popover to text geometry when available.** The focused accessibility
+element can span the editor. Use selection or caret bounds, including browser text marker bounds,
+when available. Fall back to the mouse pointer when the canvas exposes no usable text geometry.
+
 **Draft from typed or spoken prompts in Insert.** Submit a typed prompt or reviewed transcript
 to generate text for the original caret or selection. Insert treats rough notes as a brief and
 develops them into a draft for the audience and format suggested by the available context. It
@@ -396,6 +400,7 @@ unsigned Debug build. [Verification guidance](../.claude/skills/remora-verify/SK
 | Area | Manual checks |
 | --- | --- |
 | Capture and insertion | Safari, Chrome, Arc if installed, Mail, Messages, Notes, Slack, VS Code/Cursor, Terminal, and web composers such as Gmail and LinkedIn. Submit a typed Insert prompt at a caret and over a selection. In an excluded app, verify that Insert shows Prompt only and can draft with Apple Intelligence unavailable. Exercise private windows, secure fields, pause, pasteboard restoration, undo, and the onboarding practice field. |
+| Google Docs popover | In Chrome, tap right Option at the caret in a blank document, then repeat after moving the caret with the keyboard or highlighting text. Verify the popover opens at the exposed text bounds or near the mouse pointer if the editor withholds them. |
 | Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Draft and insert, Insert transcript, Edit, cancel, and a mode switch followed immediately by Return. Verify that OpenAI transcription hides the EN/FR button and detects the language on Insert transcript. The button returns when OpenAI transcription is off. In an excluded app, speak a prompt and verify that Return drafts the result. Check that Listening appears when the microphone is ready and a silent recording shows an inline notice. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
 | Chat and indicators | Real notch and secondary displays, hide and show the menu bar, hover and pin, IME, trackpad scroll, min size with 150% text, caption and badge placement, light and dark appearance, and accessibility display options. Send from older history and check that the question is visible before the reply. Scroll up mid-reply, then choose **Latest** and check that the view follows the rest of the reply. Open chat from a notification and check the selected message. Return must never approve a card. |
 | Notifications and MCP | In the installed app, use Settings › Notifications › Send a test notification and check for the Remora app icon in the banner and Notification Center. Verify the permission prompt, wake catch-up, reminders with proactive messages off, sharing suppression, and delete-all cleanup. Test Connect and Update in real clients. For meeting sources, use test accounts and synthetic meetings to exercise authorization, resync, pause, forget, and disconnect. |
