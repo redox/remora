@@ -369,6 +369,23 @@ config formats or ambiguous CLI scopes are refused. A copyable command supports 
 Once a client reads the results, its own data-handling rules apply.
 [MCP server](../Packages/RemoraKit/Sources/MCPServer) · [Client registration](../Packages/RemoraKit/Sources/ClientConfig)
 
+**Detect joined calls and select the transcription provider at the start.** Meeting recording is an explicit opt-in for
+regular Chrome running Google Meet, Zoom Workplace, and Microsoft Teams. Device activity and a
+periodic check wake bounded Accessibility reads. The client must expose joined-call controls.
+For Meet, Chrome’s own window title or its native profile and menu buttons verify a regular
+profile. The menu description can come from macOS accessibility custom content. Controls
+inside the web page cannot establish the profile. The meeting scan skips Chrome’s native tab selectors
+and bookmark buttons, which sit outside the document panes. Other branches share a 400-node
+budget and the scan deadline, including nested split panes. If a batched native role is missing,
+Remora checks the individual attributes while the app is responsive. When a child-range read
+reports an invalid range, a successful zero count can establish an empty branch. Other unreadable
+branches withhold recording, including branches inside the call controls. After discovery succeeds, Chrome’s
+final window identity check gets at least 750 milliseconds. Optional caption reads have a shorter
+budget so they leave time for verification. An incomplete read withholds recording.
+The room identifies a stopped call across windows. Its native window identity determines whether
+that call has navigated to an excluded page. A separate verified regular window showing a single
+non-meeting page can have its own site exclusion.
+
 **Import meetings as their own library.** Meeting dates, updates, and deletion semantics differ
 from screen captures, so transcripts and generated notes have their own redacted index.
 Quill and compatible servers use loopback Streamable HTTP. Granola uses fixed HTTPS origins,

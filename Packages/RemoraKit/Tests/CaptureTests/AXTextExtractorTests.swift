@@ -10,6 +10,13 @@ struct FakeAXNode: AXNode {
     var title: String? = nil
     var nodeDescription: String? = nil
     var children: [any AXNode] = []
+    var domIdentifier: String?
+    var pageURL: URL?
+    var missingBatchedRole = false
+    var unreadableChildren = false
+    var nativeClasses: [String] = []
+    var help: String?
+    var customDescriptions: [String] = []
 }
 
 /// Counts reads of `children` and of scalar properties; shared across the tree.

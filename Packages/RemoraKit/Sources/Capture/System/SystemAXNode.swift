@@ -38,13 +38,49 @@ public final class AXReadSession: Sendable {
         return check(error) ? value : nil
     }
 
+    /// One IPC for related scalar attributes. AX represents unsupported attributes with
+    /// placeholders, so indexing the result preserves the caller's requested order.
+    func copyAttributes(_ element: AXUIElement, _ names: [String]) -> [AnyObject]? {
+        guard !isStopped else { return nil }
+        var values: CFArray?
+        let error = AXUIElementCopyMultipleAttributeValues(element, names as CFArray, [], &values)
+        if error == .notImplemented {
+            return names.map { copyAttribute(element, $0) ?? NSNull() }
+        }
+        guard check(error), let result = values as? [AnyObject], result.count == names.count else { return nil }
+        // An individual field can time out even when the overall request succeeded.
+        for value in result where CFGetTypeID(value) == AXValueGetTypeID() {
+            var fieldError = AXError.success
+            if AXValueGetValue(value as! AXValue, .axError, &fieldError), fieldError == .cannotComplete {
+                _ = check(fieldError)
+                return nil
+            }
+        }
+        return result
+    }
+
     func copyChildren(_ element: AXUIElement, max: Int) -> [AXUIElement] {
-        guard !isStopped else { return [] }
+        copyElements(element, kAXChildrenAttribute, max: max) ?? []
+    }
+
+    func copyElements(_ element: AXUIElement, _ attribute: String, max: Int, emptyIfUnsupported: Bool = false) -> [AXUIElement]? {
+        guard !isStopped else { return nil }
         var values: CFArray?
         let error = AXUIElementCopyAttributeValues(
-            element, kAXChildrenAttribute as CFString, 0, max, &values)
-        guard check(error), let values else { return [] }
-        return (values as? [AXUIElement]) ?? []
+            element, attribute as CFString, 0, max, &values)
+        if emptyIfUnsupported, error == .attributeUnsupported || error == .noValue { return [] }
+        // Index zero can be out of range for an empty array. A failed range read alone
+        // cannot distinguish that leaf from malformed data or a disappearing element.
+        if Self.confirmedEmptyRange(error, count: {
+            var count: CFIndex = 0
+            return check(AXUIElementGetAttributeValueCount(element, attribute as CFString, &count)) ? count : nil
+        }) { return [] }
+        guard check(error), let values else { return nil }
+        return values as? [AXUIElement]
+    }
+
+    static func confirmedEmptyRange(_ error: AXError, count: () -> Int?) -> Bool {
+        error == .illegalArgument && count() == 0
     }
 
     public func copyParameterizedAttribute(_ element: AXUIElement, _ attribute: String, _ parameter: CFTypeRef) -> CFTypeRef? {
