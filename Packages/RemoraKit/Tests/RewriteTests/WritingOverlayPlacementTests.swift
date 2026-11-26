@@ -77,7 +77,7 @@ private let visible = CGRect(x: 0, y: 0, width: 1440, height: 900)
     let pane = CGRect(x: 28, y: 0, width: 1000, height: 880)
     let cursor = CGRect(x: 148, y: 190, width: 2, height: 16)
     let placement = WritingOverlayPlacement(surface: .terminal, field: pane, selection: nil, caret: cursor)
-    let anchor = placement.editBarAnchor(pointer: .zero)
+    let anchor = placement.resolveAnchor(pointer: .zero).rect
     #expect(placement.indicatorAnchor(pointer: .zero) == cursor)
     let frame = RewriteFlow.editBarFrame(field: anchor, height: 128, visible: visible)
     #expect(frame.minX == cursor.minX)
@@ -88,7 +88,7 @@ private let visible = CGRect(x: 0, y: 0, width: 1440, height: 900)
     let pane = CGRect(x: -1100, y: 20, width: 500, height: 800)
     for point in [CGPoint(x: -850, y: 610), CGPoint(x: 400, y: 300)] {
         let placement = WritingOverlayPlacement(surface: .terminal, field: pane, selection: nil, caret: nil)
-        let anchor = placement.editBarAnchor(pointer: point)
+        let anchor = placement.resolveAnchor(pointer: point).rect
         let expected = pane.contains(point) ? point : CGPoint(x: pane.midX, y: pane.midY)
         #expect(placement.indicatorAnchor(pointer: point).origin == expected)
         #expect(anchor.midX == expected.x)
@@ -192,14 +192,14 @@ private let visible = CGRect(x: 0, y: 0, width: 1440, height: 900)
     let pane = CGRect(x: -1100, y: 20, width: 500, height: 800)
     let text = CGRect(x: -900, y: 400, width: 80, height: 15)
     let placement = WritingOverlayPlacement(surface: .terminal, field: pane, selection: text, caret: nil)
-    #expect(placement.editBarAnchor(pointer: .zero) == text)
+    #expect(placement.resolveAnchor(pointer: .zero).rect == text)
 }
 
 @Test func ghosttyIgnoresTextBoundsOutsideTheFocusedPane() {
     let pane = CGRect(x: -1100, y: 20, width: 500, height: 800)
     let offscreen = CGRect(x: 100, y: 200, width: 2, height: 16)
     let placement = WritingOverlayPlacement(surface: .terminal, field: pane, selection: pane, caret: offscreen)
-    let anchor = placement.editBarAnchor(pointer: .zero)
+    let anchor = placement.resolveAnchor(pointer: .zero).rect
     #expect(anchor.midX == pane.midX && anchor.midY == pane.midY)
 }
 
@@ -220,4 +220,23 @@ private let visible = CGRect(x: 0, y: 0, width: 1440, height: 900)
     #expect(compact.minY == field.maxY + 8)
     #expect(expanded.minY == cursor.maxY + 8)
     #expect(expanded.minX == cursor.minX)
+}
+
+@Test func reportsWhichGeometryActuallyPositionedThePopover() {
+    let field = CGRect(x: 100, y: 100, width: 500, height: 300)
+    let caret = CGRect(x: 140, y: 240, width: 2, height: 16)
+    let pointer = CGPoint(x: 180, y: 150)
+    let cases: [(WritingOverlayPlacement.Surface, CGRect?, CGRect?, CGPoint, String)] = [
+        (.googleDocs, caret, caret, pointer, "documentCaret"),
+        (.googleDocs, caret, nil, pointer, "caret"),
+        (.googleDocs, nil, nil, pointer, "pointer"),
+        (.terminal, nil, nil, pointer, "pointer"),
+        (.terminal, nil, nil, .zero, "paneCentre"),
+        (.composer, caret, nil, pointer, "field")
+    ]
+    for (surface, ordinary, verified, point, expected) in cases {
+        let placement = WritingOverlayPlacement(surface: surface, field: field, selection: nil,
+                                                caret: ordinary, verifiedCaret: verified)
+        #expect(placement.resolveAnchor(pointer: point).source.rawValue == expected)
+    }
 }

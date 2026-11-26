@@ -1,11 +1,12 @@
 import Capture
 import CoreGraphics
 import Input
+import os
 
 /// Screen-space geometry shared by the writing popover, progress badge and notices.
 /// All stored rectangles use Cocoa coordinates. A document proxy may be smaller than its caret.
 public struct WritingOverlayPlacement {
-    enum Surface {
+    enum Surface: String {
         case composer, selection, googleDocs, terminal
 
         init(bundleID: String?, role: String?, hasSelection: Bool, context: WindowContext?) {
@@ -16,10 +17,12 @@ public struct WritingOverlayPlacement {
         }
     }
 
+    enum AnchorSource: String { case selection, documentCaret, caret, pointer, paneCentre, field }
+
     private let surface: Surface
     private let field: CGRect?
     private let selection: CGRect?
-    private let caret: CGRect?
+    private let caret: (rect: CGRect, source: AnchorSource)?
 
     public init(field focused: FocusedField?, context: WindowContext? = nil, googleDocsCaret: CGRect? = nil,
                 primaryScreenHeight: CGFloat) {
@@ -42,7 +45,11 @@ public struct WritingOverlayPlacement {
         self.surface = surface
         self.field = field
         self.selection = textBounds(selection)
-        self.caret = (surface == .googleDocs ? Self.usable(verifiedCaret) : nil) ?? textBounds(caret)
+        if surface == .googleDocs, let verified = Self.usable(verifiedCaret) {
+            self.caret = (verified, .documentCaret)
+        } else {
+            self.caret = textBounds(caret).map { ($0, .caret) }
+        }
     }
 
     private static func usable(_ rect: CGRect?) -> CGRect? {
@@ -55,27 +62,33 @@ public struct WritingOverlayPlacement {
         return CGPoint(x: pane.midX, y: pane.midY)
     }
 
-    func editBarAnchor(pointer: CGPoint, fitsBesideField: (CGRect) -> Bool = { _ in true }) -> CGRect {
-        if let selection { return selection }
-        func near(_ point: CGPoint) -> CGRect {
+    func resolveAnchor(pointer: CGPoint, fitsBesideField: (CGRect) -> Bool = { _ in true })
+        -> (rect: CGRect, source: AnchorSource) {
+        if let selection { return (selection, .selection) }
+        func near(_ point: CGPoint, source: AnchorSource) -> (CGRect, AnchorSource) {
             let width = Self.minimumBarWidth
-            return CGRect(x: point.x - width / 2, y: point.y - 12, width: width, height: 24)
+            return (CGRect(x: point.x - width / 2, y: point.y - 12, width: width, height: 24), source)
         }
-        // Docs' proxy frame can be off the page. A terminal's frame identifies the active pane.
-        let point = fallbackPoint(pointer, within: surface == .googleDocs ? nil : field)
-        let textAnchor = caret ?? near(point)
         switch surface {
         case .terminal, .googleDocs:
-            return textAnchor
-        case .selection:
-            if field?.contains(pointer) == true { return near(pointer) }
-            if let caret { return caret }
-        case .composer:
             break
+        case .selection where field?.contains(pointer) == true:
+            return near(pointer, source: .pointer)
+        case .selection where caret != nil:
+            break
+        case .composer, .selection:
+            if let field, fitsBesideField(field) { return (field, .field) }
         }
-        if let field, fitsBesideField(field) { return field }
-        return textAnchor
+        if let caret { return caret }
+        if surface != .googleDocs, let field, !field.contains(pointer) {
+            return near(CGPoint(x: field.midX, y: field.midY), source: .paneCentre)
+        }
+        return near(pointer, source: .pointer)
     }
+
+    #if DEBUG
+    private static let log = Logger(subsystem: "dev.remora", category: "rewrite")
+    #endif
 
     fileprivate static let minimumBarWidth: CGFloat = 360
 
@@ -85,14 +98,17 @@ public struct WritingOverlayPlacement {
         func frame(at anchor: CGRect) -> CGRect {
             RewriteFlow.editBarFrame(field: anchor, height: height, visible: visibleFrame(anchor))
         }
-        let anchor = editBarAnchor(pointer: pointer) { field in !frame(at: field).intersects(field) }
-        return frame(at: anchor)
+        let anchor = resolveAnchor(pointer: pointer) { field in !frame(at: field).intersects(field) }
+        #if DEBUG
+        Self.log.notice("writing placement surface=\(surface.rawValue, privacy: .public) anchor=\(anchor.source.rawValue, privacy: .public)")
+        #endif
+        return frame(at: anchor.rect)
     }
 
     /// Without a caret, place small overlays at the leading edge of an ordinary field.
     /// A terminal pane covers many rows, so its fallback follows the same point as the popover.
     public func indicatorAnchor(pointer: CGPoint) -> CGRect {
-        if let caret { return caret }
+        if let caret { return caret.rect }
         if let bounds = selection ?? (surface == .terminal ? nil : field) {
             let height = min(bounds.height, 20)
             return CGRect(x: bounds.minX, y: bounds.maxY - height, width: 0, height: height)
@@ -109,7 +125,7 @@ extension RewriteFlow {
         let surface = WritingOverlayPlacement.Surface(bundleID: context?.bundleID, role: "AXTextArea",
                                                       hasSelection: preferNearbyPointer, context: context)
         return WritingOverlayPlacement(surface: surface, field: field, selection: selection, caret: caret,
-                                       verifiedCaret: googleDocsCaret).editBarAnchor(pointer: pointer)
+                                       verifiedCaret: googleDocsCaret).resolveAnchor(pointer: pointer).rect
     }
 
     /// The Edit bar: 8 pt from its anchor, preferring above when it fits, kept on screen.

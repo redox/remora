@@ -20,6 +20,15 @@ enum CaretGeometry {
         return CGRect(x: frame.minX, y: frame.minY, width: caretWidth, height: max(16, frame.height))
     }
 
+    /// Chromium can expose an unclipped text range inside a clipped Docs input proxy.
+    /// Verify the whole insertion line against the enclosing document in AX screen coordinates.
+    static func documentInsertionBounds(_ range: CGRect?, in viewport: CGRect) -> CGRect? {
+        guard let range, range.width >= 0, range.width <= caretWidth, range.height > 0,
+              !viewport.isEmpty, !viewport.isInfinite, range.minX > viewport.minX, range.minY > viewport.minY,
+              range.maxX < viewport.maxX, range.maxY <= viewport.maxY else { return nil }
+        return thin(x: range.minX, line: range)
+    }
+
     /// Read only the ranges needed to locate the caret. Ghostty reports an empty selection
     /// at offset zero anywhere in its pane, so adjacent glyphs cannot locate its terminal cursor.
     static func read(selection: NSRange?, value: String?, isGhosttySurface: Bool, fieldFrame: CGRect?,

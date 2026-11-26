@@ -34,29 +34,73 @@ public struct FocusedFieldReader: Sendable {
         return read
     }
 
+    /// Failure codes distinguish unavailable cursor geometry from a layout error during a live repro.
+    private enum DocsCaretFailure: String, Error {
+        case unsupportedField, focusChanged, missingParent, unexpectedParentRole, unexpectedFrameURL
+        case missingFrame, missingAncestor, documentMismatch, missingViewport, clippedFrame, interrupted
+    }
+
     /// Reads the caret coordinates Docs exposes for magnifiers through its focused input iframe.
     public func readGoogleDocsCaret(in field: FocusedField, page: URL) async -> CGRect? {
-        guard field.role == kAXTextAreaRole, BrowserCatalog.isChromiumBrowser(field.bundleID),
-              let handle = field.handle as? SystemFieldHandle, handle.pid != getpid() else { return nil }
-        return try? await AXQueue.run(qos: .userInitiated) { s -> CGRect? in
-            guard let focused = Self.focusedElement(s), CFEqual(focused, handle.element),
-                  let input = Self.relatedElement(focused, kAXParentAttribute, s),
-                  s.copyAttribute(input, kAXRoleAttribute) as? String == "AXWebArea",
-                  Self.url(of: input, s)?.absoluteString == "about:blank",
-                  let frame = Self.frame(input, s) else { return nil }
-
-            // Verify the enclosing page and its viewport before treating iframe geometry as text bounds.
-            var node = input
-            for _ in 0..<8 {
-                guard let parent = Self.relatedElement(node, kAXParentAttribute, s),
-                      let role = s.copyAttribute(parent, kAXRoleAttribute) as? String else { return nil }
-                if role == "AXWebArea" {
-                    guard Self.url(of: parent, s) == page, let viewport = Self.frame(parent, s),
-                          !s.isUnresponsive, !s.isCancelled else { return nil }
-                    return CaretGeometry.caret(inMagnifierFrame: frame, viewport: viewport)
-                }
-                node = parent
+        do {
+            guard field.role == kAXTextAreaRole, BrowserCatalog.isChromiumBrowser(field.bundleID),
+                  let handle = field.handle as? SystemFieldHandle, handle.pid != getpid() else {
+                throw DocsCaretFailure.unsupportedField
             }
+            return try await AXQueue.run(qos: .userInitiated) { s in
+                guard let focused = Self.focusedElement(s), CFEqual(focused, handle.element) else {
+                    throw DocsCaretFailure.focusChanged
+                }
+                guard let input = Self.relatedElement(focused, kAXParentAttribute, s) else { throw DocsCaretFailure.missingParent }
+                guard s.copyAttribute(input, kAXRoleAttribute) as? String == "AXWebArea" else {
+                    throw DocsCaretFailure.unexpectedParentRole
+                }
+                guard Self.url(of: input, s)?.absoluteString == "about:blank" else { throw DocsCaretFailure.unexpectedFrameURL }
+                guard let frame = Self.frame(input, s) else { throw DocsCaretFailure.missingFrame }
+
+                // Verify the enclosing page and its viewport before treating iframe geometry as text bounds.
+                var node = input
+                for _ in 0..<8 {
+                    guard let parent = Self.relatedElement(node, kAXParentAttribute, s),
+                          let role = s.copyAttribute(parent, kAXRoleAttribute) as? String else { break }
+                    if role == "AXWebArea" {
+                        guard Self.url(of: parent, s) == page else { throw DocsCaretFailure.documentMismatch }
+                        guard let viewport = Self.frame(parent, s) else { throw DocsCaretFailure.missingViewport }
+                        guard !s.isUnresponsive, !s.isCancelled else { throw DocsCaretFailure.interrupted }
+                        if let caret = CaretGeometry.caret(inMagnifierFrame: frame, viewport: viewport) { return caret }
+                        // The element frame can be clipped even when the insertion range is visible.
+                        guard field.selectedText?.isEmpty != false, field.selection?.length ?? 0 == 0 else {
+                            throw DocsCaretFailure.clippedFrame
+                        }
+                        let insertion = field.selection ?? NSRange(location: 0, length: 0)
+                        let range = Self.bounds(focused, range: insertion, s)
+                        if let caret = CaretGeometry.documentInsertionBounds(range, in: viewport) {
+                            #if DEBUG
+                            Self.log.notice("writing placement document=unclippedRange")
+                            #endif
+                            return caret
+                        }
+                        let marker = Self.textBounds(focused, range: nil, tryWebMarkers: true, s)
+                        if let caret = CaretGeometry.documentInsertionBounds(marker, in: viewport) {
+                            #if DEBUG
+                            Self.log.notice("writing placement document=textMarker")
+                            #endif
+                            return caret
+                        }
+                        #if DEBUG
+                        Self.log.notice("writing placement clipped empty=\(frame.isEmpty, privacy: .public) atXEdge=\(frame.minX == viewport.minX, privacy: .public) atYEdge=\(frame.minY == viewport.minY, privacy: .public) rangeAvailable=\(range != nil, privacy: .public) markerAvailable=\(marker != nil, privacy: .public)")
+                        #endif
+                        throw DocsCaretFailure.clippedFrame
+                    }
+                    node = parent
+                }
+                throw DocsCaretFailure.missingAncestor
+            }
+        } catch {
+            #if DEBUG
+            let reason = error as? DocsCaretFailure ?? .interrupted
+            Self.log.notice("writing placement magnifier=\(reason.rawValue, privacy: .public)")
+            #endif
             return nil
         }
     }

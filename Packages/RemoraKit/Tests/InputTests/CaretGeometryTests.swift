@@ -107,3 +107,15 @@ private func expectThin(_ r: CGRect?, x: CGFloat, y: CGFloat? = nil, sourceLocat
         #expect(rect == nil)
     }
 }
+
+@Test func docsCanUseAnUnclippedInsertionRangeInsideTheVerifiedDocument() {
+    let viewport = CGRect(x: 100, y: 250, width: 1250, height: 700)
+    let range = CGRect(x: 320, y: 420, width: 0, height: 17)
+    expectThin(CaretGeometry.documentInsertionBounds(range, in: viewport), x: 320, y: 420)
+    for invalid in [CGRect(x: 100, y: 250, width: 0, height: 17),
+                    CGRect(x: 320, y: 320, width: 500, height: 1),
+                    CGRect(x: 320, y: 960, width: 0, height: 17),
+                    CGRect(x: 320, y: 940, width: 0, height: 17)] {
+        #expect(CaretGeometry.documentInsertionBounds(invalid, in: viewport) == nil)
+    }
+}
