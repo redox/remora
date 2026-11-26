@@ -66,6 +66,22 @@ import Testing
         #expect(view.contains(".defaultScrollAnchor(.top, for: .alignment)"))
     }
 
+    @Test func storedAndStreamingMessagesOfferAWholeMessageCopyButton() throws {
+        let chat = try source("App/Remora/Chat/ChatView.swift")
+        let message = try source("App/Remora/Chat/MessageView.swift")
+        #expect(chat.contains("CopyMessageButton(text: text)"))
+        #expect(chat.contains("CopyMessageButton(text: model.streamingText"))
+        #expect(message.contains("CopyMessageButton(text:"))
+        #expect(message.contains(".labelStyle(.iconOnly)"))
+    }
+
+    @Test func chatMessageBodiesUseNativeSelectableText() throws {
+        let chat = try source("App/Remora/Chat/ChatView.swift")
+        let markdown = try source("App/Remora/Chat/MarkdownView.swift")
+        #expect(chat.contains("SelectableChatText("))
+        #expect(markdown.contains("SelectableChatText("))
+    }
+
     @Test func sendingJumpsToLatestBeforeAnyResponseArrives() throws {
         let view = try source("App/Remora/Chat/ChatView.swift")
         let send = try #require(view.range(of: ".onChange(of: model.isStreaming, initial: true)"))

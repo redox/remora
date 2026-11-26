@@ -17,8 +17,7 @@ struct MessageView: View {
     var body: some View {
         switch turn.role {
         case .user:
-            VStack(alignment: .trailing, spacing: 4) {
-                UserBubble(text: turn.text)
+            UserBubble(text: turn.text) {
                 if let id = turn.id, id == model.latestUserTurnID {
                     Button {
                         model.editLastMessage()
@@ -48,20 +47,32 @@ struct MessageView: View {
             if !turn.text.isEmpty { MarkdownView(text: turn.text) }
             receipts
             if let copy = ChatPresentation.errorCopy(turn) { errorLine(copy) }
-            if !turn.llmCallIDs.isEmpty {
-                Button { showDetails = true } label: {
-                    Label("Details", systemImage: "info.circle").padding(.vertical, 4)
-                }
+            HStack(spacing: 6) {
+                CopyMessageButton(text: copyText)
+                if !turn.llmCallIDs.isEmpty {
+                    Button { showDetails = true } label: {
+                        Label("Message details", systemImage: "info.circle")
+                            .labelStyle(.iconOnly)
+                            .frame(width: 24, height: 24)
+                    }
                     .buttonStyle(.borderless)
                     .foregroundStyle(.secondary)
                     .font(.system(size: fontSize - 1))
-                    .help("Details")
+                    .help("Message details")
                     .popover(isPresented: $showDetails, arrowEdge: .bottom) {
                         MessageDetailsView(model: model, turn: turn)
                     }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var copyText: String {
+        if !turn.text.isEmpty { return turn.text }
+        let summaries = turn.id.flatMap { model.receipts[$0] }?.map { $0.receipt.summary }
+            ?? ChatPresentation.storedReceipts(turn)
+        return (summaries + [ChatPresentation.errorCopy(turn)?.text].compactMap { $0 }).joined(separator: "\n")
     }
 
     /// This session's receipts can be undone; older ones show their summary only.
@@ -82,10 +93,9 @@ struct MessageView: View {
                 if !copy.italic {
                     Image(systemName: "exclamationmark.circle").foregroundStyle(.orange).accessibilityHidden(true)
                 }
-                Text(copy.text)
-                    .italic(copy.italic)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                let font = NSFont.systemFont(ofSize: fontSize - 1)
+                SelectableChatText(copy.text, font: copy.italic ? NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask) : font,
+                                   color: .secondaryLabelColor)
             }
             switch copy.action {
             case .manageUsage?:
@@ -106,8 +116,7 @@ struct ReceiptLabel: View {
     @Environment(\.chatFontSize) private var fontSize
 
     var body: some View {
-        Text("✓ " + summary)
-            .font(.system(size: fontSize - 1))
+        SelectableChatText("✓ " + summary, font: .systemFont(ofSize: fontSize - 1))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
@@ -137,7 +146,7 @@ struct ReceiptChipView: View {
                 }
             }
             if case .note(let message) = chip.undo {
-                Text(message).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                SelectableChatText(message, font: .systemFont(ofSize: fontSize - 1), color: .secondaryLabelColor)
             }
         }
         .font(.system(size: fontSize - 1))

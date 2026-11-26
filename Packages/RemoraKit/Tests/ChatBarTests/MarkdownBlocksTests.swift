@@ -1,3 +1,4 @@
+import AppKit
 import Testing
 import Foundation
 @testable import ChatBar
@@ -40,4 +41,29 @@ func onlyWebLinksAreClickable(md: String, clickable: Bool) {
     #expect(blocks.count == 2)
     #expect(blocks.last == .paragraph("[… truncated]"))
     if case .paragraph(let t) = blocks[0] { #expect(t.count == 200_000) } else { Issue.record("expected paragraph") }
+}
+
+@MainActor @Test func chatProseIsSelectableAcrossBlocksAndKeepsCodeSeparate() throws {
+    let markdown = "# Title\n\n**Hello**\n\n- first\n2. second\n```swift\nlet value = 1\n```\nDone"
+    let sections = ChatMarkdown(fontSize: 13).sections(markdown)
+    try #require(sections.count == 3)
+    guard case .prose(let body) = sections[0], case .code(let language, let code) = sections[1],
+          case .prose(let end) = sections[2] else {
+        Issue.record("Expected prose around a copyable code block")
+        return
+    }
+    #expect(body.string == "Title\nHello\n•  first\n2.  second")
+    #expect(language == "swift" && code == "let value = 1")
+    #expect(end.string == "Done")
+}
+
+@MainActor @Test func selectableChatLinksRevealTheirDestinationAndKeepTheSchemeFilter() throws {
+    let sections = ChatMarkdown(fontSize: 13).sections("[web](https://example.com) [blocked](file:///tmp/example)")
+    guard case .prose(let text) = try #require(sections.first) else {
+        Issue.record("Expected a paragraph")
+        return
+    }
+    #expect(text.attribute(.link, at: 0, effectiveRange: nil) as? URL == URL(string: "https://example.com"))
+    #expect(text.attribute(.toolTip, at: 0, effectiveRange: nil) as? String == "https://example.com")
+    #expect(text.attribute(.link, at: 4, effectiveRange: nil) == nil)
 }

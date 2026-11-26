@@ -136,7 +136,7 @@ struct ChatView: View {
                         }
                 }
                 if let sending = model.sendingText {
-                    UserBubble(text: sending)
+                    UserBubble(text: sending) { EmptyView() }
                     StreamingMessage(model: model)
                 }
             }
@@ -284,21 +284,25 @@ struct ChatView: View {
 }
 
 /// The user's text, right-aligned in a bubble.
-struct UserBubble: View {
+struct UserBubble<Actions: View>: View {
     let text: String
+    @ViewBuilder let actions: () -> Actions
     @Environment(\.chatFontSize) private var fontSize
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         HStack {
             Spacer(minLength: 40)
-            Text(text)
-                .font(.system(size: fontSize))
-                .textSelection(.enabled)
-                .padding(.horizontal, 13)
-                .padding(.vertical, 9)
-                .background(RemoraBrand.accent(scheme).opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .trailing, spacing: 4) {
+                SelectableChatText(text, font: .systemFont(ofSize: fontSize))
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 9)
+                    .background(RemoraBrand.accent(scheme).opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                HStack(spacing: 6) {
+                    CopyMessageButton(text: text)
+                    actions()
+                }
+            }
         }
     }
 }
@@ -321,6 +325,9 @@ private struct StreamingMessage: View {
                 ProgressView().controlSize(.small)
             }
             ForEach(model.liveReceipts) { ReceiptChipView(chip: $0, undo: model.undo) }
+            CopyMessageButton(text: model.streamingText.isEmpty
+                              ? model.liveReceipts.map { $0.receipt.summary }.joined(separator: "\n")
+                              : model.streamingText)
         }
     }
 }

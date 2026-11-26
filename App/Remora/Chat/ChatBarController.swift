@@ -21,7 +21,7 @@ final class BarViewState {
 /// configured edge and expanded to the chat on hover, click, the menu or the rewrite key.
 /// `BarInteraction` decides; this applies its effects (frames from `BarGeometry`, timers, focus).
 ///
-/// It never activates Remora: the panel takes key focus only when the composer needs it, and
+/// It never activates Remora: the panel takes key focus for typing and text selection, and
 /// never on a hover expand (a key panel would turn the peek into an open bar).
 @MainActor
 final class ChatBarController: NSObject, NSWindowDelegate {
@@ -30,7 +30,7 @@ final class ChatBarController: NSObject, NSWindowDelegate {
         var openAccountSettings: @MainActor () -> Void = {}
     }
 
-    static let defaultSize = CGSize(width: 420, height: 520)
+    static let defaultSize = CGSize(width: 600, height: 720)
     static let minSize = CGSize(width: 320, height: 280)
     private static let log = Logger(subsystem: "dev.remora", category: "bar")
 
@@ -79,7 +79,10 @@ final class ChatBarController: NSObject, NSWindowDelegate {
         panel.onMouseEntered = { [weak self] in self?.hover(true) }
         panel.onMouseExited = { [weak self] in self?.hover(false) }
         model.onStreamingChange = { [weak self] on in self?.handle(.streaming(on)) }
-        model.fieldEditor = { [weak panel] in panel?.firstResponder as? NSTextView }
+        model.fieldEditor = { [weak panel] in
+            guard let editor = panel?.firstResponder as? NSTextView, editor.isEditable else { return nil }
+            return editor
+        }
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.layout() }
@@ -229,7 +232,8 @@ final class ChatBarController: NSObject, NSWindowDelegate {
             panel.setResizable(st == .open)
             panel.contentMinSize = Self.minSize
             let max = BarGeometry.clampSize(CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude), s)
-            panel.contentMaxSize = max
+            // On a short display the peek window also needs room for the strip above the card.
+            panel.contentMaxSize = st == .peeking ? frame.size : max
         }
         // Peek's window includes the notch, but open's window starts below it. Never animate
         // between those coordinate spaces while SwiftUI has already adopted the new card offset:
