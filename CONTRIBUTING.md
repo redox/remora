@@ -31,6 +31,24 @@ shared. A second copy with the same bundle id says "Remora is already running" a
 any installed copy before you launch a development build anyway, and don't run Goldfish alongside
 it (both claim right ⌥).
 
+### Generic icon on notification banners
+
+If Finder shows the Remora fish on the installed app but System Settings › Notifications ›
+Remora shows a grid, macOS may have cached the generic icon for Remora's bundle identifier.
+On macOS 27.2.1, rebuilding the current user's icon index restored the fish. This index is
+shared by all apps in the account. To back it up and let macOS regenerate it:
+
+```sh
+icon_index="$(getconf DARWIN_USER_CACHE_DIR)com.apple.iconservices/store.index"
+icon_backup="$(mktemp -d)" && mv "$icon_index" "$icon_backup/store.index" && {
+  pkill -KILL -u "$(id -u)" -x iconservicesagent
+  pkill -TERM -u "$(id -u)" -x NotificationCenter
+}
+```
+
+Reopen System Settings › Notifications › Remora and check for the fish. With screen sharing
+off, use **Send a test notification** in Remora's notification settings to check the banner.
+
 ## Before a pull request
 
 - Run `make test` and `make build`. Both must pass.
