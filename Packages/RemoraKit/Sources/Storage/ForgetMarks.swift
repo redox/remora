@@ -24,7 +24,7 @@ public enum ForgetMarks {
     }
 
     /// Imported meetings can appear in chat without contributing to memory compaction.
-    static func markChat(now: Date, in d: Database) throws {
+    public static func markChat(now: Date, in d: Database) throws {
         // Never move the chat watermark back (a forget stamped earlier than a previous one).
         let previous = try? SettingsStore.jsonValue(Date.self, forKey: chatForgetAtKey, in: d)
         let chat = max(previous ?? now, now)

@@ -150,6 +150,8 @@ public struct ChatTurn: Codable, Sendable, Equatable, FetchableRecord, MutablePe
     /// The reply used a saved note directly or through a prior reply. This survives chat retention
     /// pruning the turn that originally searched the notes.
     public var usedSavedNotes: Bool
+    /// The recordings quoted directly or through earlier replies. Revalidate them before replay.
+    public var recordingIDs: Set<UUID>?
 
     public init(id: Int64? = nil, createdAt: Date, role: ChatRole, text: String, status: ChatTurnStatus,
                 error: String? = nil, tools: [ToolTrace] = [], llmCallIDs: [Int64] = [], inboxID: Int64? = nil,
@@ -166,6 +168,7 @@ public struct ChatTurn: Codable, Sendable, Equatable, FetchableRecord, MutablePe
         case createdAt = "created_at"
         case llmCallIDs = "llm_call_ids"
         case inboxID = "inbox_id"
+        case recordingIDs = "recording_ids"
         case usedSavedNotes = "used_saved_notes"
     }
 

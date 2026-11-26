@@ -136,14 +136,16 @@ private func callCount(_ db: AppDatabase, job: String) throws -> Int {
     }
 }
 
-@Test(arguments: ["search_imported_meetings", "search_saved_notes"])
+@Test(arguments: ["search_imported_meetings", "search_saved_notes", "search_recorded_meetings"])
 func scopedToolAnswersAndFollowUpsStayOutOfBackgroundChatFolding(tool: String) async throws {
     let db = try AppDatabase.inMemory()
     let store = ChatStore(db)
     try seed(store, count: 2)
-    _ = try store.append(ChatTurn(createdAt: foldNow.addingTimeInterval(2), role: .assistant,
-                                  text: "Details from the saved item", status: .complete,
-                                  tools: [ToolTrace(name: tool, ok: true)]))
+    var answer = ChatTurn(createdAt: foldNow.addingTimeInterval(2), role: .assistant,
+                          text: "Details from the saved item", status: .complete,
+                          tools: [ToolTrace(name: tool, ok: true)])
+    if tool == "search_recorded_meetings" { answer.recordingIDs = [UUID()] }
+    try store.append(answer)
     try seed(store, count: 35)
     let fake = FakeLLMClient.bySchema(["chat_summary": #"{"summary":"Earlier chat."}"#])
     await ChatFolder(db: db, store: store, llm: makeLLM(fake, db: db), limits: ChatLimits()).foldIfNeeded(now: foldNow)

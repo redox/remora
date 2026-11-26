@@ -36,6 +36,7 @@ final class DictationController {
     @ObservationIgnored private let windows: FrontmostWindowReader
     @ObservationIgnored private let isPaused: @MainActor () -> Bool
     @ObservationIgnored private let observesContextSwitches: @MainActor () -> Bool
+    @ObservationIgnored var onTranscriptionKeyChanged: (() -> Void)?
     @ObservationIgnored private let openDictationSettings: @MainActor () -> Void
     @ObservationIgnored private let transcriber = SpeechAnalyzerTranscriber()
     @ObservationIgnored private let openAITranscription = OpenAITranscription()
@@ -129,19 +130,23 @@ final class DictationController {
         do { try TranscriptionKeychain.save(key) } catch { return "Could not save the key to Keychain." }
         invalidateCloudTranscription()
         hasTranscriptionKey = true
+        onTranscriptionKeyChanged?()
         return nil
     }
 
     func refreshTranscriptionKeyStatus() {
         let available = (try? TranscriptionKeychain.load()) != nil
-        if hasTranscriptionKey, !available { invalidateCloudTranscription() }
+        guard available != hasTranscriptionKey else { return }
+        if !available { invalidateCloudTranscription() }
         hasTranscriptionKey = available
+        onTranscriptionKeyChanged?()
     }
 
     func removeTranscriptionKey() -> String? {
         do { try TranscriptionKeychain.remove() } catch { return "Could not remove the key from Keychain." }
         invalidateCloudTranscription()
         hasTranscriptionKey = false
+        onTranscriptionKeyChanged?()
         return nil
     }
 

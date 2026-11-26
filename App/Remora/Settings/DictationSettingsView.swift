@@ -86,7 +86,9 @@ struct DictationSettingsView: View {
                         }
                     }
                 }
-                Text("Save a key to let OpenAI detect the language and transcribe eligible recordings when you choose Insert transcript. The live preview and fallback use this Mac. Your key stays in the macOS Keychain.")
+                Text("Saving a key sends eligible dictation audio to OpenAI when you choose Insert transcript. The live preview and dictation fallback use this Mac.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                Text("If automatic meeting recording is on, Remora also sends eligible meeting app audio and your unmuted microphone to OpenAI for language detection and transcription. Both features use your API project. The key is stored in Keychain.")
                     .font(.footnote).foregroundStyle(.secondary)
                 if let transcriptionKeyError { Text(transcriptionKeyError).foregroundStyle(.red) }
             }
@@ -147,7 +149,7 @@ struct DictationSettingsView: View {
     }
 }
 
-private struct SpeechModelRow: View {
+struct SpeechModelRow: View {
     let locale: DictationLocale
     let state: AssetState
     let action: () -> Void

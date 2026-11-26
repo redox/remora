@@ -16,6 +16,11 @@ the code that enforces them.
   User-connected Granola also uses `mcp-auth.granola.ai` and `mcp.granola.ai` for OAuth and
   read requests. The only request data is credentials, provider IDs and sync filters.
   Imported meeting text can go to OpenAI only through interactive chat after an explicit opt-in.
+  Recorded meetings have separate, default-off grants for interactive chat and read-only MCP excerpts.
+  Recheck recording IDs against current permissions and exclusions before replaying chat replies.
+  Notes are generated on-device. With automatic recording enabled and a saved transcription API key,
+  verified meeting-app audio and unmuted microphone audio may be sent in segments for OpenAI
+  transcription. Chrome’s process audio can include other tabs. Audio stays local without a key.
   No analytics, crash reporting, remote config, fonts, CDNs or "phone home".
   [Meeting sources design](../../../docs/design.md#mcp-and-meeting-sources)
 - Speech-to-text defaults to Apple's local recognizer. Saving a project key in Dictation settings

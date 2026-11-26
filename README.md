@@ -58,8 +58,8 @@ A single onboarding window walks you through:
 7. **Notifications**, for proactive messages.
 8. **Done.** Memory fills in as you work.
 
-Permissions: **Accessibility** is required. **Microphone** is needed only for dictation. Remora
-never asks for Screen Recording, Input Monitoring or Full Disk Access.
+Remora requires **Accessibility**. Dictation and meeting recording use **Microphone**.
+Enabling meeting recording also requires macOS system audio recording permission.
 
 ## Writing and chat
 
@@ -83,7 +83,8 @@ Dictation uses the Mac's speech model for the live preview and final text by def
 OpenAI's `gpt-transcribe` for the final transcript, paste a project key into **Settings › Dictation ›
 OpenAI transcription** and choose **Save and enable**. The key needs write access to
 `POST /v1/audio/transcriptions`. Use a key from your linked API organization to draw on its credits.
-Remora stores the key in Keychain. **Remove key** switches back to Mac transcription.
+Remora stores the key in Keychain. If automatic meeting recording is enabled, this key also
+enables OpenAI transcription for new meetings. **Remove key** selects Mac transcription for future recordings.
 
 OpenAI detects the language in eligible recordings after you choose **Insert transcript** with
 the unchanged transcript. If the request fails, Remora uses the Mac transcript. Private, paused,
@@ -100,8 +101,8 @@ the reviewed text. Audio is held in memory. Transcript cleanup uses its own mode
 - Secrets such as card numbers and API keys are replaced with `[redacted]` before anything is saved.
 - Everything it captures stays in a local database on your Mac.
 - Only the excerpts a task needs are sent to OpenAI, under your own ChatGPT account.
-- If you enable OpenAI transcription, eligible dictation audio is sent to the transcription API
-  under your OpenAI API project.
+- A saved OpenAI transcription key sends eligible dictation audio and, when automatic meeting
+  recording is enabled, eligible meeting audio to the transcription API under your API project.
 - No telemetry, no analytics, no crash reporting. Details: [PRIVACY.md](PRIVACY.md).
 
 ## Usage costs
@@ -122,7 +123,24 @@ the client.
 
 ## Meeting sources
 
-In Settings › Meeting sources, choose a start date and connect Quill, Granola or a compatible
+Turn on **Record meetings automatically** in Settings › Meeting sources to transcribe Google Meet
+in regular Chrome, Zoom Workplace, and Microsoft Teams for Mac. Allow Accessibility, Microphone,
+and system audio recording when prompted. Remora checks the meeting controls before starting. The menu bar shows recording status
+and lets you stop for the rest of the call.
+
+Without an OpenAI transcription key, choose English or French and install its Mac speech model.
+With a key saved in **Settings › Dictation › OpenAI transcription**, Remora sends eligible meeting
+audio to OpenAI in segments under your API project. OpenAI detects the language automatically.
+
+Both modes capture the meeting app’s output and your microphone while the meeting shows it is
+unmuted. For Meet, output can include audio from other Chrome tabs. Remora discards audio buffers
+after use. Speaker names appear when captions match an utterance. Search or forget the transcript
+in Meeting sources. An available on-device model generates notes, decisions, and action items.
+Under **Recorded meetings**, enable **Use recordings in chat** to ask Remora about a call, or
+**Share recordings with MCP clients** to let connected clients use `search_recorded_meetings`.
+Both options are off by default and include existing recordings. Search returns dated excerpts.
+
+To import existing notes, choose a start date and connect Quill, Granola or a compatible
 local MCP server. For Quill, enable the local HTTP server in Quill Settings › MCP Server and paste
 the URL it provides. Granola opens a browser for sign-in. The local MCP option speaks Streamable
 HTTP over loopback and uses meeting list, notes and transcript tools with compatible schemas.

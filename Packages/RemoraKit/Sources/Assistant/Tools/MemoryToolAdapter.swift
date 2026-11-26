@@ -23,9 +23,9 @@ public struct MemoryToolAdapter: ChatTool {
         self.tools = tools
     }
 
-    /// One adapter per `MemoryTools.definitions` entry, in order.
+    /// One adapter per `MemoryTools.memoryDefinitions` entry, in order.
     public static func all(_ tools: MemoryTools) -> [MemoryToolAdapter] {
-        MemoryTools.definitions.map { MemoryToolAdapter($0, tools: tools) }
+        MemoryTools.memoryDefinitions.map { MemoryToolAdapter($0, tools: tools) }
     }
 
     public func run(arguments: String, context: ToolContext) async -> ToolRun {

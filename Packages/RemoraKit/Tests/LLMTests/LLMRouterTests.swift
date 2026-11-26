@@ -52,8 +52,11 @@ private let onDeviceJob = RoutingConfig(jobTiers: [.queryExpansion: .onDevice])
     #expect(d.tierModels == [.small: "s"] && d.jobTiers.isEmpty && d.onDeviceEnabled)
 }
 
-@Test func noJobDefaultsToOnDevice() {
-    #expect(JobType.allCases.allSatisfy { $0.defaultTier != .onDevice })
+@Test func onlyLocalMeetingNotesDefaultToOnDevice() {
+    #expect(JobType.allCases.filter { $0.defaultTier == .onDevice } == [.meetingNotes])
+    let config = RoutingConfig(jobTiers: [.meetingNotes: .large])
+    #expect(LLMRouter.routes(job: .meetingNotes, config: config, catalog: spike, onDevice: .available).map(\.backend) == [.onDevice])
+    #expect(LLMRouter.routes(job: .meetingNotes, config: config, catalog: spike, onDevice: .unavailable("off")).isEmpty)
     let r = LLMRouter.routes(job: .queryExpansion, config: .init(), catalog: spike, onDevice: .available)
     #expect(r.map(\.backend) == [.siwc] && r[0].model == "gpt-6-luna")
 }

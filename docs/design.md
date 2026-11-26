@@ -87,7 +87,8 @@ error codes, with no user content or credentials.
 
 **Make capture status visible where it can be changed.** The menu-bar mark shows a filled sea-glass
 dot when the active window is eligible, a ring when it is excluded, and distinct pause and permission
-states. On a window switch, the mark updates quietly.
+states. While meeting audio is recording or dictation is listening, a red waveform pulses below the
+window-capture dot. Reduce Motion keeps the waveform steady. On a window switch, the mark updates quietly.
 Opening the menu shows the current capture status. The optional title-bar badge is off by
 default and uses a small non-activating panel, hidden during moves, full screen, and detected
 screen sharing. It uses the same Remora mark as the menu bar, tinted sea-glass for eligible windows
@@ -389,6 +390,40 @@ budget so they leave time for verification. An incomplete read withholds recordi
 The room identifies a stopped call across windows. Its native window identity determines whether
 that call has navigated to an excluded page. A separate verified regular window showing a single
 non-meeting page can have its own site exclusion.
+A solo instant Meet can qualify as soon as those controls appear. If the client has not opened
+its audio device yet, Remora retries while the call remains verifiable. The menu shows recording
+setup, waiting status, or the active client. During a recording each successful verification schedules
+another check after half a second, so a quiet call keeps advancing the cutoff before departure.
+Delayed cloud audio buffers can drain through the already verified cutoff when the call ends.
+A single recording holds a process-scoped output tap, plus microphone input while the meeting
+controls indicate unmuted audio. Chrome can mix other tabs into the recording. Missing or
+conflicting call evidence interrupts capture. When a complete scan finds no joined call, Remora
+finishes through the last verification and goes idle, even if Chrome stays open. A fresh verified
+join can start a new recording. A temporary audio or verification failure also allows a new recording
+of the same call after a fresh joined observation. Repeated failures back off from two to thirty
+seconds. An interruption before the first transcript shows its cause in the menu.
+Stopping from the menu, including during retry, suppresses that call until
+the user leaves. Pause, lock, sleep, exclusion, or delete-all discards pending work.
+
+Without a saved OpenAI transcription key, Apple Speech uses the selected meeting language and
+its installed model. With the project key from Dictation settings, eligible app and unmuted
+microphone audio is uploaded in segments for automatic language detection. Meeting settings
+show the active provider and offer speech languages and downloads only for Apple Speech. Changing
+or removing the key during an OpenAI recording discards pending work. Audio already sent falls
+under the configured API project.
+
+Both inputs share an audio clock. Captions with a matching utterance, speaker and time can
+supply a remote name. The local library stores the redacted transcript, timestamps, source
+client and exclusion context (app, window title, URL or path). An on-device model can add
+notes, decisions and action items after the transcript commits. Recordings remain searchable
+and forgettable in Settings. Interactive chat and read-only MCP each have a separate opt-in
+for searching that same index. Import access and the choice of transcription provider are independent.
+Keyword search returns up to five dated transcript and notes excerpts. An empty query returns recent calls.
+Each read checks its grant, capture pause and the stored source against current exclusions.
+Chat replies carry the IDs of recordings used directly or through history so another model request
+can recheck every source. Background prompts and chat folding omit recording-backed content.
+Forgetting a recording while chat has access, or disabling chat access, advances the chat forget watermark. Delete-all
+removes recordings and clears both grants.
 
 **Import meetings as their own library.** Meeting dates, updates, and deletion semantics differ
 from screen captures, so transcripts and generated notes have their own redacted index.
@@ -445,6 +480,7 @@ unsigned Debug build. [Verification guidance](../.claude/skills/remora-verify/SK
 | Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Draft and insert, Insert transcript, Edit, cancel, and a mode switch followed immediately by Return. Verify that OpenAI transcription hides the EN/FR button and detects the language on Insert transcript. The button returns when OpenAI transcription is off. In an excluded app, speak a prompt and verify that Return drafts the result. Check that Listening appears when the microphone is ready and a silent recording shows an inline notice. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
 | Chat and indicators | Real notch and secondary displays, hide and show the menu bar, hover and pin, IME, trackpad scroll, min size with 150% text, quiet switches between captured and excluded windows, badge placement, light and dark appearance, and accessibility display options. Send from older history and check that the question is visible before the reply. Scroll up mid-reply, then choose **Latest** and check that the view follows the rest of the reply. Open chat from a notification and check the selected message. Drag from one paragraph into the next after opening on hover, then press ⌘C. Check the copy icon on a question and a streaming reply, and the info icon on a completed reply. Return must never approve a card. |
 | Notifications and MCP | In the installed app, use Settings › Notifications › Send a test notification and check for the Remora app icon in the banner and Notification Center. Verify the permission prompt, wake catch-up, reminders with proactive messages off, sharing suppression, and delete-all cleanup. Test Connect and Update in real clients. For meeting sources, use test accounts and synthetic meetings to exercise authorization, resync, pause, forget, and disconnect. |
+| Local meeting recording | Use synthetic calls in regular Chrome Meet (including a solo instant meeting with the invitation panel open), Zoom Workplace, and Teams for Mac. Check joined, lobby, audio test, muted and camera-off, disconnected audio, app switches, minimized windows, overlapping calls, headsets, screen sharing and another playing tab. Check the red waveform below the capture dot in light and dark appearance, steady under Reduce Motion and gone when recording ends. Verify Apple Speech with a selected language, OpenAI language detection with a saved key and no installed speech model, removal of the key during a call, both transcript sources and playback, caption names, a distinctive final word just before manual stop or leaving, leave/rejoin, lock, sleep, exclusion, revocation, search, forget, and delete-all. |
 | Settings › Usage | With the pane open, rewrite or chat and check the new call appears without a refresh. Switch Today, 7 days and 30 days, click breakdown rows and legend entries to filter the log and click again to clear, sort by time and cost, and select a call to read the detail. During a usage-limit backoff, check the orange paused notice. Check light and dark appearance at the Settings window width. |
 | Distribution | Fresh macOS account, install and move, permissions, signed DMG and Gatekeeper, and an update from a real appcast. |
 

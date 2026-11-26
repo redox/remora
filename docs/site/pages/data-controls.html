@@ -3,7 +3,7 @@
 <h2 id="pause-capture">Pause capture</h2>
 <p>Open the menu-bar <strong>Pause</strong> menu or use <strong>Settings › Privacy</strong>. Choose 15 minutes, one hour, until 08:00 tomorrow, or indefinitely. Choose <strong>Resume</strong> to resume early. The capture indicator shows the current state.</p>
 <p>A rewrite while paused can still use field text in an otherwise allowed window. See <a href="@ROOT@docs/privacy/#how-model-routing-works">model routing</a>.</p>
-<p>Pause also suspends meeting sync and meeting searches from chat. You can still browse existing imports in <strong>Settings › Meeting sources</strong>. <a href="@ROOT@docs/meeting-sources/#manage-imports">Manage meeting imports</a></p>
+<p>Pause discards pending meeting recordings and suspends meeting sync, meeting searches from chat, and recording searches from MCP clients. You can still browse existing imports in <strong>Settings › Meeting sources</strong>. <a href="@ROOT@docs/meeting-sources/#manage-imports">Manage meeting imports</a></p>
 
 <h2 id="exclusion-rules">Exclusion rules</h2>
 <p>In <strong>Settings › Privacy</strong>, add one case-insensitive exclusion per entry. For the current window, the capture menu can also offer <strong>Never capture this app</strong> or <strong>Never capture this site</strong>.</p>
@@ -24,4 +24,4 @@
 <p>Chat messages from before the forget stay visible until you clear the chat. Remora stops replaying those messages to the model in future turns.</p>
 
 <h2 id="delete-all-data">Delete all data</h2>
-<p>In <strong>Settings › Privacy</strong>, choose <strong>Delete all data…</strong> and type <code>yes</code>. This permanently deletes captures, activity history, summaries, wiki, identity, chat history, reminders, and imported meetings. Remora also clears delivered notifications, disconnects meeting sources, and turns off chat access to imports. Exclusions and other preferences are kept.</p>
+<p>In <strong>Settings › Privacy</strong>, choose <strong>Delete all data…</strong> and type <code>yes</code>. This permanently deletes captures, activity history, summaries, wiki, identity, chat history, reminders, recorded meetings and imported meetings. Remora also clears delivered notifications, disconnects meeting sources, and turns off chat access to imports and recording access for chat and MCP. Exclusions and other preferences are kept.</p>

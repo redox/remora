@@ -3,7 +3,8 @@ import Storage
 import SwiftUI
 
 struct MeetingSourcesView: View {
-    let model: MeetingSourcesModel
+    let env: AppEnvironment
+    private var model: MeetingSourcesModel { env.meetingSources }
     @State private var provider: MeetingSource.Provider = .quill
     @State private var endpoint = ""
     @State private var since = Calendar.current.date(byAdding: .day, value: -7, to: .now) ?? .now
@@ -17,6 +18,8 @@ struct MeetingSourcesView: View {
 
     var body: some View {
         Form {
+            MeetingRecordingSettingsView(env: env)
+            LocalMeetingsSection(model: model)
             Section("Add a source") {
                 Picker("Provider", selection: $provider) {
                     ForEach(MeetingSource.Provider.allCases, id: \.self) {
@@ -163,6 +166,141 @@ struct MeetingSourcesView: View {
         } catch {
             matches = []
             searchFailed = true
+        }
+    }
+}
+
+private struct LocalMeetingsSection: View {
+    let model: MeetingSourcesModel
+    @State private var query = ""
+    @State private var results: [LocalMeetingSummary] = []
+    @State private var loadedRevision: Int?
+    @State private var selected: LocalMeetingSummary?
+    @State private var failed = false
+
+    var body: some View {
+        Section("Recorded meetings") {
+            Toggle("Use recordings in chat", isOn: access(.chat))
+            Text("Remora chat can send matching transcript and notes excerpts to OpenAI.")
+                .font(.callout).foregroundStyle(.secondary)
+            Toggle("Share recordings with MCP clients", isOn: access(.mcp))
+            Text("Connected clients can read matching transcript and notes excerpts.")
+                .font(.callout).foregroundStyle(.secondary)
+            TextField("Search recordings", text: $query)
+            if failed {
+                Text("Could not search recordings.").foregroundStyle(.red)
+            } else if results.isEmpty, loadedRevision == model.revision {
+                Text(query.isEmpty ? "No recorded meetings." : "No matching recordings.").foregroundStyle(.secondary)
+            }
+            ForEach(loadedRevision == model.revision ? results : []) { item in
+                Button { selected = item } label: {
+                    LabeledContent {
+                        Text(item.startedAt.formatted(date: .abbreviated, time: .shortened))
+                    } label: {
+                        Text(item.title)
+                        Text(item.client)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .task(id: Search(query: query, revision: model.revision)) {
+            do {
+                let revision = model.revision
+                let items = try await model.recordings.search(query)
+                try Task.checkCancellation()
+                loadedRevision = revision
+                results = items
+                failed = false
+            } catch is CancellationError {
+            } catch {
+                results = []
+                failed = true
+            }
+        }
+        .sheet(item: $selected) { item in
+            RecordedMeetingView(model: model, item: item)
+        }
+    }
+
+    private func access(_ scope: RecordingSearchAccess) -> Binding<Bool> {
+        Binding(get: { model.recordingAccess.contains(scope) },
+                set: { model.setRecordingAccess(scope, enabled: $0) })
+    }
+
+    private struct Search: Equatable {
+        let query: String
+        let revision: Int
+    }
+}
+
+private struct RecordedMeetingView: View {
+    @Environment(\.dismiss) private var dismiss
+    let model: MeetingSourcesModel
+    let item: LocalMeetingSummary
+    @State private var detail: LocalMeetingDetail?
+    @State private var loadedRevision: Int?
+    @State private var confirmForget = false
+    @State private var forgetFailed = false
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            if loadedRevision == model.revision, let detail {
+                Text(detail.summary.title).font(.headline)
+                Text("\(detail.summary.client) · \(detail.summary.startedAt.formatted(date: .long, time: .shortened))")
+                    .foregroundStyle(.secondary)
+                if detail.summary.interrupted { Text("Recording was interrupted. The transcript may be missing the end of the call.").foregroundStyle(.secondary) }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if let notes = detail.notes {
+                            Text(notes)
+                        } else {
+                            Text(model.generatingNotes.contains(item.id) ? "Generating notes on this Mac…" : "On-device notes unavailable.")
+                                .foregroundStyle(.secondary)
+                        }
+                        Text("Transcript").font(.headline)
+                        Text(detail.transcript)
+                    }
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else {
+                ProgressView()
+            }
+            if forgetFailed { Text("Could not forget this recording.").foregroundStyle(.red) }
+            HStack {
+                Button("Forget…") { confirmForget = true }
+                Spacer()
+                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding()
+        .frame(width: 600, height: 440)
+        .task(id: model.revision) {
+            do {
+                let revision = model.revision
+                let result = try await model.recordings.detail(id: item.id)
+                try Task.checkCancellation()
+                loadedRevision = revision
+                detail = result
+                if result == nil { dismiss() }
+            } catch is CancellationError {
+            } catch {
+                detail = nil
+                dismiss()
+            }
+        }
+        .confirmationDialog("Forget this recording?", isPresented: $confirmForget, titleVisibility: .visible) {
+            Button("Forget recording", role: .destructive) {
+                Task {
+                    do {
+                        try await model.forgetRecording(item.id)
+                        dismiss()
+                    } catch { forgetFailed = true }
+                }
+            }
+        } message: {
+            Text("Remora removes the transcript and notes from this Mac.")
         }
     }
 }

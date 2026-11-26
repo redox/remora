@@ -53,6 +53,8 @@ final class AppEnvironment {
     let speechAssets: SpeechAssetModel
     let dictation: DictationController
     let memory: MemoryController
+    @ObservationIgnored private(set) lazy var meetingRecording = MeetingRecordingController(env: self)
+    var meetingSessionAvailable: Bool { scheduler.sessionAvailable }
     let meetingSources: MeetingSourcesModel
     /// Created by `RemoraApp` before the database opens, so updates also work when it can't.
     let updater: UpdaterController
@@ -163,7 +165,8 @@ final class AppEnvironment {
         let toolbox = ChatToolbox(
             MemoryToolAdapter.all(MemoryTools(databaseURL: AppDatabase.defaultURL, embedder: { embedder }))
                 + [TimeReportTool(db: db), RoutineSuggestionsTool(db: db), GuideTool(),
-                   SearchMeetingsTool(importer: meetingSources.importer, db: db), SearchSavedNotesTool(db: db)]
+                   SearchMeetingsTool(importer: meetingSources.importer, db: db), SearchRecordedMeetingsTool(db: db),
+                   SearchSavedNotesTool(db: db)]
                 + ActionTools.all(reminders: reminders, db: db, effects: effects))
         let agent = ChatAgent(db: db, llm: service, toolbox: toolbox, store: ChatStore(db), calls: calls,
                               calendar: { PeriodKey.localCalendar })
@@ -206,6 +209,8 @@ final class AppEnvironment {
         do { windowBadgeEnabled = try settings.windowBadgeEnabled() } catch {
             logger.error("badge setting unreadable: \(String(describing: type(of: error)), privacy: .public)")
         }
+        dictation.onTranscriptionKeyChanged = { [weak self] in self?.meetingRecording.transcriptionKeyChanged() }
+        scheduler.onSessionInactive = { [weak self] in self?.meetingRecording.discard() }
         scheduler.onWindowEvent = { [weak self] in self?.badge.windowEvent($0) }
         indicator.onStateChange = { [weak self] _ in self?.badge.stateChanged() }
         scheduler.isPaused = { [weak self] in self?.isPaused ?? true }
@@ -246,7 +251,7 @@ final class AppEnvironment {
     /// the chat turn in flight (from send until its reply is stored).
     var isBusyForUpdate: Bool {
         rewrite.isWorking || rewrite.isEditing || dictation.isActive || isDeletingAll || memory.isRunningJob
-            || onboarding.isShowing || chat.isStreaming
+            || onboarding.isShowing || chat.isStreaming || meetingRecording.busy
     }
 
     private static func format(_ date: Date) -> String {
@@ -296,7 +301,10 @@ final class AppEnvironment {
             pausedUntil = nil
             pauseUnreadable = true
         }
-        if isPaused { dictation.invalidateCloudTranscription() }
+        if isPaused {
+            dictation.invalidateCloudTranscription()
+            meetingRecording.discard()
+        }
         expiryTimer?.invalidate()
         expiryTimer = nil
         if let until = pausedUntil, until != .distantFuture {
@@ -388,6 +396,7 @@ final class AppEnvironment {
             rewrite.start()
             dictation.start()
         }
+        meetingRecording.watch()
         showOnboardingIfNeeded()
     }
 
@@ -438,6 +447,7 @@ final class AppEnvironment {
             dictation.start()
             onboarding.refresh()
         } else {
+            meetingRecording.interrupt(reason: "Meeting recording lost Accessibility permission.")
             scheduler.stop()
             rewrite.stop()
             dictation.stop()
@@ -452,6 +462,8 @@ final class AppEnvironment {
         switch change {
         case .pause: refresh()
         case .exclusions:
+            meetingSources.exclusionsChanged()
+            meetingRecording.policyChanged()
             indicator.refresh(reloadRules: true)
             chat.reload()
         // Forgotten captures can still be named by the digest: rebuild the digest alone.
@@ -496,6 +508,8 @@ final class AppEnvironment {
             }
             do {
                 try ExclusionStore(db).add(rule.pattern)
+                meetingRecording.policyChanged()
+                meetingSources.exclusionsChanged()
                 chat.reload()
                 lastError = nil
             } catch {

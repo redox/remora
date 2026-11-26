@@ -79,6 +79,7 @@ public struct ToolContext: Sendable {
 /// One tool call's result. `output` goes back to the model as the function call output.
 public struct ToolRun: Sendable, Equatable {
     /// At most `ChatToolbox.outputLimit` characters plus the truncation suffix.
+    public var recordingIDs: Set<UUID> = []
     public var output: String
     public var isError: Bool
     public var receipt: ActionReceipt?

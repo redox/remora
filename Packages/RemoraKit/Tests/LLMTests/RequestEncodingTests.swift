@@ -71,7 +71,7 @@ func validateRejectsForbidden(_ key: String) {
             && JobType.salientFlags.defaultTier == .small && JobType.evidenceCheck.defaultTier == .small
             && JobType.chat.defaultEffort == nil && JobType.rewrite.defaultEffort == .low)
     #expect(JobType.memoryDigest.rawValue == "memory_digest" && JobType.memoryDigest.defaultTier == .large)
-    #expect(JobType.hourChronicle.rawValue == "hour_chronicle" && JobType.allCases.count == 25)
+    #expect(JobType.hourChronicle.rawValue == "hour_chronicle" && JobType.allCases.count == 26)
 }
 
 @Test func newJobTypesRoute() {

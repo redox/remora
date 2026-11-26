@@ -32,7 +32,7 @@ GROUPS = {
         ("dictation", "Voice dictation"),
         ("chat", "Chat"),
         ("memory", "Memory and activity"),
-        ("meeting-sources", "Import meeting notes"),
+        ("meeting-sources", "Record and import meetings"),
         ("reminders", "Reminders and briefs"),
         ("mcp", "Connect AI clients"),
     ],

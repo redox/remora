@@ -28,12 +28,12 @@ public enum JobType: String, Codable, Sendable, CaseIterable {
     case memoryDigest = "memory_digest"
     case chatFold = "chat_fold"
     case reminderPrompt = "reminder_prompt"
+    case meetingNotes = "meeting_notes"
 
     /// Default routing before user overrides and privacy checks.
     public var defaultTier: Tier {
         switch self {
-        // No job defaults to on-device (Luna is cheap); it stays selectable per job and is the
-        // only route for calls that may not use the cloud.
+        case .meetingNotes: return .onDevice
         case .dictationCleanup, .queryExpansion, .workingMemory,
              .salientFlags, .entityExtraction, .hourChronicle, .timeLedgerAttribution, .nudgeTriage, .evidenceCheck,
              .chatFold: return .small

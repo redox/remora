@@ -19,7 +19,9 @@ the design and its linked Sign in with ChatGPT documentation.
   `truncation`, `user` or `background`. Never send reasoning effort `minimal` (or `none`): nil
   means the model default. `ResponsesClient` enforces this; don't bypass it.
 - Function tools work; hosted tools don't. Sign in with ChatGPT has no audio, transcription or
-  embeddings endpoint. Optional dictation uploads use a separate project API key.
+  embeddings endpoint. Dictation and meeting transcription share an optional project API key.
+  For meetings, a saved key selects automatic language detection from verified audio segments.
+  Without a key the recording uses Apple Speech with a local meeting language and model.
   [Writing and dictation design](../../../docs/design.md#writing-and-dictation)
 - Success is a `response.completed` event. Usage-limit errors can arrive mid-stream as
   `response.failed` (`subscription_sharing_usage_limit_exceeded` /
@@ -32,8 +34,8 @@ the design and its linked Sign in with ChatGPT documentation.
   `gpt-6.1-terra`). Each `JobType` has a `defaultTier` (`LLM/Core/JobType.swift`); the user can
   override per job and per tier (`RoutingConfig`, setting `llm.routing`, pickers in Settings ›
   Account).
-- No job defaults to on-device. On-device is forced (failing closed) whenever the privacy routing
-  says the context may not reach the cloud (see the privacy skill).
+- Locally recorded meeting notes always use the on-device tier and have no routing picker.
+  Other jobs default to a cloud tier. On-device is forced whenever privacy routing requires it.
 - Reasoning effort: `low` for background work and the rewrite key; the model default for chat.
 
 ## Adding a model job

@@ -20,10 +20,14 @@
 <h2 id="dictation-audio">Dictation audio</h2>
 <p>The live transcript uses Mac speech recognition. Drafting and editing use the reviewed text. If you save an API key for <a href="@ROOT@docs/dictation/#openai-transcription">OpenAI transcription</a>, choosing <strong>Insert transcript</strong> with an eligible, unchanged transcript sends the completed recording to <code>api.openai.com/v1/audio/transcriptions</code> under that API project. OpenAI detects the language from the audio. Paused, private, excluded, and unverifiable contexts use Mac speech recognition. Remora keeps audio in memory, discards it when the draft is dismissed, and stores the key separately in the macOS Keychain.</p>
 
+<h2 id="meeting-audio">Meeting audio</h2>
+<p>Automatic meeting recording captures the meeting app’s output and your microphone while the call shows it is unmuted. Google Meet in Chrome can include audio from other tabs, even when those sites have different exclusions. With a transcription key saved in Dictation settings, Remora sends eligible audio segments during the call to OpenAI under your API project for automatic language detection. Without a key, Apple Speech transcribes the audio on your Mac in the selected language.</p>
+<p>Remora keeps audio in memory. Transcripts are redacted before storage, and meeting notes, decisions and action items are generated on the Mac. You can search and forget recordings in Settings. Separate switches allow Remora chat to send excerpts to OpenAI and connected MCP clients to read excerpts. Both default to off. Pausing or deleting discards pending work. OpenAI may already have received earlier audio segments. <a href="@ROOT@docs/meeting-sources/#record-a-meeting">Record a meeting</a></p>
+
 <h2 id="where-data-is-kept">Where data is kept</h2>
 <ul>
-  <li><code>~/Library/Application Support/Remora/remora.sqlite</code> holds captures, memory, chat history, and imported meetings.</li>
-  <li>ChatGPT and Granola credentials are stored separately in the macOS Keychain.</li>
+  <li><code>~/Library/Application Support/Remora/remora.sqlite</code> holds captures, memory, chat history, recorded meetings and meeting imports.</li>
+  <li>ChatGPT and Granola credentials and the optional transcription API key are stored separately in the macOS Keychain.</li>
   <li>Remora logs operational events, counts, and codes. Captured text, model prompts and replies, transcripts, and credentials are excluded from logs.</li>
 </ul>
 <p>See <a href="@ROOT@docs/memory/#retention-and-background-work">retention</a> and <a href="@ROOT@docs/data-controls/#delete-all-data">delete all data</a>.</p>

@@ -275,7 +275,7 @@ public enum FeatureGuide {
 
             **Delete all data** (Settings › Privacy, type "yes" to confirm) permanently deletes every \
             capture, the activity history, chronicles, wiki, identity, chat history and reminders, and \
-            clears Remora's notifications from Notification Center. It also deletes saved notes and imported \
+            clears Remora's notifications from Notification Center. It also deletes saved notes, recordings and imported \
             meetings and disconnects meeting sources. Exclusions and most preferences are kept. This cannot be undone.
             """),
         GuideSection(id: "mcp", title: "MCP (other AI apps)", body: """
@@ -317,7 +317,13 @@ public enum FeatureGuide {
             - **Shortcuts:** rewrite key, Edit mode, fallback shortcut, sounds.
             - **Dictation:** on or off, language, optional OpenAI transcription, cleanup.
             - **Meeting sources:** connect Quill, Granola or a compatible local server, and search or \
-              forget imported meetings. Optional chat access lets Remora send relevant excerpts to OpenAI.
+              forget imported meetings. Optional chat access lets Remora send imported excerpts to OpenAI. \
+              Enable recording there for Google Meet in Chrome, Zoom and Teams. Chrome audio can include \
+              other tabs. With a transcription key saved in Dictation settings, eligible meeting app audio \
+              and your unmuted microphone are sent to OpenAI for automatic language detection. Without a \
+              key, choose English or French for on-device transcription. Meeting notes are generated locally.
+              Under Recorded meetings, enable Use recordings in chat to ask about a recorded call.
+              Share recordings with MCP clients separately enables excerpt search for connected clients.
             - **MCP:** connect, update or disconnect AI apps.
             - **Logs:** open the logs folder, export the last 24 hours, open Console. Logs never contain captured text, prompts or answers.
 

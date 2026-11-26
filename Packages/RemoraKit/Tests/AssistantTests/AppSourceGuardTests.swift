@@ -3,6 +3,65 @@ import Testing
 
 /// Guards on App sources that have no test target of their own: they read the Swift files.
 @Suite struct AppSourceGuardTests {
+    @Test func transientRecordingInterruptionsDoNotStopTheRoomUntilDeparture() throws {
+        let controller = try source("App/Remora/Meetings/MeetingRecordingController.swift")
+        let start = try #require(controller.range(of: "    func interrupt("))
+        let body = try #require(controller[start.upperBound...].components(separatedBy: "\n    }").first)
+        #expect(!body.contains("starts.suppress("))
+        #expect(body.contains("starts.retryAfterInterruption("))
+        #expect(controller.contains("starts.mayStart(meeting.id)"))
+    }
+
+    @Test func aVerifiedRecordingSchedulesItsNextCheckBeforeTheIdleDiscoveryPoll() throws {
+        let controller = try source("App/Remora/Meetings/MeetingRecordingController.swift")
+        let start = try #require(controller.range(of: "private func renewDeadline("))
+        let end = try #require(controller.range(of: "    func stop()", range: start.upperBound..<controller.endIndex))
+        let renewal = controller[start.upperBound..<end.lowerBound]
+        #expect(renewal.contains(".milliseconds(500)"))
+        #expect(renewal.contains("check()"))
+        #expect(renewal.contains("interrupt(reason:"))
+        #expect(controller.contains("finish(interrupted: !confirmed, through: active.lastVerified,"))
+    }
+
+    @Test func meetingLanguageAndSpeechAssetsFollowTheSavedTranscriptionKey() throws {
+        let view = try source("App/Remora/Settings/MeetingRecordingSettingsView.swift")
+        #expect(view.contains("private var usesOpenAI: Bool { env.dictation.hasTranscriptionKey }"))
+        #expect(view.contains("if !usesOpenAI { localSpeechSettings }"))
+        #expect(view.contains("guard !usesOpenAI else { return }"))
+        #expect(view.contains("OpenAI detects the language"))
+        let keyView = try source("App/Remora/Settings/DictationSettingsView.swift")
+        #expect(keyView.contains("automatic meeting recording"))
+    }
+
+    @Test func meetingLibraryHidesCachedContentUntilItChecksTheCurrentExclusions() throws {
+        let view = try source("App/Remora/Settings/MeetingSourcesView.swift")
+        #expect(view.contains("ForEach(loadedRevision == model.revision ? results : [])"))
+        #expect(view.contains("if loadedRevision == model.revision, let detail"))
+        let model = try source("App/Remora/Settings/MeetingSourcesModel.swift")
+        #expect(model.contains("guard !Task.isCancelled else { return }"))
+    }
+
+    @Test func meetingUploadsRequireTheOriginalKeyAndCurrentCapturePermission() throws {
+        let controller = try source("App/Remora/Meetings/MeetingRecordingController.swift")
+        let start = try #require(controller.range(of: "private func mayTranscribe("))
+        let gate = controller[start.upperBound...].prefix(while: { $0 != "}" })
+        for check in ["active === recording", "allowed", "env.permissions.accessibilityGranted",
+                      "env.permissions.microphone == .granted", "DataGeneration.current",
+                      "SnapshotPolicy.current", "TranscriptionKeychain.load()"] {
+            #expect(gate.contains(check))
+        }
+        #expect(controller.contains("active.audio.confirmVerified(through: observationStart"))
+        #expect(controller.contains("recording.audio.invalidateUnverifiedAudio()"))
+        let env = try source("App/Remora/AppEnvironment.swift")
+        #expect(env.contains("meetingRecording.transcriptionKeyChanged()"))
+    }
+
+    @Test func meetingMenuShowsSetupOrDetectionStatusBeforeRecordingStarts() throws {
+        let menu = try source("App/Remora/MenuBarContent.swift")
+        #expect(menu.contains("Set up meeting recording…"))
+        #expect(menu.contains("Text(env.meetingRecording.displayStatus)"))
+    }
+
     @Test func windowSwitchesDoNotPresentCaptureStatusPopups() throws {
         let environment = try source("App/Remora/AppEnvironment.swift")
         #expect(!environment.contains("SwitchLabelPanel()"))
@@ -199,6 +258,25 @@ import Testing
         #expect(!badge.contains("\"fish"))
         #expect(!brand.contains("\"fish"))
         #expect(!menuBar.contains("\"fish"))
+    }
+
+    @Test func menuBarWaveformTracksRecordingAndHonorsReduceMotion() throws {
+        let label = try source("App/Remora/RemoraApp.swift")
+        #expect(label.contains("accessibilityReduceMotion"))
+        #expect(label.contains("env.meetingRecording.recordingClientName"))
+        #expect(label.contains("env.dictation.phase == .listening"))
+        let icon = try source("App/Remora/Indicator/MenuBarIcon.swift")
+        #expect(icon.contains("NSColor.systemRed"))
+        #expect(icon.contains("systemSymbolName: \"waveform\""))
+        let controller = try source("App/Remora/Meetings/MeetingRecordingController.swift")
+        let ready = try #require(controller.range(of: "active.audio.setMicAllowed(active.observingCall && meeting.micAllowed)"))
+        let indicator = try #require(controller.range(of: "recordingClientName = meeting.client.displayName"))
+        let update = controller[ready.upperBound..<indicator.lowerBound]
+        #expect(update.contains("guard !active.finishing") && update.contains("if active.observingCall"))
+        for method in ["func discard()", "private func finish(interrupted:"] {
+            let body = try #require(controller.range(of: method))
+            #expect(controller[body.upperBound...].components(separatedBy: "\n    }")[0].contains("recordingClientName = nil"))
+        }
     }
 
     @Test func captureIndicatorsUseTheBrandAccent() throws {

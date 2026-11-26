@@ -464,8 +464,10 @@ private struct StuckEmbedder: Embedder {
     try ExclusionStore(db).add("app:Vault")
 
     let t = tools(url)
+    try RecordingSearchAccess.mcp.set(true, in: db)
     let nowArg = Value.int(Int(now.timeIntervalSince1970))
     let calls: [(String, [String: Value])] = [
+        ("search_recorded_meetings", ["query": "pricing"]),
         ("search_memory", ["query": "pricing"]), ("get_snapshots", ["ids": [.int(Int(shown)), .int(Int(hidden))]]),
         ("read_session", ["app": "Vault", "start": 0, "end": 4_000_000_000]), ("get_recent_activity", [:]),
         ("get_usage", [:]), ("get_chronicle", ["level": "hour", "date": nowArg, "count": 3]),

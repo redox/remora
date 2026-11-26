@@ -63,7 +63,9 @@ public struct ChatFolder: Sendable {
                 // (`ForgetMarks`); they do not count toward the trigger either.
                 let (replayable, summary) = try store.replayable(in: d)
                 // Later turns can quote the same meeting or note through interactive history.
-                let turns = replayable.prefix { !SearchMeetingsTool.used(in: $0) && !SearchSavedNotesTool.used(in: $0) }
+                let turns = replayable.prefix {
+                    $0.recordingIDs == nil && !SearchMeetingsTool.used(in: $0) && !SearchSavedNotesTool.used(in: $0)
+                }
                 let total = turns.reduce(0) { $0 + TokenEstimate.count($1.text) }
                 guard total > limits.foldTrigger, turns.count > limits.keepRecent else { return nil }
                 let old = Array(turns.dropLast(max(0, limits.keepRecent)))

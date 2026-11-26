@@ -1,6 +1,7 @@
 import Foundation
 import GRDB
 import LLM
+import MeetingImport
 import Redaction
 import Retrieval
 import Storage
@@ -136,6 +137,11 @@ public actor ChatAgent {
            (try? await SavedNoteStore(db).canUseChatContext(since: started, now: now())) != true {
             replayable.removeAll(where: SearchSavedNotesTool.used)
         }
+        let historyIDs = Set(replayable.flatMap { $0.recordingIDs ?? [] })
+        if !historyIDs.isEmpty {
+            let allowed = (try? await LocalMeetingLibrary(db: db).allowedChatIDs(historyIDs, since: started, at: now())) ?? []
+            replayable.removeAll { !($0.recordingIDs ?? []).isSubset(of: allowed) }
+        }
         let kept = ChatHistory.kept(turns: replayable, budgetTokens: limits.historyBudget, inboxKinds: prior.kinds)
         let history = ChatHistory.input(turns: kept, summary: prior.summary, budgetTokens: limits.historyBudget, inboxKinds: prior.kinds)
         let instructions = ChatPrompt.instructions(memory: memory, earlier: history.earlier, now: started,
@@ -143,7 +149,7 @@ public actor ChatAgent {
         let tainted = startsTainted(memory: memory, earlier: history.earlier, kept: kept)
         let hasSavedNoteContext = kept.contains(where: SearchSavedNotesTool.used)
 
-        let state = TurnState(tainted: tainted)
+        let state = TurnState(tainted: tainted, recordingIDs: Set(kept.flatMap { $0.recordingIDs ?? [] }))
         let assistantID = assistant.id
         let input = history.items + [.user(text)]
         let status: ChatTurnStatus
@@ -169,6 +175,7 @@ public actor ChatAgent {
         assistant.status = status
         assistant.error = code
         assistant.tainted = state.tainted
+        assistant.recordingIDs = state.recordingIDs.isEmpty ? nil : state.recordingIDs
         assistant.usedSavedNotes = hasSavedNoteContext || SearchSavedNotesTool.used(in: assistant)
         if status == .complete, assistant.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             assistant.status = .failed
@@ -218,6 +225,12 @@ public actor ChatAgent {
         let rounds = max(1, limits.maxRounds)
         for round in 1...rounds {
             if Task.isCancelled { throw LLMError.cancelled }
+            let recordingIDs = state.recordingIDs
+            if !recordingIDs.isEmpty {
+                guard let interactiveStarted,
+                      try await LocalMeetingLibrary(db: db).allowedChatIDs(recordingIDs, since: interactiveStarted, at: now()) == recordingIDs
+                else { throw LLMError.cancelled }
+            }
             if usedMeetings {
                 guard let interactiveStarted, try ImportedMeetingStore(db).chatAccessEnabled(),
                       try !SettingsStore(db).isPaused(now: now()),
@@ -256,6 +269,7 @@ public actor ChatAgent {
                 let context = ToolContext(now: now(), calendar: calendar(), turnTainted: state.tainted, confirm: confirm,
                                           generation: generation)
                 let run = await toolbox.run(c, context: context)
+                if !run.recordingIDs.isEmpty { state.includeRecordings(run.recordingIDs) }
                 if c.name == SearchMeetingsTool.name, !run.isError { usedMeetings = true }
                 if c.name == SearchSavedNotesTool.name, !run.isError { usedSavedNotes = true }
                 // Anything but Remora's own bookkeeping (reads of captured or derived text, action
@@ -377,12 +391,18 @@ final class TurnState: Sendable {
         var partial = ""
         var callIDs: [Int64] = []
         var traces: [ToolTrace] = []
+        var recordingIDs: Set<UUID>
         var tainted: Bool
     }
 
     private let s: Mutex<S>
 
-    init(tainted: Bool = false) { s = Mutex(S(tainted: tainted)) }
+    init(tainted: Bool = false, recordingIDs: Set<UUID> = []) {
+        s = Mutex(S(recordingIDs: recordingIDs, tainted: tainted))
+    }
+
+    func includeRecordings(_ ids: Set<UUID>) { s.withLock { $0.recordingIDs.formUnion(ids) } }
+    var recordingIDs: Set<UUID> { s.withLock { $0.recordingIDs } }
 
     func taint() { s.withLock { $0.tainted = true } }
     var tainted: Bool { s.withLock { $0.tainted } }

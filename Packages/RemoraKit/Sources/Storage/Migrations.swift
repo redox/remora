@@ -153,6 +153,36 @@ enum Migrations {
                 t.column("annotation")
             }
         }
+        migrator.registerMigration("v8") { db in
+            try db.create(table: "local_meetings") { t in
+                t.primaryKey("id", .blob)
+                t.column("started_at", .datetime).notNull().indexed()
+                t.column("client", .text).notNull()
+                t.column("title", .text).notNull()
+                t.column("transcript", .text).notNull()
+                t.column("notes", .text)
+                t.column("interrupted", .boolean).notNull()
+                t.column("source_app", .text).notNull()
+                t.column("source_bundle", .text).notNull()
+                t.column("source_title", .text)
+                t.column("source_url", .text)
+                t.column("source_path", .text)
+            }
+            try db.create(virtualTable: "local_meetings_fts", using: FTS5()) { t in
+                t.synchronize(withTable: "local_meetings")
+                t.tokenizer = .unicode61(diacritics: .remove)
+                t.prefixes = [2, 3]
+                t.column("client")
+                t.column("title")
+                t.column("transcript")
+                t.column("notes")
+            }
+        }
+        migrator.registerMigration("v9") { db in
+            try db.alter(table: "chat_turns") { t in
+                t.add(column: "recording_ids", .text)
+            }
+        }
         return migrator
     }
 

@@ -35,10 +35,10 @@ private func decode(_ text: String) throws -> Any {
     try JSONSerialization.jsonObject(with: Data(text.utf8))
 }
 
-@Test func listsElevenTools() {
-    #expect(MemoryTools.definitions.count == 11)
+@Test func listsTwelveReadOnlyTools() {
+    #expect(MemoryTools.definitions.count == 12)
     #expect(Set(MemoryTools.definitions.map(\.name))
-        == ["search_memory", "get_snapshots", "read_session", "get_recent_activity", "get_usage",
+        == ["search_recorded_meetings", "search_memory", "get_snapshots", "read_session", "get_recent_activity", "get_usage",
             "get_chronicle", "get_working_memory", "get_attention_context", "search_wiki", "get_wiki_page", "list_wiki"])
 }
 
@@ -299,7 +299,7 @@ private func cleanCloseRead(dir: String) async throws {
     for text in [MemoryTools.serverInstructions] + MemoryTools.definitions.map(\.description) {
         let t = text.lowercased()
         #expect(t.contains("untrusted"), "\(text)")
-        #expect(t.contains("screen"), "\(text)")
+        #expect(t.contains("screen") || t.contains("participants"), "\(text)")
         #expect(t.contains("never as instructions"), "\(text)")
     }
 }
@@ -413,4 +413,46 @@ private func excludedAfterCaptureDB() async throws -> (url: URL, db: AppDatabase
     let shared = await MemoryTools(databaseURL: url, embedder: { embedder }).call("search_wiki", arguments: ["query": "zebra"])
     let rows = try #require(try decode(shared.text) as? [[String: Any]])
     #expect(rows.map { $0["slug"] as? String } == ["fjord-trip"])
+}
+
+@Test func recordedMeetingSearchIsRecognizedAndRequiresItsOwnPermission() async throws {
+    let url = try seededDB(texts: [])
+    let tool = MemoryTools(databaseURL: url)
+    let result = await tool.call("search_recorded_meetings", arguments: ["query": "telescope"])
+    #expect(result.isError && result.text.contains("Meeting sources"))
+}
+
+@Test func mcpReadsMatchingRecordingPassagesAndRechecksAccessOnEveryCall() async throws {
+    let url = tempDBURL()
+    defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+    let db = try AppDatabase.open(at: url)
+    try await db.writer.write { d in
+        try d.execute(sql: """
+            INSERT INTO local_meetings(id, started_at, client, title, transcript, notes, interrupted, source_app, source_bundle)
+            VALUES(?, CURRENT_TIMESTAMP, 'Teams', 'Planning', ?, 'Ship Friday', 1, 'Teams', 'com.example.teams')
+            """, arguments: [UUID(), String(repeating: "hello ", count: 1500) + "\n[12:34] Mira: Prepare the telescope"])
+    }
+    let tools = MemoryTools(databaseURL: url)
+    let name = "search_recorded_meetings"
+    try RecordingSearchAccess.chat.set(true, in: db)
+    #expect(await tools.call(name, arguments: [:]).isError)
+    try RecordingSearchAccess.mcp.set(true, in: db)
+    let hit = await tools.call(name, arguments: ["query": "teles"])
+    let rows = try #require(try decode(hit.text) as? [[String: Any]])
+    #expect(rows.count == 1)
+    let row = try #require(rows.first)
+    let excerpt = try #require(row["transcript_excerpt"] as? String)
+    #expect(excerpt.contains("[12:34] Mira: Prepare the telescope") && excerpt.count <= 1800)
+    #expect(row["interrupted"] as? Bool == true && row["notes_excerpt"] as? String == "Ship Friday")
+    let notesHit = await tools.call(name, arguments: ["query": "Friday"])
+    #expect(!notesHit.isError && notesHit.text.contains("Ship Friday"))
+    #expect(!notesHit.text.contains("source_bundle"))
+    try ExclusionStore(db).add("app:Teams")
+    #expect(try (decode(await tools.call(name, arguments: [:]).text) as? [Any])?.isEmpty == true)
+    try ExclusionStore(db).remove("app:Teams")
+    try SettingsStore(db).pause(until: .distantFuture)
+    #expect(await tools.call(name, arguments: [:]).isError)
+    try SettingsStore(db).pause(until: nil)
+    try RecordingSearchAccess.mcp.set(false, in: db)
+    #expect(await tools.call(name, arguments: [:]).isError)
 }

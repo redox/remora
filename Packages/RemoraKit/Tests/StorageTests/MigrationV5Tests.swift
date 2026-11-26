@@ -129,11 +129,11 @@ import Testing
     }
     // FTS5 virtual tables and their shadow tables (`<name>_data`, `_idx`, `_docsize`, `_config`, `_content`).
     let ftsNames = ["snapshots_fts", "chronicle_fts", "wiki_pages_fts", "wiki_facts_fts", "imported_meetings_fts",
-                    "saved_notes_fts"]
+                    "local_meetings_fts", "saved_notes_fts"]
     let ftsShadows = ["", "_data", "_idx", "_docsize", "_config", "_content"]
     tables.subtract(ftsNames.flatMap { n in ftsShadows.map { n + $0 } })
     let capture: Set<String> = ["snapshots", "activity_events", "inline_outputs", "style_notes",
-                                "imported_meetings", "forgotten_imports", "saved_notes"]
+                                "imported_meetings", "forgotten_imports", "local_meetings", "saved_notes"]
     let kept: Set<String> = ["settings", "exclusions", "llm_calls", "time_rules" /* user rules kept */]
     let wiped = capture.union(DataReset.derivedMemoryTables).union(DataReset.assistantTables)
     #expect(Set(DataReset.assistantTables) == Set(assistantTables))

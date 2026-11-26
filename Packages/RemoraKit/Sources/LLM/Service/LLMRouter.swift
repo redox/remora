@@ -55,7 +55,7 @@ public enum LLMRouter {
     public static func routes(job: JobType, config: RoutingConfig, catalog: [ModelInfo],
                               onDevice: OnDeviceAvailability, cloudAllowed: Bool = true) -> [Route] {
         let onDeviceRoute = Route(backend: .onDevice, model: FoundationModelsClient.modelID, effort: nil, tier: .onDevice)
-        if !cloudAllowed {
+        if !cloudAllowed || job == .meetingNotes {
             return config.onDeviceEnabled && onDevice == .available ? [onDeviceRoute] : []
         }
         let effort = job.defaultEffort

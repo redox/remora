@@ -79,7 +79,7 @@ struct SettingsView: View {
             ShortcutsSettingsView(rewrite: env.rewrite, openDictationSettings: { env.settingsTab = .dictation })
         case .dictation: DictationSettingsView(env: env)
         case .mcp: MCPSettingsView()
-        case .meetingSources: MeetingSourcesView(model: env.meetingSources)
+        case .meetingSources: MeetingSourcesView(env: env)
         case .logs: LogsSettingsView()
         }
     }

@@ -92,7 +92,8 @@ public struct SpeechAnalyzerTranscriber: Transcriber {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
                     for try await r in module.results {
-                        continuation.yield(TranscriberResult(text: String(r.text.characters), isFinal: r.isFinal))
+                        continuation.yield(TranscriberResult(text: String(r.text.characters), isFinal: r.isFinal,
+                                                           startSeconds: r.range.start.seconds, endSeconds: r.range.end.seconds))
                     }
                 }
                 let last = try await analyzer.analyzeSequence(input)

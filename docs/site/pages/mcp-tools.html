@@ -14,6 +14,9 @@
   "limit": 5
 }</code></pre>
 
+<h2 id="recorded-meetings">Recorded meetings</h2>
+<p><code>search_recorded_meetings</code> accepts an optional keyword <code>query</code> of up to 256 UTF-8 bytes. Omit it for the most recent recordings. With <strong>Share recordings with MCP clients</strong> enabled in Meeting sources, the tool returns up to five matches with a meeting ID, title, client, start time, interruption status, and excerpts from the transcript and available notes.</p>
+
 <h2 id="derived-memory">Derived memory</h2>
 <dl class="tool-list">
   <div><dt><code>get_chronicle</code></dt><dd>Requires <code>level</code> (<code>hour</code>, <code>day</code>, <code>week</code>, <code>month</code>, or <code>year</code>). Optional <code>date</code> and <code>count</code>. Returns period summaries newest first. Default count 1, maximum 24.</dd></div>

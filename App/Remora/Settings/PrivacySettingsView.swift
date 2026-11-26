@@ -69,7 +69,7 @@ struct PrivacySettingsView: View {
         } header: {
             Text("Microphone")
         } footer: {
-            Text("Only needed when voice dictation is on.")
+            Text("Used for voice dictation and meeting recording.")
         }
     }
 
@@ -191,9 +191,11 @@ struct PrivacySettingsView: View {
     }
 
     private func remove(_ pattern: String) {
-        do { try store.remove(pattern) } catch { listError = "Could not remove the pattern." }
+        do {
+            try store.remove(pattern)
+            env.applyActionChange(.exclusions)
+        } catch { listError = "Could not remove the pattern." }
         reload()
-        env.indicator.refresh(reloadRules: true)
     }
 
     private func setManualSaves(_ enabled: Bool, for pattern: String) {
@@ -232,7 +234,7 @@ private struct DeleteAllSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Delete all data?").font(.headline)
-            Text("This permanently deletes captures, activity, memory, saved notes, chat history and imported meetings. It also disconnects meeting sources. Your ignore list and other preferences are kept. This cannot be undone.")
+            Text("This permanently deletes captures, activity, memory, saved notes, chat history, recorded meetings and imported meetings. It also disconnects meeting sources. Your ignore list and other preferences are kept. This cannot be undone.")
                 .fixedSize(horizontal: false, vertical: true)
             Text(PrivacySettingsView.backupNote)
                 .font(.footnote).foregroundStyle(.secondary)

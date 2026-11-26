@@ -6,7 +6,15 @@ public struct TranscriberResult: Sendable, Equatable {
     public var text: String
     public var isFinal: Bool
 
-    public init(text: String, isFinal: Bool) { self.text = text; self.isFinal = isFinal }
+    public var startSeconds: TimeInterval?
+    public var endSeconds: TimeInterval?
+
+    public init(text: String, isFinal: Bool, startSeconds: TimeInterval? = nil, endSeconds: TimeInterval? = nil) {
+        self.text = text
+        self.isFinal = isFinal
+        self.startSeconds = startSeconds
+        self.endSeconds = endSeconds
+    }
 }
 
 /// On-device speech-to-text for one locale per transcription.

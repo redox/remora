@@ -50,11 +50,28 @@ private final class BusyProbe {
 private struct MenuBarLabel: View {
     let env: AppEnvironment?
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var dimmed = false
 
     var body: some View {
         if let env {
-            Image(nsImage: MenuBarIcon.image(symbol: env.menuBarSymbol, dot: env.isPaused ? nil : env.indicator.dot))
-                .accessibilityLabel(IndicatorCopy.headline(env.indicator.state) ?? env.statusText)
+            let meeting = env.meetingRecording.recordingClientName
+            let dictating = env.dictation.phase == .listening
+            let recording = meeting != nil || dictating
+            let pulsing = recording && !reduceMotion
+            let windowStatus = IndicatorCopy.headline(env.indicator.state) ?? env.statusText
+            let label = [meeting.map { "Recording \($0)" }, dictating ? "Recording dictation" : nil, windowStatus]
+                .compactMap { $0 }.joined(separator: ". ")
+            Image(nsImage: MenuBarIcon.image(symbol: env.menuBarSymbol, dot: env.isPaused ? nil : env.indicator.dot,
+                                             recording: recording ? (pulsing && dimmed ? .dim : .bright) : .off))
+                .accessibilityLabel(label)
+                .task(id: pulsing) {
+                    dimmed = false
+                    while pulsing && !Task.isCancelled {
+                        do { try await Task.sleep(for: .milliseconds(800)) } catch { return }
+                        dimmed.toggle()
+                    }
+                }
                 .onAppear { env.settingsOpener = { openSettings() } }
         } else {
             Image(systemName: "exclamationmark.triangle")

@@ -11,7 +11,7 @@ public enum DataReset {
     /// Deletes every snapshot (and its FTS rows), activity event, inline output, style note,
     /// all derived memory (chronicles, wiki, flags, identity, ledger, jobs, embeddings,
     /// boilerplate, digest, snapshot tombstones, non-user time rules) and the assistant's chat
-    /// turns, summaries, inbox, nudge decisions, reminders, imported meetings and saved notes in one transaction that also bumps
+    /// turns, summaries, inbox, nudge decisions, reminders, imported meetings, local meeting transcripts and notes, and saved notes in one transaction that also bumps
     /// `DataGeneration`, then scrubs what SQLite would otherwise leave recoverable on disk:
     /// - `secure_delete` overwrites freed content with zeros during the delete;
     /// - FTS `'delete-all'` drops every index segment (token text) at once;
@@ -41,6 +41,11 @@ public enum DataReset {
                 _ = try SavedNote.deleteAll(d)
                 try d.execute(sql: "INSERT INTO saved_notes_fts(saved_notes_fts) VALUES('delete-all')")
                 try SettingsStore(db).setValue(nil as Bool?, forKey: SavedNoteStore.chatKey, in: d)
+                for access in RecordingSearchAccess.allCases {
+                    try SettingsStore.store(nil, forKey: access.rawValue, in: d)
+                }
+                try d.execute(sql: "DELETE FROM local_meetings")
+                try d.execute(sql: "INSERT INTO local_meetings_fts(local_meetings_fts) VALUES('delete-all')")
                 _ = try ImportedMeeting.deleteAll(d)
                 try d.execute(sql: "INSERT INTO imported_meetings_fts(imported_meetings_fts) VALUES('delete-all')")
                 try d.execute(sql: "DELETE FROM forgotten_imports")

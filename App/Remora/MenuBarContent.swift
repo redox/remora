@@ -12,6 +12,15 @@ struct MenuBarContent: View {
 
     var body: some View {
         if let env {
+            if env.meetingRecording.enabled {
+                Text(env.meetingRecording.displayStatus)
+                if env.meetingRecording.canStop {
+                    Button("Stop meeting recording") { env.meetingRecording.stop() }
+                }
+            } else {
+                Button("Set up meeting recording…") { env.openSettings(tab: .meetingSources) }
+            }
+            Divider()
             if let headline = IndicatorCopy.headline(env.indicator.state) { Text(headline) }
             let items = QuickMenu.items(for: env.indicator.state)
             ForEach(items, id: \.self) { item in

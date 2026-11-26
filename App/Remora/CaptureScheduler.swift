@@ -72,6 +72,8 @@ final class CaptureScheduler {
     private var clipboardPollInFlight = false
     /// Bumped on every start/stop so a clipboard sample from a previous run is ignored.
     private var clipboardGeneration = 0
+    var onSessionInactive: @MainActor () -> Void = {}
+    var sessionAvailable: Bool { !screenLocked && !asleep }
     private var screenLocked = false
     private var asleep = false
 
@@ -95,7 +97,8 @@ final class CaptureScheduler {
         guard !running else { return }
         running = true
         // Lock/sleep notifications are not observed while stopped: start from a clean slate.
-        screenLocked = false
+        let session = CGSessionCopyCurrentDictionary() as? [String: Any]
+        screenLocked = session == nil || session?["CGSSessionScreenIsLocked"] as? Bool == true
         asleep = false
         attribution = ClipboardAttribution(pollInterval: Self.clipboardAttributionWindow)
         clipboardGeneration += 1
@@ -257,11 +260,11 @@ final class CaptureScheduler {
     private func observeSystemNotifications() {
         let workspace = NSWorkspace.shared.notificationCenter
         observe(workspace, NSWorkspace.didActivateApplicationNotification) { $0.frontmostAppChanged() }
-        observe(workspace, NSWorkspace.willSleepNotification) { $0.asleep = true }
+        observe(workspace, NSWorkspace.willSleepNotification) { $0.asleep = true; $0.onSessionInactive() }
         observe(workspace, NSWorkspace.didWakeNotification) { $0.asleep = false; $0.requestTick() }
 
         let distributed = DistributedNotificationCenter.default()
-        observe(distributed, Notification.Name("com.apple.screenIsLocked")) { $0.screenLocked = true }
+        observe(distributed, Notification.Name("com.apple.screenIsLocked")) { $0.screenLocked = true; $0.onSessionInactive() }
         observe(distributed, Notification.Name("com.apple.screenIsUnlocked")) {
             $0.screenLocked = false
             $0.requestTick()

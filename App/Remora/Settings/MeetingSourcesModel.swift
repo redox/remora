@@ -1,4 +1,6 @@
+import Capture
 import Foundation
+import LLM
 import MeetingImport
 import Observation
 import Storage
@@ -13,7 +15,12 @@ final class MeetingSourcesModel {
     private(set) var errorMessage: String?
     private(set) var chatAccessEnabled = false
 
+    private(set) var recordingAccess: Set<RecordingSearchAccess> = []
+    @ObservationIgnored private let db: AppDatabase
     @ObservationIgnored private let store: ImportedMeetingStore
+    @ObservationIgnored let recordings: LocalMeetingLibrary
+    @ObservationIgnored private var notesTasks: [UUID: Task<Void, Never>] = [:]
+    private(set) var generatingNotes: Set<UUID> = []
     @ObservationIgnored let importer: MeetingImporter
     @ObservationIgnored private let granola: GranolaAuthorization
     @ObservationIgnored private var automaticSync: Task<Void, Never>?
@@ -21,6 +28,8 @@ final class MeetingSourcesModel {
     @ObservationIgnored private var manualSync: [UUID: Task<Void, Never>] = [:]
 
     init(db: AppDatabase) {
+        self.db = db
+        recordings = LocalMeetingLibrary(db: db)
         store = ImportedMeetingStore(db)
         granola = GranolaAuthorization(browser: SystemBrowser())
         importer = MeetingImporter(db: db, granola: granola)
@@ -37,7 +46,13 @@ final class MeetingSourcesModel {
         }
     }
 
+    func cancelPendingRecordingNotes() {
+        for task in notesTasks.values { task.cancel() }
+    }
+
     func prepareForReset() {
+        cancelPendingRecordingNotes()
+        revision += 1
         automaticSync?.cancel()
         automaticSync = nil
         connectionTask?.cancel()
@@ -45,6 +60,7 @@ final class MeetingSourcesModel {
     }
 
     func didReset() async {
+        revision += 1
         do { try await granola.disconnect() } catch { errorMessage = "Could not remove the Granola sign-in." }
         statuses.removeAll()
         reload()
@@ -107,6 +123,40 @@ final class MeetingSourcesModel {
         }
     }
 
+    func saveRecording(client: String, title: String, startedAt: Date, transcript: String,
+                       interrupted: Bool, context: WindowContext, generation: Int, llm: LLMService) async throws {
+        let id = try await recordings.save(client: client, title: title, startedAt: startedAt,
+                                           transcript: transcript, interrupted: interrupted, context: context,
+                                           generation: generation)
+        revision += 1
+        guard !Task.isCancelled else { return }
+        generatingNotes.insert(id)
+        notesTasks[id] = Task {
+            // The library keeps the transcript when Apple Intelligence is unavailable or the model fails.
+            try? await recordings.generateNotes(id: id, context: context, generation: generation, llm: llm)
+            notesTasks[id] = nil
+            generatingNotes.remove(id)
+            revision += 1
+        }
+    }
+
+    func forgetRecording(_ id: UUID) async throws {
+        notesTasks[id]?.cancel()
+        try await recordings.forget(id: id)
+        revision += 1
+    }
+
+    func exclusionsChanged() { revision += 1 }
+
+    func setRecordingAccess(_ access: RecordingSearchAccess, enabled: Bool) {
+        do {
+            try access.set(enabled, in: db)
+            if enabled { recordingAccess.insert(access) } else { recordingAccess.remove(access) }
+        } catch {
+            errorMessage = "Could not save recording access."
+        }
+    }
+
     func setChatAccess(_ enabled: Bool) {
         do {
             try store.setChatAccessEnabled(enabled)
@@ -148,6 +198,7 @@ final class MeetingSourcesModel {
     }
 
     private func reload() {
+        recordingAccess = Set(RecordingSearchAccess.allCases.filter { (try? $0.enabled(in: db)) == true })
         do {
             sources = try store.sources()
             chatAccessEnabled = (try? store.chatAccessEnabled()) == true

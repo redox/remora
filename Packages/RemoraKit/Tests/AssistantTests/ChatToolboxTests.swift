@@ -54,14 +54,15 @@ private struct FakeAction: ChatTool {
             "get_remora_guide",
         ]))
         #expect(names.count == Set(names).count)
-        #expect(MemoryToolAdapter.all(MemoryTools(databaseURL: url)).count == MemoryTools.definitions.count)
+        #expect(MemoryToolAdapter.all(MemoryTools(databaseURL: url)).count == MemoryTools.memoryDefinitions.count)
+        #expect(!names.contains("search_recorded_meetings"))
     }
 
     @Test func memoryToolsAreUntrustedReads() throws {
         let (url, db) = try tempDB()
         let box = toolbox(url, db)
         #expect(box.kind(of: "search_memory") == .untrustedRead && box.kind(of: "time_report") == .untrustedRead)
-        for name in MemoryTools.definitions.map(\.name) where name != "get_usage" {
+        for name in MemoryTools.memoryDefinitions.map(\.name) where name != "get_usage" {
             #expect(box.kind(of: name) == .untrustedRead, "\(name)")
         }
         #expect(box.kind(of: "get_usage") == .trustedRead)
