@@ -124,6 +124,9 @@ struct ChatView: View {
                     .help(pinned ? "Unpin: close when you click elsewhere" : "Pin: keep the chat open")
                 }
                 Menu {
+                    if !inChatWindow, bar.state.settings.savedExpandedSize != nil {
+                        Button("Use default chat size") { bar.update { $0.savedExpandedSize = nil } }
+                    }
                     Button("Clear chat history…") { confirmClear = true }
                     Button("Settings…") { bar.actions.openSettings() }
                 } label: {

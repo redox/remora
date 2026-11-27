@@ -31,6 +31,12 @@ public struct BarSettings: Codable, Sendable, Equatable {
     /// Keyed by `BarPosition.rawValue`.
     public var expandedSizes: [String: CGSize] = [:]
 
+    /// A nil size lets this position open at the current default.
+    public var savedExpandedSize: CGSize? {
+        get { expandedSizes[position.rawValue] }
+        set { expandedSizes[position.rawValue] = newValue }
+    }
+
     public init() {}
 
     static func clamp(_ v: Double) -> Double {

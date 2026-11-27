@@ -31,8 +31,6 @@ final class ChatBarController: NSObject, NSWindowDelegate {
         var openAccountSettings: @MainActor () -> Void = {}
     }
 
-    static let defaultSize = CGSize(width: 600, height: 720)
-    static let minSize = CGSize(width: 320, height: 280)
     private static let log = Logger(subsystem: "dev.remora", category: "bar")
 
     let state = BarViewState()
@@ -239,11 +237,6 @@ final class ChatBarController: NSObject, NSWindowDelegate {
                           auxiliaryTopRight: global(s.auxiliaryTopRightArea), safeAreaTop: s.safeAreaInsets.top)
     }
 
-    private var expandedSize: CGSize {
-        let stored = settings.expandedSizes[settings.position.rawValue] ?? Self.defaultSize
-        return CGSize(width: max(stored.width, Self.minSize.width), height: max(stored.height, Self.minSize.height))
-    }
-
     private func layout() {
         guard started, chatWindow == nil, let s = screen() else { return }
         let p = settings.position
@@ -265,12 +258,12 @@ final class ChatBarController: NSObject, NSWindowDelegate {
             panel.contentMinSize = CGSize(width: 1, height: 1)
             panel.contentMaxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
         case .peeking, .open:
-            let screenCard = BarGeometry.expandedFrame(p, size: expandedSize, s)
+            let screenCard = BarGeometry.expandedFrame(p, size: settings.savedExpandedSize, s)
             let placed = BarLayout.panel(card: screenCard, bar: st == .peeking ? BarGeometry.collapsedPanelFrame(p, s) : nil)
             frame = placed.frame
             card = placed.card
             panel.setResizable(st == .open)
-            panel.contentMinSize = Self.minSize
+            panel.contentMinSize = BarGeometry.clampSize(BarGeometry.minimumExpandedSize, s)
             let max = BarGeometry.clampSize(CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude), s)
             // On a short display the peek window also needs room for the strip above the card.
             panel.contentMaxSize = st == .peeking ? frame.size : max
@@ -328,7 +321,7 @@ final class ChatBarController: NSObject, NSWindowDelegate {
 
     func windowDidEndLiveResize(_ notification: Notification) {
         guard interaction.state == .open else { return }
-        settings.expandedSizes[settings.position.rawValue] = panel.frame.size
+        settings.savedExpandedSize = panel.frame.size
         save()
         state.card = CGRect(origin: .zero, size: panel.frame.size)
     }

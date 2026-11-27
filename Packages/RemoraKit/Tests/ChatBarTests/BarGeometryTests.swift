@@ -35,6 +35,21 @@ private let external = ScreenInfo(frame: CGRect(x: 0, y: 0, width: 1920, height:
     #expect(f.midX == 756)
 }
 
+@Test func defaultChatUsesTheAvailableHeightBelowTheNotch() {
+    var settings = BarSettings()
+    settings.expandedSizes = ["top": CGSize(width: 600, height: 720), "left": CGSize(width: 420, height: 520)]
+    #expect(BarGeometry.expandedFrame(.top, size: settings.savedExpandedSize, mbp).size == CGSize(width: 600, height: 720))
+
+    settings.savedExpandedSize = nil
+    let card = BarGeometry.expandedFrame(.top, size: settings.savedExpandedSize, mbp)
+    #expect(card.size == CGSize(width: 900, height: 928))
+    #expect(card.midX == mbp.frame.midX)
+    #expect(card.maxY == mbp.frame.maxY - mbp.safeAreaTop - 8)
+    #expect(BarGeometry.expandedFrame(.top, size: settings.savedExpandedSize, external).size == CGSize(width: 900, height: 960))
+    settings.position = .left
+    #expect(settings.savedExpandedSize == CGSize(width: 420, height: 520))
+}
+
 @Test func hiddenMenuBarNeverLetsTheChatCoverTheNotch() {
     var screen = mbp
     screen.visibleFrame = screen.frame

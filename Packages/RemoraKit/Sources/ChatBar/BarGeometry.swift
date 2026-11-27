@@ -19,6 +19,8 @@ public struct ScreenInfo: Sendable, Equatable {
 }
 
 public enum BarGeometry {
+    public static let minimumExpandedSize = CGSize(width: 320, height: 280)
+
     static let thickness: CGFloat = 6
     static let margin: CGFloat = 8
 
@@ -62,9 +64,11 @@ public enum BarGeometry {
         return CGSize(width: min(size.width, area.width), height: min(size.height, area.height))
     }
 
-    public static func expandedFrame(_ p: BarPosition, size: CGSize, _ s: ScreenInfo) -> CGRect {
+    public static func expandedFrame(_ p: BarPosition, size: CGSize?, _ s: ScreenInfo) -> CGRect {
         let v = usableFrame(s)
-        let sz = clampSize(size, s)
+        let requested = size ?? CGSize(width: 900, height: 960)
+        let sz = clampSize(CGSize(width: max(requested.width, minimumExpandedSize.width),
+                                  height: max(requested.height, minimumExpandedSize.height)), s)
         let origin: CGPoint
         switch p {
         case .top:
