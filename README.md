@@ -10,10 +10,10 @@ wiki of people and projects, and open items. You use that memory to rewrite or d
 field with one key, to dictate, to ask questions in a chat bar under the notch, and to give other AI
 apps read-only access over MCP. Remora uses your ChatGPT plan for rewrite, cleanup, memory, and chat.
 
-| Rewrite in place | Insert or edit with a prompt |
+| Rewrite in place | Draft or rewrite with a prompt |
 |---|---|
-| ![A selected sentence in a Mail reply with Remora's Writing badge below it](docs/images/remora-rewrite.png) | ![The writing popover in Insert, drafting at the caret, and in Edit, rewriting a selection](docs/images/remora-popover.png) |
-| Double-tap **right ⌥** to rewrite the selection, or continue your sentence at the caret. | Tap **right ⌥** once for the writing popover: **Insert** drafts from your prompt, **Edit** changes the selection. Tap again to switch. |
+| ![A selected sentence in a Mail reply with Remora's Writing badge below it](docs/images/remora-rewrite.png) | ![The writing popover in Draft, drafting at the caret, and in Rewrite, rewriting a selection](docs/images/remora-popover.png) |
+| Double-tap **right ⌥** to rewrite the selection, or continue your sentence at the caret. | Tap **right ⌥** once for the writing popover: **Draft** writes new text from your prompt, **Rewrite** changes the selection. Tap again to switch. |
 | **Speak where you type** | **Ask about your work** |
 | ![The writing popover listening, with a live transcript under the caret](docs/images/remora-dictation.png) | ![The chat bar under the notch listing three open items](docs/images/remora-chat.png) |
 | Hold **right ⌥** to dictate, review the live transcript, then insert it or use it as an edit. | Open the chat bar to recall a decision, find what you left open, or see where your time went. |
@@ -35,7 +35,7 @@ publishing instructions.
 - A ChatGPT plan that supports Sign in with ChatGPT.
 - Apple silicon recommended. Some steps use Apple's on-device model, which needs Apple
   Intelligence. On a Mac without it (including Intel Macs), everything that would go to the cloud
-  still works, but rewrites, Edit mode and dictation cleanup in excluded, private or unverifiable
+  still works, but quick rewrites, Rewrite mode and dictation cleanup in excluded, private or unverifiable
   contexts fail closed with a notice: they never fall back to the cloud.
 
 ## Install
@@ -63,8 +63,8 @@ Enabling meeting recording also requires macOS system audio recording permission
 
 ## Writing and chat
 
-- Tap **right ⌥** to open the writing popover in **Edit** for selected text or **Insert** at the
-  caret. Type a prompt in **Insert** and press Return to draft text at the caret. When the
+- Tap **right ⌥** to open the writing popover in **Rewrite** for selected text or **Draft** at the
+  caret. Type a prompt in **Draft** and press Return to draft text at the caret. When the
   footer says **Prompt only**, the model receives only the text you submit in the popover.
   Tap again to switch modes.
 - Double-tap **right ⌥** with the popover closed to rewrite a selection. With nothing selected,
@@ -74,9 +74,9 @@ Enabling meeting recording also requires macOS system audio recording permission
 
 ## Dictation
 
-Hold **right ⌥** to dictate and release to review the transcript. In **Insert**, press Return to
+Hold **right ⌥** to dictate and release to review the transcript. In **Draft**, press Return to
 draft from your spoken prompt, or choose **Insert transcript** to put your words into the field.
-Tap the key to switch to **Edit** for changes to existing text. For hands-free dictation, click the
+Tap the key to switch to **Rewrite** for changes to existing text. For hands-free dictation, click the
 microphone beside the Return arrow, then click Stop to review the transcript.
 
 Dictation uses the Mac's speech model for the live preview and final text by default. To use

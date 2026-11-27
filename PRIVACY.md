@@ -68,7 +68,7 @@ Everything is stored on your Mac, in `~/Library/Application Support/Remora/remor
 - **Model requests to `api.openai.com`, and sign-in at `auth.openai.com`**, under your own ChatGPT
   account. A request holds the input and excerpts that task needs, such as a writing prompt, the
   text around the caret, and relevant memory. OpenAI's terms for your plan apply to it. In excluded,
-  private or unverifiable contexts, any text Remora reads stays on-device. If you submit an Insert
+  private or unverifiable contexts, any text Remora reads stays on-device. If you submit a Draft
   prompt in a supported field there, a cloud request contains only your typed or reviewed spoken prompt.
   Field text, app and site information, and memory stay on your Mac. While capture is paused in an
   otherwise allowed context, writing requests use only the field text and any prompt you enter.
@@ -124,7 +124,7 @@ is kept in memory for the session and is never written to disk by Remora.
 The mic in the chat composer transcribes on your Mac. Stopping adds the words to your draft.
 Choosing Send submits the reviewed text as a regular chat message.
 
-**Draft and insert** and **Edit** can send the reviewed transcript as text using the writing
+**Draft and insert** and **Rewrite** can send the reviewed transcript as text using the writing
 privacy rules above. Those actions keep the audio on your Mac.
 
 If you save a project API key in **Settings › Dictation › OpenAI transcription**, Remora can send

@@ -91,7 +91,7 @@ public enum EditVoiceRoute {
 
         public func actionTitle(replacesSelection: Bool) -> String {
             switch self {
-            case .edit: replacesSelection ? "Rewrite selection" : "Apply as edit"
+            case .edit: replacesSelection ? "Rewrite selection" : "Apply rewrite"
             case .insert: replacesSelection ? "Replace selection" : "Insert at caret"
             }
         }

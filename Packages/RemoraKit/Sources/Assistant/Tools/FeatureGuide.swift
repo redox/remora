@@ -111,7 +111,7 @@ public enum FeatureGuide {
             sent to the language model you signed in to (your ChatGPT account).
 
             - **Rewrite key:** double-tap right ⌥ to rewrite selected text or draft at the caret.
-            - **Writing popover:** tap the key. With a selection it opens in Edit; otherwise it opens in Insert.
+            - **Writing popover:** tap the key. It opens in Rewrite for a selection or Draft at the cursor.
             - **Ask in a field:** type `/q` and a question, then double-tap the key; the answer replaces it.
             - **Dictation:** hold the rewrite key to talk. The live transcript appears in the writing popover.
             - **Chat bar:** a slim bar under the notch; chat with your memory, set reminders, change settings.
@@ -134,12 +134,12 @@ public enum FeatureGuide {
             fields and password managers are refused with a beep. An optional fallback shortcut \
             (⇧⌘G, off by default) and the sounds are in Settings › Shortcuts.
             """),
-        GuideSection(id: "edit-mode", title: "Edit mode", body: """
-            Select text and tap the rewrite key to open the writing popover in Edit. Type an instruction \
+        GuideSection(id: "edit-mode", title: "Draft and Rewrite", body: """
+            Select text and tap the rewrite key to open the writing popover in Rewrite. Type an instruction \
             such as "shorter" or "translate to French", then press Return or choose Rewrite selection. \
-            With no selection, the popover opens in Insert. Type what you want written and press Return \
-            to draft and insert it at the caret. Where field text must stay on-device, Insert \
-            can use ChatGPT with only the prompt you submit. In Edit, the popover stays open for more rounds. \
+            With no selection, the popover opens in Draft. Type what you want written and press Return \
+            to draft and insert it at the caret. Where field text must stay on-device, Draft \
+            can use ChatGPT with only the prompt you submit. In Rewrite, the popover stays open for more rounds. \
             Tap the rewrite key to switch modes. Esc or a click outside closes the popover. \
             Configure gestures in Settings › Shortcuts.
             """),
@@ -151,8 +151,8 @@ public enum FeatureGuide {
         GuideSection(id: "dictation", title: "Dictation", body: """
             Off by default: turn it on in Settings › Dictation. Hold the rewrite key to speak. The \
             writing popover shows the live transcript using your Mac. Release to review the final \
-            text in Insert mode. Press Return to draft from the spoken prompt, or choose Insert transcript \
-            to put the words into the field. Switch to Edit to apply a spoken instruction to existing text. \
+            text in Draft mode. Press Return to draft from the spoken prompt, or choose Insert transcript \
+            to put the words into the field. Switch to Rewrite to apply a spoken instruction to existing text. \
             Esc discards the draft. For hands-free dictation, click the microphone beside the Return arrow, then click Stop to finish.
 
             For Mac speech recognition, pick English or French in the menu bar or let Remora use \
@@ -314,7 +314,7 @@ public enum FeatureGuide {
               and sites need **Manual saves only** in Privacy. You can also paste, search or delete
               notes in Memory. Optional chat access can send relevant excerpts to OpenAI.
             - **Notifications:** proactive messages on or off, macOS notification permission, a test notification.
-            - **Shortcuts:** rewrite key, Edit mode, fallback shortcut, sounds.
+            - **Shortcuts:** rewrite key, writing popover, fallback shortcut, sounds.
             - **Dictation:** on or off, language, optional OpenAI transcription, cleanup.
             - **Meeting sources:** connect Quill, Granola or a compatible local server, and search or \
               forget imported meetings. Optional chat access lets Remora send imported excerpts to OpenAI. \
@@ -330,12 +330,12 @@ public enum FeatureGuide {
             The chat can change some settings when you ask (it tells you what changed and offers undo).
             """),
         GuideSection(id: "shortcuts", title: "Shortcuts", body: """
-            - **Right ⌥ tap:** open the writing popover in Edit for a selection, or Insert at the caret.
+            - **Right ⌥ tap:** open the writing popover in Rewrite for a selection, or Draft at the caret.
             - **Right ⌥ double-tap:** rewrite the selection, draft at the caret, or answer `/q`. Opens chat outside a text field.
-            - **Right ⌥ hold:** dictate into the popover in Insert when dictation is on.
-            - **Right ⌥ tap in the popover:** switch between Insert and Edit.
+            - **Right ⌥ hold:** dictate into the popover in Draft when dictation is on.
+            - **Right ⌥ tap in the popover:** switch between Draft and Rewrite.
             - **⇧⌘G:** fallback shortcut, off by default (it is also Find Previous in many apps).
-            - **Esc:** cancel a rewrite or close Edit mode.
+            - **Esc:** cancel a rewrite or close the writing popover.
 
             Change them in Settings › Shortcuts. Quit Goldfish while using Remora: both use right ⌥.
             """),

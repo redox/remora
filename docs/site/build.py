@@ -28,7 +28,7 @@ GROUPS = {
         ("quickstart", "Quickstart"),
     ],
     "Guides": [
-        ("rewrite", "Rewrite and Edit mode"),
+        ("rewrite", "Draft and Rewrite"),
         ("dictation", "Voice dictation"),
         ("chat", "Chat"),
         ("memory", "Memory and activity"),

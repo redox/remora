@@ -2,7 +2,7 @@ import AppKit
 import Input
 import SwiftUI
 
-/// Settings › Shortcuts: the rewrite key, Edit-mode gestures, the fallback chord and sounds.
+/// Settings › Shortcuts: the rewrite key, Rewrite-mode gestures, the fallback chord and sounds.
 /// Every change is saved and applied at once.
 struct ShortcutsSettingsView: View {
     let rewrite: RewriteController
@@ -25,7 +25,7 @@ struct ShortcutsSettingsView: View {
                     ForEach(TriggerKey.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .disabled(!s.rewriteKeyEnabled)
-                Text("Tap to open the popover in Insert or Edit, depending on the selection. Double-tap to rewrite selected text or draft at the caret.")
+                Text("Tap to open Draft at the cursor or Rewrite when text is selected. Double-tap to rewrite selected text or draft at the caret.")
                     .font(.footnote).foregroundStyle(.secondary)
                 if let status = rewrite.statusLine {
                     Text(status).font(.footnote).foregroundStyle(.orange)
@@ -34,7 +34,7 @@ struct ShortcutsSettingsView: View {
             Section("Writing popover") {
                 Toggle("Double-tap writes in place", isOn: binding(\.doubleTapRewrites))
                 Toggle("Hold opens the popover", isOn: binding(\.holdOpensEdit))
-                Text("With dictation enabled, holding records speech. Tap the key while the popover is open to switch between Insert and Edit.")
+                Text("With dictation enabled, holding records speech. Tap the key while the popover is open to switch between Draft and Rewrite.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             .disabled(!s.rewriteKeyEnabled)

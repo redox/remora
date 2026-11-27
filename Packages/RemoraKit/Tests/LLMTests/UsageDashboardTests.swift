@@ -30,7 +30,7 @@ import Storage
         }
         #expect(UsageLabels.job("hour_chronicle") == "Hour summary")
         #expect(UsageLabels.job("rewrite") == "Rewrite")
-        #expect(UsageLabels.job("edit_mode") == "Edit mode")
+        #expect(UsageLabels.job("edit_mode") == "Draft and Rewrite")
         #expect(UsageLabels.job("chat") == "Chat")
         #expect(UsageLabels.job("dictation_cleanup") == "Dictation cleanup")
         #expect(UsageCategory.of(jobType: "rewrite") == .writing)

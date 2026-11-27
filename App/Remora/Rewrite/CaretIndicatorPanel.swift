@@ -50,7 +50,7 @@ final class CaretIndicatorPanel {
         show(.working, kind: .working(onCancel: onCancel), in: field)
     }
 
-    /// The subtle hint while the rewrite key is held (Edit mode on release).
+    /// The subtle hint while the rewrite key is held (Rewrite mode on release).
     func showHint(in field: FocusedField) {
         show(.hint, kind: .hint, in: field)
     }
@@ -141,7 +141,7 @@ struct IndicatorView: View {
                         .foregroundStyle(RemoraBrand.accent(scheme).opacity(0.6))
                 }
                 .frame(width: CaretIndicatorPanel.hintSize.width, height: CaretIndicatorPanel.hintSize.height)
-                .accessibilityLabel("Release to open Edit mode")
+                .accessibilityLabel("Release to open Rewrite mode")
         case .notice(let notice, let width, let onAction, let onDismiss):
             WritingNoticeView(notice: notice, onAction: onAction)
                 // Give the text its final width before the hosting view measures the wrapped height.

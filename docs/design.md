@@ -221,18 +221,18 @@ vacuuming, and WAL truncation scrub the files, with retry on next launch if clea
 
 ## Writing and dictation
 
-**Use one rewrite key with distinct gestures.** A clean right Option tap opens Edit for a
-selection and Insert at the caret. Double-tap rewrites the selection or writes at the original
+**Use one rewrite key with distinct gestures.** A clean right Option tap opens Rewrite for a
+selection and Draft at the caret. Double-tap rewrites the selection or writes at the original
 caret. A field starting with `/q` gets an answer in place. Hold previews dictation when enabled,
 and a tap inside the popover switches modes. A clean gesture rules out other key or mouse input
 so ordinary Option typing, including on AZERTY, stays intact. The optional Shift-Command-G
 fallback is off by default because apps assign it other meanings. No gesture requires Input
 Monitoring.
 
-In Edit, a short instruction applies to the selected passage, or to the field when there is no
+In Rewrite, a short instruction applies to the selected passage, or to the field when there is no
 selection. For example, “in French” requests a translation of the passage with its line breaks.
 When Google Docs in a Chromium browser exposes only a selected range in its blank input proxy,
-Edit temporarily copies the selection and checks the clipboard’s source URL against the document.
+Rewrite temporarily copies the selection and checks the clipboard’s source URL against the document.
 Before pasting, it checks the document, range and copied text again. The paste replaces the
 active selection and the popover closes. Docs handles Undo because the proxy cannot track the
 replacement for another round. If Remora cannot verify the passage, it leaves the field alone.
@@ -245,7 +245,7 @@ available. Fall back to the mouse pointer when Docs exposes no usable text geome
 
 **Keep the writing overlay near the active text.** Place the measured popover beside an ordinary
 composer when it fits. In a full-height editor, prefer the caret. If text bounds are unavailable,
-use the pointer in the field or the field centre. Insert and Edit use a Return arrow beside a short
+use the pointer in the field or the field centre. Draft and Rewrite use a Return arrow beside a short
 prompt to leave room for typing. The button moves below a wrapped or multiline instruction.
 Its tooltip and accessibility label name the current action. When dictation is enabled, a microphone
 sits beside the arrow and becomes a stop button during hands-free recording.
@@ -254,12 +254,12 @@ Ghostty can report an empty selection at offset zero while the terminal cursor i
 down. Use reported cursor or selection bounds when available. Apply the same pointer or pane-centre
 fallback even in a small split because its frame describes the whole terminal surface.
 
-**Draft from typed or spoken prompts in Insert.** Submit a typed prompt or reviewed transcript
-to generate text for the original caret or selection. Insert treats rough notes as a brief and
+**Draft new text from a typed or spoken prompt.** Submit a typed prompt or reviewed transcript
+to generate text for the original caret or selection. Draft treats rough notes as a brief and
 develops them into a draft for the audience and format suggested by the available context. It
 preserves finished wording supplied for direct insertion and grounds facts and commitments in
-the prompt and available context. Existing text outside the target stays in place. Insert uses the
-Edit mode model settings and checks that the target is safe to write to. In places where field text
+the prompt and available context. Existing text outside the target stays in place. Draft shares model
+settings with Rewrite and checks that the target is safe to write to. In places where field text
 must stay on-device, Draft and insert sends just the submitted prompt with the drafting guidance.
 It uses the field locally to verify the insertion target. A failed draft leaves the prompt in the
 popover for retry. Insert transcript puts the user's words into the field using dictation settings.
@@ -283,7 +283,7 @@ Listening once microphone audio starts arriving. This gives Bluetooth inputs tim
 the user starts speaking.
 Recording errors appear in the command bar so the user can retry in place. Release or Stop leaves
 the text in the command bar. Insert transcript can clean up an unchanged draft, and edits to the
-preview are kept as typed. Draft and insert and Edit use the reviewed text as an instruction.
+preview are kept as typed. Draft and Rewrite use the reviewed text as an instruction.
 Cancelling discards the recording. Audio stays in memory and spoken edit instructions are
 excluded from stored instructions.
 
@@ -492,10 +492,10 @@ unsigned Debug build. [Verification guidance](../.claude/skills/remora-verify/SK
 
 | Area | Manual checks |
 | --- | --- |
-| Capture and insertion | Safari, Chrome, Arc if installed, Mail, Messages, Notes, Slack, VS Code/Cursor, Terminal, and web composers such as Gmail and LinkedIn. Submit a typed Insert prompt at a caret and over a selection. In an excluded app, verify that Insert shows Prompt only and can draft with Apple Intelligence unavailable. Exercise private windows, secure fields, pause, pasteboard restoration, undo, and the onboarding practice field. |
+| Capture and insertion | Safari, Chrome, Arc if installed, Mail, Messages, Notes, Slack, VS Code/Cursor, Terminal, and web composers such as Gmail and LinkedIn. Submit a typed Draft prompt at a caret and over a selection. In an excluded app, verify that Draft shows Prompt only and can draft with Apple Intelligence unavailable. Exercise private windows, secure fields, pause, pasteboard restoration, undo, and the onboarding practice field. |
 | Ghostty popover | Tap right Option with the prompt low in a tall terminal, then repeat in a split pane on a secondary display. Move the pointer inside and outside the focused pane. Check placement at the cursor when available, and the pointer or pane centre otherwise. Repeat with highlighted text. |
 | Google Docs popover | In Chrome, enable **Turn on screen magnifier support** in **Tools › Accessibility**. In a blank document, move the mouse away from the page and tap right Option. Repeat after moving the caret with the keyboard in a populated document or highlighting text. Verify placement follows the text. Disable the setting and verify pointer fallback when no text bounds are available. |
-| Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Draft and insert, Insert transcript, Edit, cancel, and a mode switch followed immediately by Return. Verify that OpenAI transcription hides the EN/FR button and detects the language on Insert transcript. The button returns when OpenAI transcription is off. In an excluded app, speak a prompt and verify that Return drafts the result. Check that Listening appears when the microphone is ready and a silent recording shows an inline notice. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
+| Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Draft and insert, Insert transcript, Rewrite, cancel, and a mode switch followed immediately by Return. Verify that OpenAI transcription hides the EN/FR button and detects the language on Insert transcript. The button returns when OpenAI transcription is off. In an excluded app, speak a prompt and verify that Return drafts the result. Check that Listening appears when the microphone is ready and a silent recording shows an inline notice. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
 | Chat dictation | In both chat presentations, add dictated words to a typed draft, stop, edit and send. Try Esc, losing focus, closing, a silent recording, a Bluetooth mic, and a denied microphone permission. |
 | Chat window | Scroll to an earlier reply, enter a draft, choose **Open in window**, and take a window screenshot. Check the reading position, draft, resizing, and a running reply. Close the window and check the protected bar with pinning on and off. |
 | Chat and indicators | Real notch and secondary displays, hide and show the menu bar, hover and pin, IME, trackpad scroll, min size with 150% text, quiet switches between captured and excluded windows, badge placement, light and dark appearance, and accessibility display options. Send from older history and check that the question is visible before the reply. Scroll up mid-reply, then choose **Latest** and check that the view follows the rest of the reply. Open chat from a notification and check the selected message. Drag from one paragraph into the next after opening on hover, then press ⌘C. Check the copy icon on a question and a streaming reply, and the info icon on a completed reply. Return must never approve a card. |

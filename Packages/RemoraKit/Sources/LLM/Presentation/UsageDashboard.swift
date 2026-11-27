@@ -60,7 +60,7 @@ public enum UsageLabels {
         switch raw {
         case "hour_chronicle": return "Hour summary"
         case "rewrite": return "Rewrite"
-        case "edit_mode": return "Edit mode"
+        case "edit_mode": return "Draft and Rewrite"
         case "chat": return "Chat"
         case "dictation_cleanup": return "Dictation cleanup"
         case "query_expansion": return "Search expansion"

@@ -65,7 +65,7 @@ final class EditBarPanel {
 
         var inputLabel: String {
             switch submission {
-            case .edit: "Edit instruction"
+            case .edit: "Rewrite instruction"
             case .compose: draftIsSpoken ? "Dictated prompt" : "Drafting prompt"
             case .insertText: "Text to insert"
             }
@@ -366,13 +366,13 @@ struct EditBarView: View {
     private var controls: some View {
         HStack(spacing: 4) {
             HStack(spacing: 2) {
-                modeButton("Insert", mode: .insert)
-                if model.allowsEdit { modeButton("Edit", mode: .edit) }
+                modeButton("Draft", mode: .insert)
+                if model.allowsEdit { modeButton("Rewrite", mode: .edit) }
             }
             .accessibilityRepresentation {
-                Picker("Use text to", selection: $model.mode) {
-                    Text("Insert").tag(EditVoiceRoute.Mode.insert)
-                    if model.allowsEdit { Text("Edit").tag(EditVoiceRoute.Mode.edit) }
+                Picker("Writing mode", selection: $model.mode) {
+                    Text("Draft").tag(EditVoiceRoute.Mode.insert)
+                    if model.allowsEdit { Text("Rewrite").tag(EditVoiceRoute.Mode.edit) }
                 }
                 .pickerStyle(.segmented)
             }
