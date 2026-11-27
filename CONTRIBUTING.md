@@ -84,6 +84,25 @@ Captured text, clipboard text, memory, and tool results are untrusted data. Prom
 them as data to work on, never as instructions, and a model's output must not be able to trigger
 an action the user didn't ask for.
 
+## Recall benchmark
+
+Run the offline MCP snapshot benchmark before and after changing search or ranking. Use the same
+fixture and questions on both revisions. Each line gives the question, whether the fictional
+history settles it, the rank of each required source in the first five hits, and the returned IDs.
+For example, `#2@3` means snapshot 2 ranked third. A change to `#2@miss` means the evidence
+dropped out of the first five.
+
+```sh
+swift test --package-path Packages/RemoraKit --filter recallBenchmark
+```
+
+Compare the `recall@5` lines by question and report any sources gained or lost. To add a case,
+append to the [benchmark’s shared history and probes](Packages/RemoraKit/Tests/MCPServerTests/RecallBenchmarkTests.swift).
+Give it the question a person would ask and the fixed keywords and filters a client would send.
+For an unresolved question, include any sources that show the proposal or conflict. An empty
+source list expects an empty result. The benchmark checks retrieval and citation data offline.
+Client query selection and answer wording require separate evaluation.
+
 ## CI
 
 `.github/workflows/ci.yml` runs on pushes to `main` and on pull requests, on a macOS runner with
