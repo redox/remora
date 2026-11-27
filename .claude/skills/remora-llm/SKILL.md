@@ -1,6 +1,6 @@
 ---
 name: remora-llm
-description: Use before changing how Remora calls models — Sign in with ChatGPT auth, Responses API requests, model tiers and routing, a new job type or background job, prompts, chat tools and actions, prompt reminders, cost accounting and usage-limit handling. Covers SIWC request rules, adding a job end to end, untrusted prompt sections, tool trust levels and testing with FakeLLMClient.
+description: Use before changing how Remora calls models — Sign in with ChatGPT auth, Responses API requests, model tiers and routing, a new job type or background job, prompts, chat tools and actions, prompt reminders, cost accounting and usage-limit handling. Also use when investigating a wrong memory answer in Remora chat or a connected MCP client. Covers SIWC request rules, adding a job end to end, untrusted prompt sections, tool trust levels and testing with FakeLLMClient.
 ---
 
 # Models, prompts and chat tools
@@ -79,6 +79,27 @@ the design and its linked Sign in with ChatGPT documentation.
   down without a confirmation.
 - Prompt reminders run `ChatAgent.answer` with read-only tools and no confirmation UI, under the
   usage-limit backoff.
+
+## Investigate a wrong memory answer
+
+1. Recreate the disputed claim with fictional captures, dates and a question. Record what those
+   sources establish and where the user saw the answer (Remora chat or an MCP client). Keep real
+   captures, conversations and the user’s database out of fixtures and logs.
+2. Follow the claim back to its source. Compare the capture with the wiki fact or summary that
+   cites it. If the derived fact introduced the error, test that extraction or update path. For
+   a user-stated correction to an existing wiki fact, exercise chat’s user-confirmed
+   `correct_wiki` action and check that the old fact is no longer presented as current.
+3. If the stored evidence is sound, replay the lookup on the affected surface. Check whether the
+   decisive source is eligible under current exclusions and forget rules, where it ranks, and
+   whether it survives the result limit and context assembly. For an MCP snapshot miss, add a
+   question and its expected source IDs to the [recall benchmark](../../../CONTRIBUTING.md#recall-benchmark).
+   A withheld source can make “I couldn’t verify that” the correct outcome.
+4. If the right evidence reached the answerer, check what inference the source supports. For
+   example, “Could we ship Friday?” establishes a proposal. In chat, inspect the instructions and
+   tool output passed to `FakeLLMClient` and add a regression case at the first faulty step. For
+   an external client, verify the MCP instructions and returned sources, and identify any answer
+   behavior that still needs checking in that client. A scripted reply alone cannot demonstrate
+   that a model will draw the right conclusion.
 
 ## Testing
 
