@@ -24,9 +24,12 @@ struct ChatView: View {
     @State private var messagePosition = ScrollPosition(idType: Int64?.self)
     @State private var atLatest = true
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     private var dictation: DictationController { model.dictation }
     private var fontSize: CGFloat { 13 * textScale }
+    private var transcriptEdgeInset: CGFloat { 16 * textScale }
     private var hasMessages: Bool { !model.turns.isEmpty || model.sendingText != nil }
 
     var body: some View {
@@ -166,7 +169,8 @@ struct ChatView: View {
                 }
             }
             .scrollTargetLayout()
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, transcriptEdgeInset)
         }
         .defaultScrollAnchor(hasMessages ? .bottom : .top, for: .initialOffset)
         .defaultScrollAnchor(.top, for: .alignment)
@@ -202,6 +206,7 @@ struct ChatView: View {
         .overlay(alignment: .bottomTrailing) {
             if hasMessages && !atLatest && messagePosition.edge != .bottom {
                 latestButton
+        .mask { transcriptEdgeMask }
                     .padding(.trailing, 16)
                     .padding(.bottom, 8)
             }
@@ -211,6 +216,23 @@ struct ChatView: View {
     private var latestButton: some View {
         Button {
             scrollToLatest()
+    @ViewBuilder private var transcriptEdgeMask: some View {
+        if reduceTransparency || contrast == .increased {
+            Color.black
+        } else {
+            GeometryReader { geometry in
+                // Match the end padding so the first and last lines can scroll fully clear of the fade.
+                let edge = min(0.25, transcriptEdgeInset / max(1, geometry.size.height))
+                LinearGradient(stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black, location: edge),
+                    .init(color: .black, location: 1 - edge),
+                    .init(color: .clear, location: 1)
+                ], startPoint: .top, endPoint: .bottom)
+            }
+        }
+    }
+
         } label: {
             Label("Latest", systemImage: "arrow.down")
                 .font(.system(size: fontSize - 1, weight: .medium))

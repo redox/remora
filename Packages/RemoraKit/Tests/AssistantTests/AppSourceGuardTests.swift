@@ -143,6 +143,13 @@ import Testing
         #expect(controller.contains("panel.contentView = host"))
     }
 
+    @Test func chatTranscriptFadesInsideItsPaddingAndKeepsLatestLegible() throws {
+        let view = try source("App/Remora/Chat/ChatView.swift")
+        #expect(view.contains(".padding(.vertical, transcriptEdgeInset)"))
+        let mask = try #require(view.range(of: ".mask { transcriptEdgeMask }"))
+        #expect(view[mask.upperBound...].contains(".overlay(alignment: .bottomTrailing)"))
+    }
+
     @Test func chatOpensAtTheWelcomeHeadingOrLatestMessage() throws {
         let view = try source("App/Remora/Chat/ChatView.swift")
         #expect(view.contains(".defaultScrollAnchor(hasMessages ? .bottom : .top, for: .initialOffset)"))

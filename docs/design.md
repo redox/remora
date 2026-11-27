@@ -317,7 +317,10 @@ other screen-edge positions, pinning, resizing, and 100–150% text sizing. The 
 to 600 × 720 pt for reading longer replies. It fits the available screen and remembers the size
 chosen for each position. Dragging selects passages across paragraphs and lists. The copy icon
 under each message copies its source text, including Markdown and partial replies during streaming.
-The info icon opens model call details. The compact hover panel
+The info icon opens model call details. In both the popover and the chat window, messages fade
+as they scroll past the header or composer. Matching end padding keeps the first and last lines
+fully readable. Increase Contrast and Reduce Transparency keep the transcript at full opacity.
+The compact hover panel
 and expanded card use matching frame and content geometry at each transition so controls stay
 clear of the camera housing, including with a hidden menu bar. Mouse delivery is set explicitly
 because transparent borderless windows can otherwise pass scroll gesture starts through. Native
