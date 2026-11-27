@@ -24,14 +24,17 @@ struct OverlaySurface: ViewModifier {
 struct OverlayComposerBackground: View {
     let focused: Bool
     let cornerRadius: CGFloat
+    var raised = false
     @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: raised ? .circular : .continuous)
         let borderOpacity = contrast == .increased
             ? (focused ? 0.80 : 0.52)
-            : (focused ? 0.38 : 0.10)
-        shape.fill(Color.primary.opacity(focused ? 0.07 : 0.045))
+            : (focused ? (raised ? 0.22 : 0.38) : 0.10)
+        let fill = raised ? Color(nsColor: .controlBackgroundColor) : Color.primary.opacity(focused ? 0.07 : 0.045)
+        shape.fill(fill)
+            .shadow(color: raised ? .black.opacity(0.08) : .clear, radius: 5, y: 2)
             .overlay {
                 shape.strokeBorder(Color.primary.opacity(borderOpacity))
             }

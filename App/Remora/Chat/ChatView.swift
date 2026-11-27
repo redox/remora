@@ -1,4 +1,5 @@
 import Assistant
+import ChatBar
 import Dictation
 import LLM
 import Storage
@@ -268,10 +269,14 @@ struct ChatView: View {
                 }
             }
             composerInput
+                .padding(.leading, 18)
+                .padding(.trailing, 7)
+                .padding(.vertical, 7)
+                .background(OverlayComposerBackground(focused: composerFocused, cornerRadius: 25, raised: true))
         }
-        .padding(10)
-        .background(OverlayComposerBackground(focused: composerFocused, cornerRadius: 12))
-        .padding(12)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 14)
     }
 
     private var recordingStatus: String {
@@ -283,18 +288,15 @@ struct ChatView: View {
     }
 
     private var composerInput: some View {
-        HStack(alignment: .bottom, spacing: 8) {
+        ChatComposerLayout {
             TextField("Ask Remora", text: $model.draft, axis: .vertical)
                 .textFieldStyle(.plain)
-                .font(.system(size: fontSize))
+                .font(.system(size: fontSize + 2))
                 .accessibilityLabel("Ask Remora")
                 .help("Return to send · Shift Return for a new line")
                 .lineLimit(1...6)
                 .focused($composerFocused)
                 .disabled(model.editingTurnID != nil && model.isStreaming)
-                .padding(.vertical, 5)
-                // Center a short field beside the 30 pt button; longer drafts still grow upward.
-                .frame(minHeight: 30, alignment: .center)
                 .onKeyPress(.return, phases: .down) { press in
                     // Enter sends (not while a turn runs), ⇧Enter adds a line at the caret. Return
                     // never answers a card, and sends nothing while one waits. While an input
@@ -307,6 +309,12 @@ struct ChatView: View {
                     case .send: model.send(); return .handled
                     }
                 }
+            composerControls
+        }
+    }
+
+    private var composerControls: some View {
+        HStack(spacing: 3) {
             Button {
                 if !dictation.isDictatingChat { bar.open(focusInput: true) }
                 model.toggleDictation()
@@ -320,13 +328,13 @@ struct ChatView: View {
             .help(dictation.isDictatingChat ? "Stop dictation (Esc to cancel)" :
                     (dictation.settings.enabled ? "Dictate message" : "Enable voice dictation in Settings"))
             if model.isStreaming {
-                Button { model.stop() } label: { composerIcon("stop.fill") }
-                    .buttonStyle(QuietButtonStyle(selected: true))
+                Button { model.stop() } label: { primaryComposerIcon("stop.fill", enabled: true) }
+                    .buttonStyle(.plain)
                     .accessibilityLabel("Stop")
                     .help("Stop response (Esc)")
             } else {
-                Button { model.send() } label: { composerIcon("arrow.up") }
-                    .buttonStyle(QuietButtonStyle(selected: model.canSend))
+                Button { model.send() } label: { primaryComposerIcon("arrow.up", enabled: model.canSend) }
+                    .buttonStyle(.plain)
                     .disabled(!model.canSend)
                     .accessibilityLabel(model.editingTurnID == nil ? "Send" : "Save and resend")
                     .help(model.editingTurnID == nil ? "Send (Return)" : "Save and resend (Return)")
@@ -336,8 +344,15 @@ struct ChatView: View {
 
     private func composerIcon(_ symbol: String) -> some View {
         Image(systemName: symbol)
-            .font(.system(size: fontSize, weight: .semibold))
-            .frame(width: 30, height: 30)
+            .font(.system(size: fontSize + 2, weight: .medium))
+            .frame(width: 36, height: 36)
+    }
+
+    private func primaryComposerIcon(_ symbol: String, enabled: Bool) -> some View {
+        composerIcon(symbol)
+            .foregroundStyle(enabled ? (scheme == .dark ? Color.black : .white) : .secondary)
+            .background(enabled ? RemoraBrand.accent(scheme) : Color.primary.opacity(0.08), in: Circle())
+            .contentShape(Circle())
     }
 }
 

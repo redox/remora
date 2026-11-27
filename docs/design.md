@@ -323,8 +323,10 @@ clear of the camera housing, including with a hidden menu bar. Mouse delivery is
 because transparent borderless windows can otherwise pass scroll gesture starts through. Native
 selection colors, Reduce Transparency, Increase Contrast, and Reduce Motion guide the overlay
 surfaces. Composer focus uses a neutral outline that follows the field's rounded shape, with
-stronger contrast when Increase Contrast is enabled. The visual identity uses the app's own
-fish mark and sea-glass accents.
+stronger contrast when Increase Contrast is enabled. A short chat draft shares one row with
+the microphone and send button. When the text wraps or the user adds a line, the controls
+move below it so the draft can use the full width. The same field keeps the caret and selection
+as the layout changes. The visual identity uses the app's own fish mark and sea-glass accents.
 
 **Open chat in a regular window for screenshots.** The floating bar requests screenshot and screen-sharing
 protection. Choosing **Open in window** moves the conversation into a standard resizable window
