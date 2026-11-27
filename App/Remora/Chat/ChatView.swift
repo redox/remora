@@ -294,7 +294,7 @@ struct ChatView: View {
                 .padding(.leading, 18)
                 .padding(.trailing, 7)
                 .padding(.vertical, 7)
-                .background(OverlayComposerBackground(focused: composerFocused, cornerRadius: 25, raised: true))
+                .background(OverlayComposerBackground(focused: composerFocused, cornerRadius: 25))
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
@@ -337,26 +337,23 @@ struct ChatView: View {
 
     private var composerControls: some View {
         HStack(spacing: 3) {
-            Button {
+            ComposerMicrophoneButton(showsStop: dictation.isDictatingChat, iconSize: fontSize + 2, buttonSize: 36) {
                 if !dictation.isDictatingChat { bar.open(focusInput: true) }
                 model.toggleDictation()
-            } label: {
-                composerIcon(dictation.isDictatingChat ? "stop.circle.fill" : "mic")
             }
-            .buttonStyle(QuietButtonStyle(selected: dictation.isDictatingChat))
             .disabled(model.isStreaming || model.clearing || (dictation.isActive && !dictation.isDictatingChat)
                       || (dictation.isDictatingChat && dictation.phase == .finishing))
             .accessibilityLabel(dictation.isDictatingChat ? "Stop dictation" : "Dictate message")
             .help(dictation.isDictatingChat ? "Stop dictation (Esc to cancel)" :
                     (dictation.settings.enabled ? "Dictate message" : "Enable voice dictation in Settings"))
             if model.isStreaming {
-                Button { model.stop() } label: { primaryComposerIcon("stop.fill", enabled: true) }
-                    .buttonStyle(.plain)
+                Button { model.stop() } label: { composerIcon("stop.fill") }
+                    .buttonStyle(ComposerActionStyle())
                     .accessibilityLabel("Stop")
                     .help("Stop response (Esc)")
             } else {
-                Button { model.send() } label: { primaryComposerIcon("arrow.up", enabled: model.canSend) }
-                    .buttonStyle(.plain)
+                Button { model.send() } label: { composerIcon("arrow.up") }
+                    .buttonStyle(ComposerActionStyle())
                     .disabled(!model.canSend)
                     .accessibilityLabel(model.editingTurnID == nil ? "Send" : "Save and resend")
                     .help(model.editingTurnID == nil ? "Send (Return)" : "Save and resend (Return)")
@@ -368,13 +365,6 @@ struct ChatView: View {
         Image(systemName: symbol)
             .font(.system(size: fontSize + 2, weight: .medium))
             .frame(width: 36, height: 36)
-    }
-
-    private func primaryComposerIcon(_ symbol: String, enabled: Bool) -> some View {
-        composerIcon(symbol)
-            .foregroundStyle(enabled ? (scheme == .dark ? Color.black : .white) : .secondary)
-            .background(enabled ? RemoraBrand.accent(scheme) : Color.primary.opacity(0.08), in: Circle())
-            .contentShape(Circle())
     }
 }
 

@@ -76,8 +76,8 @@ Enabling meeting recording also requires macOS system audio recording permission
 
 Hold **right ⌥** to dictate and release to review the transcript. In **Insert**, press Return to
 draft from your spoken prompt, or choose **Insert transcript** to put your words into the field.
-Tap the key to switch to **Edit** for changes to existing text. Choose **Record** and **Stop** for
-hands-free dictation.
+Tap the key to switch to **Edit** for changes to existing text. For hands-free dictation, click the
+microphone beside the Return arrow, then click Stop to review the transcript.
 
 Dictation uses the Mac's speech model for the live preview and final text by default. To use
 OpenAI's `gpt-transcribe` for the final transcript, paste a project key into **Settings › Dictation ›

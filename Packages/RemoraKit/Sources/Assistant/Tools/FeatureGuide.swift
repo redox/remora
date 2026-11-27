@@ -153,7 +153,7 @@ public enum FeatureGuide {
             writing popover shows the live transcript using your Mac. Release to review the final \
             text in Insert mode. Press Return to draft from the spoken prompt, or choose Insert transcript \
             to put the words into the field. Switch to Edit to apply a spoken instruction to existing text. \
-            Esc discards the draft. For hands-free dictation, choose Record and Stop.
+            Esc discards the draft. For hands-free dictation, click the microphone beside the Return arrow, then click Stop to finish.
 
             For Mac speech recognition, pick English or French in the menu bar or let Remora use \
             the last language in that app or your default. The popover also offers a language button \

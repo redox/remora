@@ -10,14 +10,27 @@ import Testing
         return try String(contentsOf: root.appendingPathComponent(path), encoding: .utf8)
     }
 
-    @Test func editorOffersVisibleActionsAndTracksUndoAvailability() throws {
+    @Test func editorNamesItsIconOnlySubmitActionAndTracksUndoAvailability() throws {
         let view = try source("App/Remora/Rewrite/EditBarPanel.swift")
-        #expect(view.contains("Button(action: onSubmit)"))
-        #expect(view.contains("Text(model.actionTitle)"))
+        let button = try #require(view.range(of: "Button(action: onSubmit)"))
+        let submit = view[button.upperBound...].prefix { $0 != "}" }
+        #expect(submit.contains(#"Label(model.actionTitle, systemImage: "return")"#))
+        #expect(submit.contains(".labelStyle(.iconOnly)"))
         #expect(view.contains(".accessibilityLabel(\"Close editor\")"))
         #expect(view.contains("model.canUndo"))
         let controller = try source("App/Remora/Rewrite/RewriteController.swift")
         #expect(controller.contains("bar.model.canUndo = edit?.session?.canUndo ?? false"))
+    }
+
+    @Test func writingPopoverOffersHandsFreeDictationBesideSubmit() throws {
+        let view = try source("App/Remora/Rewrite/EditBarPanel.swift")
+        let controls = try #require(view.range(of: "private var composerControls:"))
+        let submit = try #require(view.range(of: "Button(action: onSubmit)", range: controls.upperBound..<view.endIndex))
+        let recording = view[controls.upperBound..<submit.lowerBound]
+        #expect(recording.contains("if model.recordEnabled"))
+        #expect(recording.contains("model.listening && model.handsFree"))
+        #expect(recording.contains("actions?.record()"))
+        #expect(recording.contains("model.isWorking || model.finalizing || (model.listening && !model.handsFree)"))
     }
 
     @Test func editorLetsAnInputMethodHandleCompositionBeforePanelShortcuts() throws {
@@ -87,12 +100,12 @@ import Testing
         #expect(!appearance.contains("selected && enabled"))
         let editor = try source("App/Remora/Rewrite/EditBarPanel.swift")
         #expect(editor.contains("QuietButtonStyle(selected: model.mode == mode)"))
-        #expect(editor.contains("QuietButtonStyle(selected: model.canSubmit)"))
     }
 
     @Test func editInstructionWrapsAndGrowsWithinThePanel() throws {
         let view = try source("App/Remora/Rewrite/EditBarPanel.swift")
-        let field = try #require(view.range(of: "TextField(model.placeholder"))
+        let layout = try #require(view.range(of: "ChatComposerLayout {"))
+        let field = try #require(view.range(of: "TextField(model.placeholder", range: layout.upperBound..<view.endIndex))
         let controls = try #require(view.range(of: "if model.isWorking {", range: field.upperBound..<view.endIndex))
         let instruction = view[field.lowerBound..<controls.lowerBound]
         #expect(instruction.contains("text: $model.instruction, axis: .vertical"))

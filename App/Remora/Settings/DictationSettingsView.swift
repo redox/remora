@@ -46,7 +46,7 @@ struct DictationSettingsView: View {
             Section("Shortcut") {
                 Text("Hold the rewrite key to dictate and release to review. Press Return in Insert to draft from your prompt, or choose Insert transcript to use your words.")
                     .font(.footnote).foregroundStyle(.secondary)
-                Text("For hands-free dictation, tap the key to open the popover and choose Record.")
+                Text("For hands-free dictation, tap the key to open the popover, then click the microphone beside the Return arrow.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Mac speech language") {

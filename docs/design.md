@@ -245,7 +245,10 @@ available. Fall back to the mouse pointer when Docs exposes no usable text geome
 
 **Keep the writing overlay near the active text.** Place the measured popover beside an ordinary
 composer when it fits. In a full-height editor, prefer the caret. If text bounds are unavailable,
-use the pointer in the field or the field centre.
+use the pointer in the field or the field centre. Insert and Edit use a Return arrow beside a short
+prompt to leave room for typing. The button moves below a wrapped or multiline instruction.
+Its tooltip and accessibility label name the current action. When dictation is enabled, a microphone
+sits beside the arrow and becomes a stop button during hands-free recording.
 
 Ghostty can report an empty selection at offset zero while the terminal cursor is several rows
 down. Use reported cursor or selection bounds when available. Apply the same pointer or pane-centre

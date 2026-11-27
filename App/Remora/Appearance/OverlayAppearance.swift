@@ -24,21 +24,49 @@ struct OverlaySurface: ViewModifier {
 struct OverlayComposerBackground: View {
     let focused: Bool
     let cornerRadius: CGFloat
-    var raised = false
     @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: raised ? .circular : .continuous)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .circular)
         let borderOpacity = contrast == .increased
             ? (focused ? 0.80 : 0.52)
-            : (focused ? (raised ? 0.22 : 0.38) : 0.10)
-        let fill = raised ? Color(nsColor: .controlBackgroundColor) : Color.primary.opacity(focused ? 0.07 : 0.045)
-        shape.fill(fill)
-            .shadow(color: raised ? .black.opacity(0.08) : .clear, radius: 5, y: 2)
+            : (focused ? 0.22 : 0.10)
+        shape.fill(Color(nsColor: .controlBackgroundColor))
+            .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
             .overlay {
                 shape.strokeBorder(Color.primary.opacity(borderOpacity))
             }
             .allowsHitTesting(false)
+    }
+}
+
+struct ComposerMicrophoneButton: View {
+    let showsStop: Bool
+    let iconSize: CGFloat
+    let buttonSize: CGFloat
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: showsStop ? "stop.circle.fill" : "mic")
+                .font(.system(size: iconSize, weight: .medium))
+                .frame(width: buttonSize, height: buttonSize)
+        }
+        .buttonStyle(QuietButtonStyle(selected: showsStop))
+    }
+}
+
+struct ComposerActionStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.isEnabled) private var enabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        let ink: Color = scheme == .dark ? .black : .white
+        configuration.label
+            .foregroundStyle(enabled ? ink : Color.secondary)
+            .background(enabled ? RemoraBrand.accent(scheme) : Color.primary.opacity(0.08), in: Capsule())
+            .contentShape(Capsule())
+            .opacity(configuration.isPressed ? 0.8 : 1)
     }
 }
 

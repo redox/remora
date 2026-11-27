@@ -1,4 +1,5 @@
 import AppKit
+import ChatBar
 import Dictation
 import LLM
 import Observation
@@ -248,7 +249,7 @@ final class EditBarPanel {
     /// Shows a spoken instruction (partial or final) in the text field.
     func setInstruction(_ s: String) { model.instruction = s }
 
-    /// The microphone glyph and the "Listening…" placeholder while dictation listens.
+    /// Shows the recording indicator and live transcript while dictation listens.
     func setListening(_ on: Bool) { model.listening = on }
 
     private func submit() {
@@ -389,18 +390,6 @@ struct EditBarView: View {
                 .help("Switch dictation language")
                 .accessibilityLabel("Dictation language: \(locale.name). Switch language.")
             }
-            if model.recordEnabled {
-                let canStop = model.listening && model.handsFree
-                Button {
-                    actions?.record()
-                } label: {
-                    Label(canStop ? "Stop" : "Record", systemImage: canStop ? "stop.fill" : "mic")
-                        .padding(.horizontal, 8)
-                        .frame(minHeight: 26)
-                }
-                .buttonStyle(QuietButtonStyle())
-                .disabled(model.isWorking || model.finalizing || (model.listening && !model.handsFree))
-            }
             Spacer(minLength: 0)
             closeButton
         }
@@ -442,39 +431,65 @@ struct EditBarView: View {
     }
 
     private var composer: some View {
-        HStack(spacing: 8) {
-            if model.listening {
-                Image(systemName: model.microphoneReady ? "mic.fill" : "mic")
-                    .foregroundStyle(model.microphoneReady ? Color.red : Color.secondary)
-                    .accessibilityLabel(model.placeholder)
-            } else {
-                RemoraGlyph().frame(width: 18, height: 18).foregroundStyle(accent).accessibilityHidden(true)
-            }
+        ChatComposerLayout {
             TextField(model.placeholder,
                       text: $model.instruction, axis: .vertical)
                 .textFieldStyle(.plain)
-                .font(.body)
+                .font(.system(size: 15))
                 .lineLimit(1...6)
                 .accessibilityLabel(model.inputLabel)
                 .focused($focused)
                 .disabled(model.isWorking || model.listening || model.finalizing)
+                .padding(.leading, 25)
+                .overlay(alignment: .topLeading) {
+                    Group {
+                        if model.listening {
+                            Image(systemName: "waveform")
+                                .foregroundStyle(model.microphoneReady ? Color.red : Color.secondary)
+                                .accessibilityLabel(model.placeholder)
+                        } else {
+                            RemoraGlyph().foregroundStyle(accent).accessibilityHidden(true)
+                        }
+                    }
+                    .frame(width: 18, height: 19)
+                    .allowsHitTesting(false)
+                }
+            composerControls
+        }
+        .padding(.leading, 13)
+        .padding(.trailing, 5)
+        .padding(.vertical, 5)
+        .background(OverlayComposerBackground(focused: focused, cornerRadius: 21))
+    }
+
+    private var composerControls: some View {
+        HStack(spacing: 3) {
+            if model.recordEnabled {
+                let canStop = model.listening && model.handsFree
+                let title = canStop ? "Stop dictation" : "Start dictation"
+                ComposerMicrophoneButton(showsStop: canStop, iconSize: 15, buttonSize: 32) {
+                    actions?.record()
+                }
+                .disabled(model.isWorking || model.finalizing || (model.listening && !model.handsFree))
+                .accessibilityLabel(title)
+                .help(title)
+            }
             if model.isWorking {
                 ProgressView().controlSize(.small)
+                    .frame(width: 32, height: 32)
                     .accessibilityLabel(model.submission == .insertText ? "Preparing text" : "Writing")
             } else {
                 Button(action: onSubmit) {
-                    Text(model.actionTitle)
-                        .font(.caption.weight(.medium))
-                        .padding(.horizontal, 8)
-                        .frame(minHeight: 26)
+                    Label(model.actionTitle, systemImage: "return")
+                        .labelStyle(.iconOnly)
+                        .font(.system(size: 15, weight: .medium))
+                        .frame(width: 32, height: 32)
                 }
-                .buttonStyle(QuietButtonStyle(selected: model.canSubmit))
+                .buttonStyle(ComposerActionStyle())
                 .disabled(!model.canSubmit)
                 .help("\(model.actionTitle) (Return)")
             }
         }
-        .padding(.leading, 10).padding(.trailing, 5).padding(.vertical, 5)
-        .background(OverlayComposerBackground(focused: focused, cornerRadius: 10))
     }
 
     private var footer: some View {
