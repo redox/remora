@@ -102,6 +102,24 @@ import Testing
         #expect(controller[compose.upperBound..<literal.lowerBound].contains("composeDraft(text, context: ctx)"))
     }
 
+    @Test func insertYieldsFocusBeforeCheckingTheTargetAndOnlyReopensForRetry() throws {
+        let controller = try source("App/Remora/Rewrite/RewriteController.swift")
+        let start = try #require(controller.range(of: "case .insertText:"))
+        let submit = controller[start.upperBound...].components(separatedBy: "\n    }")[0]
+        let hide = try #require(submit.range(of: "bar.hideForPaste()"))
+        let task = try #require(submit.range(of: "Task {"))
+        #expect(hide.lowerBound < task.lowerBound)
+
+        let insert = try #require(controller.range(of: "private func insertDraft("))
+        let body = controller[insert.upperBound...].components(separatedBy: "\n    }")[0]
+        #expect(body.contains("gate(field, sample: sample, rules: .denyAll)"))
+        let restore = try #require(body.range(of: "bar.restoreAfterPaste()"))
+        #expect(body[..<restore.lowerBound].contains("if edit?.generation == mine"))
+        #expect(body[..<restore.lowerBound].contains("== context.originalPID"))
+        #expect(body.contains("pasteReadyAt: pasteReadyAt"))
+        #expect(!body.contains("bar.hideForPaste()"))
+    }
+
     @Test func rememberingASelectionUsesAnExplicitSaveButton() throws {
         let panel = try source("App/Remora/Rewrite/EditBarPanel.swift")
         let editor = try source("App/Remora/Memory/SavedNoteEditor.swift")

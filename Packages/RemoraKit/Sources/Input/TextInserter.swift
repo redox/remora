@@ -101,7 +101,9 @@ public struct TextInserter: Sendable {
         if !preferPaste, let expectedValue, let newValue, field.isFocused() {
             if let expectedSelection, field.selectedRange() != expectedSelection { return .fieldChanged }
             switch await axWrite(text, target: target, expected: expectedValue, newValue: newValue, field) {
-            case .done: return .ax
+            case .done:
+                Self.log.info("AX write verified")
+                return .ax
             case .unchanged: break
             case .changedByOthers:
                 Self.log.info("insert aborted: field kept changing after the AX write")

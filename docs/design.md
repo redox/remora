@@ -269,6 +269,8 @@ settings with Rewrite and checks that the target is safe to write to. In places 
 must stay on-device, Draft and insert sends just the submitted prompt with the drafting guidance.
 It uses the field locally to verify the insertion target. A failed draft leaves the prompt in the
 popover for retry. Insert places the reviewed text at the caret or replaces the selection, preserving whitespace and punctuation.
+Pressing Return in Insert hides the popover immediately so the target can regain keyboard focus
+during validation. If the target field has changed, the popover reopens with the text for retry.
 
 **Finish the result before touching the target.** The original focused field, its text, and the
 selected range or caret are checked before applying a result. In a populated field, an unreadable

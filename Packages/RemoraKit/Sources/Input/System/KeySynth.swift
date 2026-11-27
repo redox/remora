@@ -1,6 +1,7 @@
 import Carbon.HIToolbox
 import CoreGraphics
 import Foundation
+import os
 
 /// Posts ⌘V / ⌘A to the HID event tap. The key code is resolved from the current ASCII-capable
 /// keyboard layout with ⌘ held (`KeyLayout`), never assumed positional: on AZERTY the ANSI "A"
@@ -8,9 +9,16 @@ import Foundation
 /// A private event source keeps the user's physically held modifiers (e.g. the rewrite key
 /// itself) from merging into the synthesized events.
 public struct KeySynth: KeySynthesizing {
+    private static let log = Logger(subsystem: "dev.remora", category: "insert")
+
     public init() {}
 
-    public func commandV() async -> Bool { await press("v") }
+    public func commandV() async -> Bool {
+        let posted = await press("v")
+        if posted { Self.log.info("paste shortcut posted") }
+        return posted
+    }
+
     public func commandA() async -> Bool { await press("a") }
 
     private func press(_ character: Character) async -> Bool {

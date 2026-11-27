@@ -568,6 +568,9 @@ final class RewriteController {
             bar.model.notice = nil
             edit?.round = Task { [weak self] in await self?.composeDraft(text, context: ctx) }
         case .insertText:
+            // Give the target keyboard focus while the window and field are being checked.
+            Self.log.info("exact insert submitted")
+            bar.hideForPaste()
             bar.model.isWorking = true
             bar.model.notice = nil
             edit?.round = Task { [weak self] in await self?.insertDraft(draft, context: ctx) }
@@ -610,6 +613,17 @@ final class RewriteController {
 
     private func insertDraft(_ text: String, context: EditContext) async {
         let mine = context.generation
+        let pasteReadyAt = ContinuousClock.now + .milliseconds(80)
+        // A successful insert or copy closes this session. Only a failed submission needs its editor back.
+        defer {
+            if edit?.generation == mine {
+                if NSWorkspace.shared.frontmostApplication?.processIdentifier == context.originalPID {
+                    bar.restoreAfterPaste()
+                } else {
+                    closeEditBar()
+                }
+            }
+        }
         let sample = await windows.readContext()
         guard edit?.generation == mine, !Task.isCancelled else { return }
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == context.originalPID,
@@ -617,12 +631,14 @@ final class RewriteController {
             return endRound(mine, notice: nil)
         }
 
+        Self.log.info("exact insert window checked")
         if let field = context.field {
-            guard case .proceed = gate(field, sample: sample, rules: policy()) else {
+            // Insert needs the target refusals only. It never requests capture, memory or model access.
+            guard case .proceed = gate(field, sample: sample, rules: .denyAll) else {
                 return endRound(mine, notice: .unreadable)
             }
             let outcome = await write(text, target: .caret, expected: field.value,
-                                      expectedSelection: field.selection, field, generation: mine)
+                                      expectedSelection: field.selection, field, generation: mine, pasteReadyAt: pasteReadyAt)
             guard edit?.generation == mine else { return }
             switch outcome {
             case .ax, .paste, .noChange: break
@@ -632,19 +648,16 @@ final class RewriteController {
                 return copyDraft(text, at: field)
             }
         } else if context.fallback == .frontmostPaste, let pid = context.originalPID {
-            bar.hideForPaste()
-            try? await Task.sleep(for: .milliseconds(80))
+            try? await Task.sleep(until: pasteReadyAt, clock: .continuous)
             guard edit?.generation == mine, !Task.isCancelled else { return }
             let read = await fields.readField()
             guard edit?.generation == mine, !Task.isCancelled else { return }
             if IsSecureEventInputEnabled() {
-                bar.restoreAfterPaste()
                 return endRound(mine, notice: nil)
             }
             if case .refused(let reason) = read {
                 switch DictationTarget.atInsertion(fieldRefusal: reason, secureInputOn: false) {
                 case .refuseSecure:
-                    bar.restoreAfterPaste()
                     return endRound(mine, notice: nil)
                 case .nowhere: return copyDraft(text)
                 case .field, .frontmostPaste: break
@@ -882,7 +895,8 @@ final class RewriteController {
     /// Writes the result into the original field. If pasting, the bar steps aside to let the
     /// field take key focus again.
     private func write(_ value: String, target: InsertionTarget = .whole, expected: String?,
-                       expectedSelection: NSRange? = nil, _ field: FocusedField, generation: Int) async -> InsertionOutcome {
+                       expectedSelection: NSRange? = nil, _ field: FocusedField, generation: Int,
+                       pasteReadyAt: ContinuousClock.Instant? = nil) async -> InsertionOutcome {
         let inserter = inserter
         let preferPaste = field.isWebBacked
             || (target == .caret && expected?.contains(RewriteFlow.objectReplacement) == true)
@@ -891,6 +905,12 @@ final class RewriteController {
                                   expectedSelection: expectedSelection, into: field.handle,
                                   preferPaste: preferPaste,
                                   beforePaste: {
+                                      if let pasteReadyAt {
+                                          if ContinuousClock.now < pasteReadyAt, !field.handle.isFocused() {
+                                              try? await Task.sleep(until: pasteReadyAt, clock: .continuous)
+                                          }
+                                          return
+                                      }
                                       await MainActor.run { [weak self] in
                                           if self?.edit?.generation == generation { self?.bar.hideForPaste() }
                                       }
@@ -898,6 +918,7 @@ final class RewriteController {
                                       try? await Task.sleep(for: .milliseconds(80))
                                   },
                                   afterPaste: { [weak self] in
+                                      guard pasteReadyAt == nil else { return }
                                       await MainActor.run {
                                           if self?.edit?.generation == generation { self?.bar.restoreAfterPaste() }
                                       }
