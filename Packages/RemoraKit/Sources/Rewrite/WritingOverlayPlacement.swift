@@ -90,7 +90,7 @@ public struct WritingOverlayPlacement {
     private static let log = Logger(subsystem: "dev.remora", category: "rewrite")
     #endif
 
-    fileprivate static let minimumBarWidth: CGFloat = 360
+    public static let minimumBarWidth: CGFloat = 480
 
     /// The same measured height determines both whether a composer can serve as an anchor
     /// and which side of the final anchor has room. A panel may grow after the user types.

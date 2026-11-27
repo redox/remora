@@ -245,7 +245,9 @@ available. Fall back to the mouse pointer when Docs exposes no usable text geome
 
 **Keep the writing overlay near the active text.** Place the measured popover beside an ordinary
 composer when it fits. In a full-height editor, prefer the caret. If text bounds are unavailable,
-use the pointer in the field or the field centre. All three modes use a Return arrow beside a short
+use the pointer in the field or the field centre. The popover starts at 480 points wide to give
+typing space beside the microphone and Return button. It follows wider fields up to 560 points
+and shrinks to fit smaller screens. All three modes use a Return arrow beside a short
 prompt to leave room for typing. The button moves below a wrapped or multiline instruction.
 Its tooltip and accessibility label name the current action. When dictation is enabled, a microphone
 sits in the composer and becomes a stop button during hands-free recording. Typing and dictation share one editor.

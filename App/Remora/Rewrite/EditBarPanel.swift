@@ -163,7 +163,7 @@ final class EditBarPanel {
         let model = Model()
         self.model = model
         host = NSHostingView(rootView: EditBarView(model: model, actions: nil))
-        panel = Panel(contentRect: CGRect(x: 0, y: 0, width: 360, height: 88),
+        panel = Panel(contentRect: CGRect(x: 0, y: 0, width: WritingOverlayPlacement.minimumBarWidth, height: 88),
                       styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
         panel.contentView = host
         panel.level = .floating

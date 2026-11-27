@@ -108,7 +108,7 @@ private let visible = CGRect(x: 0, y: 0, width: 1440, height: 900)
 @Test func editBarSitsAboveTheFieldWithClampedWidth() {
     let field = CGRect(x: 100, y: 300, width: 200, height: 40)
     let f = RewriteFlow.editBarFrame(field: field, height: 80, visible: visible)
-    #expect(f == CGRect(x: 100, y: 348, width: 360, height: 80))
+    #expect(f == CGRect(x: 100, y: 348, width: 480, height: 80))
     let wide = RewriteFlow.editBarFrame(field: CGRect(x: 0, y: 300, width: 1000, height: 40), height: 80, visible: visible)
     #expect(wide.width == 560)
 }
@@ -116,7 +116,7 @@ private let visible = CGRect(x: 0, y: 0, width: 1440, height: 900)
 @Test func editBarGoesBelowWhenAboveWouldLeaveTheScreen() {
     let field = CGRect(x: 100, y: 820, width: 400, height: 40)
     let f = RewriteFlow.editBarFrame(field: field, height: 80, visible: visible)
-    #expect(f == CGRect(x: 100, y: 732, width: 400, height: 80))
+    #expect(f == CGRect(x: 100, y: 732, width: 480, height: 80))
 }
 
 @Test func expandedEditBarStaysClearOfASelectionNearTheTopOfASecondScreen() {
@@ -133,7 +133,7 @@ private let visible = CGRect(x: 0, y: 0, width: 1440, height: 900)
 
 @Test func editBarStaysOnScreenForAFullScreenField() {
     let f = RewriteFlow.editBarFrame(field: CGRect(x: 1300, y: 0, width: 140, height: 900), height: 80, visible: visible)
-    #expect(visible.contains(f) && f.width == 360)
+    #expect(visible.contains(f) && f.width == 480)
 }
 
 @Test func expandedEditBarFitsASmallVisibleScreen() {
