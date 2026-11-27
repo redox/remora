@@ -152,8 +152,6 @@ final class EditBarPanel {
         }
     }
 
-    private static let height: CGFloat = 88
-
     let model: Model
     private let panel: Panel
     private let host: NSHostingView<EditBarView>
@@ -165,7 +163,7 @@ final class EditBarPanel {
         let model = Model()
         self.model = model
         host = NSHostingView(rootView: EditBarView(model: model, actions: nil))
-        panel = Panel(contentRect: CGRect(x: 0, y: 0, width: 360, height: Self.height),
+        panel = Panel(contentRect: CGRect(x: 0, y: 0, width: 360, height: 88),
                       styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
         panel.contentView = host
         panel.level = .floating
@@ -186,7 +184,7 @@ final class EditBarPanel {
     /// `focus: false` shows it without taking key focus (a spoken instruction while the rewrite key
     /// is still held: a key typed meanwhile must still reach the user's app); `focus()` takes it later.
     func open(placement: WritingOverlayPlacement, pointer: CGPoint, mode: EditVoiceRoute.Mode, replacesSelection: Bool, allowsEdit: Bool,
-              recordEnabled: Bool, triggerName: String?, actions: Actions, focus: Bool = true) {
+              recordEnabled: Bool, triggerName: String?, actions: Actions, focus: Bool = true, configure: (Model) -> Void) {
         self.actions = actions
         model.instruction = ""
         model.draftIsSpoken = false
@@ -212,15 +210,23 @@ final class EditBarPanel {
         model.fieldOnly = false
         model.onDeviceOnly = false
         model.listening = false
-        host.rootView = EditBarView(model: model, actions: actions, onSubmit: { [weak self] in self?.submit() },
-                                    onHeightChange: { [weak self] height in self?.resize(to: height) })
+        configure(model)
+        target = (placement, pointer)
+        let width = placement.editBarFrame(pointer: pointer, height: panel.frame.height,
+                                           visibleFrame: ScreenPlacement.visibleFrame(for:)).width
+        var editor = EditBarView(model: model, actions: actions, onSubmit: { [weak self] in self?.submit() })
+        // A scroll view accepts any proposed height. Ask for its ideal height at the target
+        // width so the first visible frame includes the padding, even on a same-size reopen.
+        let sizingHost = NSHostingController(rootView: editor.fixedSize(horizontal: false, vertical: true))
+        let fitted = sizingHost.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
+        resize(to: fitted.height)
+        editor.onHeightChange = { [weak self] height in self?.resize(to: height) }
+        host.rootView = editor
         panel.onEscape = { actions.close() }
         panel.onUndo = { [weak model] in
             guard model?.noteDraft == nil, model?.savedNoteID == nil else { return false }
             return actions.undo()
         }
-        target = (placement, pointer)
-        resize(to: Self.height)
         if focus {
             panel.makeKeyAndOrderFront(nil)
             model.focusToken += 1

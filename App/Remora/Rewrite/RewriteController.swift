@@ -462,14 +462,15 @@ final class RewriteController {
                     undoNote: { [weak self] in self?.undoSavedNote() },
                     close: { [weak self] in self?.closeEditBar() },
                     noticeAction: { [weak self] in self?.perform($0) }),
-                 focus: focus)
-        bar.model.canRemember = noteSource != nil
-        bar.model.selectionOnly = !allowsEdit && !dictationEnabled
-        if dictationEnabled { bar.model.recordingLocale = dictation?.preferredLocale }
-        if let fallback { bar.model.fallbackActionTitle = fallback == .nowhere ? "Copy text" : "Insert text" }
-        bar.model.onDeviceOnly = access?.cloudAllowed == false
-        bar.model.backend = account.routing.tier(for: .editMode) == .onDevice ? nil : .siwc
-        bar.model.fieldOnly = access?.windowContextAllowed == false
+                 focus: focus) { model in
+            model.canRemember = noteSource != nil
+            model.selectionOnly = !allowsEdit && !dictationEnabled
+            if dictationEnabled { model.recordingLocale = dictation?.preferredLocale }
+            if let fallback { model.fallbackActionTitle = fallback == .nowhere ? "Copy text" : "Insert text" }
+            model.onDeviceOnly = access?.cloudAllowed == false
+            model.backend = account.routing.tier(for: .editMode) == .onDevice ? nil : .siwc
+            model.fieldOnly = access?.windowContextAllowed == false
+        }
         if voiceHold { startRecording(handsFree: false) }
         if !focus {
             // The panel cannot consume Esc while it is displayed without taking keyboard focus.

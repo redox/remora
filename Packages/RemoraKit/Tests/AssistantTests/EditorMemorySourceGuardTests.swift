@@ -98,6 +98,17 @@ import Testing
         #expect(view[close.lowerBound..<paste.lowerBound].contains("model.instruction = \"\""))
     }
 
+    @Test func editorLaysOutItsContentBeforePresentingThePanel() throws {
+        let view = try source("App/Remora/Rewrite/EditBarPanel.swift")
+        let open = try #require(view.range(of: "func open(placement:"))
+        let show = try #require(view.range(of: "panel.makeKeyAndOrderFront", range: open.upperBound..<view.endIndex))
+        let setup = view[open.upperBound..<show.lowerBound]
+        #expect(setup.contains("editor.fixedSize(horizontal: false, vertical: true)"))
+        let fit = try #require(setup.range(of: "sizingHost.sizeThatFits(in: CGSize(width: width,"))
+        #expect(setup[fit.upperBound...].contains("resize(to: fitted.height)"))
+        #expect(!setup.contains("resize(to: Self.height)"))
+    }
+
     @Test func editorGrowsForNotices() throws {
         let view = try source("App/Remora/Rewrite/EditBarPanel.swift")
         #expect(view.contains("onGeometryChange"))
