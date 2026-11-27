@@ -56,3 +56,12 @@ func systemDefault(langs: [String], expected: DictationLocale) {
     let e = try JSONDecoder().decode(DictationSettings.self, from: Data("{}".utf8))
     #expect(!e.enabled)
 }
+
+@Test func savedDictationSettingsRequireOptInToSendAudioOnStop() throws {
+    let old = try JSONDecoder().decode(DictationSettings.self, from: Data(#"{"enabled":true}"#.utf8))
+    #expect(!old.transcribeOnStop)
+    var enabled = old
+    enabled.transcribeOnStop = true
+    let data = try JSONEncoder().encode(enabled)
+    #expect(try JSONDecoder().decode(DictationSettings.self, from: data).transcribeOnStop)
+}

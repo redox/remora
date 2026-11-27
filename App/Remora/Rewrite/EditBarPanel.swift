@@ -48,19 +48,20 @@ final class EditBarPanel {
         var listening = false
 
         var canSubmit: Bool {
-            !isWorking && !listening && !finalizing && !instruction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            guard !isWorking, !listening, !finalizing else { return false }
+            if mode == .insert { return !instruction.isEmpty }
+            return !instruction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
 
         var submission: EditVoiceRoute.Submission {
-            mode.submission(hasFallback: fallbackActionTitle != nil)
+            mode.submission
         }
 
-        var offersTranscriptInsertion: Bool { draftIsSpoken && submission == .compose && !listening && !finalizing }
+        var modes: [EditVoiceRoute.Mode] { allowsEdit ? EditVoiceRoute.Mode.allCases : [.insert] }
         var promptOnly: Bool { submission == .compose && onDeviceOnly }
 
         var actionTitle: String {
-            if submission == .compose { return "Draft and insert" }
-            return fallbackActionTitle ?? mode.actionTitle(replacesSelection: replacesSelection)
+            fallbackActionTitle ?? mode.actionTitle(replacesSelection: replacesSelection)
         }
 
         var inputLabel: String {
@@ -366,13 +367,11 @@ struct EditBarView: View {
     private var controls: some View {
         HStack(spacing: 4) {
             HStack(spacing: 2) {
-                modeButton("Draft", mode: .insert)
-                if model.allowsEdit { modeButton("Rewrite", mode: .edit) }
+                ForEach(model.modes, id: \.self) { mode in modeButton(mode.rawValue, mode: mode) }
             }
             .accessibilityRepresentation {
                 Picker("Writing mode", selection: $model.mode) {
-                    Text("Draft").tag(EditVoiceRoute.Mode.insert)
-                    if model.allowsEdit { Text("Rewrite").tag(EditVoiceRoute.Mode.edit) }
+                    ForEach(model.modes, id: \.self) { mode in Text(mode.rawValue).tag(mode) }
                 }
                 .pickerStyle(.segmented)
             }
@@ -391,6 +390,13 @@ struct EditBarView: View {
                 .accessibilityLabel("Dictation language: \(locale.name). Switch language.")
             }
             Spacer(minLength: 0)
+            if model.promptOnly {
+                Text("Prompt only")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .help("Only the text you enter here can go to ChatGPT.")
+            }
+            if model.canUndo { undoButton }
             closeButton
         }
         .font(.callout)
@@ -422,7 +428,7 @@ struct EditBarView: View {
         .focused($focusedMode, equals: mode)
         .onKeyPress(keys: [.leftArrow, .rightArrow]) { press in
             let leading = layoutDirection == .leftToRight ? KeyEquivalent.leftArrow : .rightArrow
-            let next: EditVoiceRoute.Mode = press.key == leading ? .insert : .edit
+            let next = mode.adjacent(backward: press.key == leading)
             guard model.allowsEdit, !model.isWorking, next != mode else { return .ignored }
             model.mode = next
             focusedMode = next
@@ -493,59 +499,47 @@ struct EditBarView: View {
     }
 
     private var footer: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            if model.canRemember || model.offersTranscriptInsertion {
-                HStack {
-                    if model.canRemember { rememberButton }
-                    Spacer(minLength: 0)
-                    if model.offersTranscriptInsertion {
-                        Button("Insert transcript") { actions?.submit(model.instruction, .insertText) }
-                            .buttonStyle(.link)
-                            .disabled(!model.canSubmit)
-                            .help("Insert your words using your dictation settings")
-                    }
-                }
-            }
+        Group {
             if let notice = model.notice {
                 WritingNoticeView(notice: notice) { actions?.noticeAction($0) }
                     .textSelection(.enabled)
-                if model.canUndo {
-                    undoButton.frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            if model.canRemember {
+                HStack {
+                    footerStatus
+                    Spacer()
+                    rememberButton
                 }
             } else {
-                HStack(alignment: .top, spacing: 6) {
-                    if model.listening || model.finalizing {
-                        Text("Transcribing on this Mac")
-                    } else if model.promptOnly {
-                        Text("Prompt only")
-                            .help("Only the text you enter here can go to ChatGPT.")
-                    } else if model.submission != .insertText {
-                        Text(RewriteFlow.editBarFooter(backend: model.backend, fieldOnly: model.fieldOnly,
-                                                       onDeviceOnly: model.onDeviceOnly))
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else if let trigger = model.triggerName, model.allowsEdit {
-                        Text("Tap \(trigger) to switch modes")
-                    }
-                    Spacer(minLength: 0)
-                    undoButton
-                    if !model.listening, !model.finalizing,
-                       model.promptOnly || (model.submission != .insertText
-                           && model.backend != .onDevice && !model.onDeviceOnly) {
-                        Button("Manage usage") { actions?.noticeAction(.manageUsage) }.buttonStyle(.link)
-                    }
-                }
+                footerStatus
             }
         }
         .font(.caption)
         .foregroundStyle(.secondary)
     }
 
+    @ViewBuilder private var footerStatus: some View {
+        if model.notice == nil {
+            if model.finalizing {
+                Text("Finishing transcript…")
+            } else if model.listening {
+                Text("Transcribing on this Mac")
+            } else if model.submission != .insertText, !model.promptOnly {
+                Text(RewriteFlow.editBarFooter(backend: model.backend, fieldOnly: model.fieldOnly,
+                                               onDeviceOnly: model.onDeviceOnly))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
     private var undoButton: some View {
         Button { _ = actions?.undo() } label: {
-            Label("Undo", systemImage: "arrow.uturn.backward")
+            Label("Undo last edit", systemImage: "arrow.uturn.backward")
+                .labelStyle(.iconOnly)
+                .frame(width: 28, height: 28)
         }
-        .buttonStyle(.borderless)
-        .disabled(!model.canUndo || model.isWorking || model.listening || model.finalizing)
-        .help("Undo the last edit (⌘Z)")
+        .buttonStyle(QuietButtonStyle())
+        .disabled(model.isWorking || model.listening || model.finalizing)
+        .help("Undo last edit (⌘Z)")
     }
 }

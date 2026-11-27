@@ -44,7 +44,7 @@ struct DictationSettingsView: View {
                 Toggle("Enable voice dictation", isOn: enabledBinding)
             }
             Section("Shortcut") {
-                Text("Hold the rewrite key to dictate and release to review. Press Return in Draft to draft from your prompt, or choose Insert transcript to use your words.")
+                Text("Hold the rewrite key to dictate and release to review. Choose Draft, Rewrite, or Insert, then press Return. Insert uses the text exactly as shown.")
                     .font(.footnote).foregroundStyle(.secondary)
                 Text("For hands-free dictation, tap the key to open the popover, then click the microphone beside the Return arrow.")
                     .font(.footnote).foregroundStyle(.secondary)
@@ -86,14 +86,17 @@ struct DictationSettingsView: View {
                         }
                     }
                 }
-                Text("Saving a key sends eligible dictation audio to OpenAI when you choose Insert transcript. The live preview and dictation fallback use this Mac.")
+                if dictation.hasTranscriptionKey {
+                    Toggle("Transcribe on stop", isOn: binding(\.transcribeOnStop))
+                }
+                Text("Save and enable sends eligible writing audio to OpenAI when you stop dictating. Review the final transcript before pressing Return. The live preview and fallback use this Mac.")
                     .font(.footnote).foregroundStyle(.secondary)
                 Text("If automatic meeting recording is on, Remora also sends eligible meeting app audio and your unmuted microphone to OpenAI for language detection and transcription. Both features use your API project. The key is stored in Keychain.")
                     .font(.footnote).foregroundStyle(.secondary)
                 if let transcriptionKeyError { Text(transcriptionKeyError).foregroundStyle(.red) }
             }
             Section("Cleanup") {
-                Toggle("Clean up transcripts", isOn: binding(\.cleanupEnabled))
+                Toggle("Clean up Mac transcripts", isOn: binding(\.cleanupEnabled))
                 Text(Self.cleanupCaption).font(.footnote).foregroundStyle(.secondary)
             }
             Section("Speech models") {
@@ -138,7 +141,7 @@ struct DictationSettingsView: View {
         DictationLocale.allCases.contains { if case .installing = assets.state($0) { true } else { false } }
     }
 
-    static let cleanupCaption = "Removes filler words and fixes punctuation with your ChatGPT plan's small model. In apps Remora doesn't capture, only the on-device model is used, and if it's unavailable the transcript goes in as heard. Turn it off to insert the transcript without cleanup. Corrections you make in the preview are kept as typed."
+    static let cleanupCaption = "For Mac transcripts, use Apple Intelligence to remove filler words and fix punctuation before review. If unavailable, keep the original. OpenAI transcripts are ready to review directly."
 
     static func microphoneLabel(_ status: MicrophoneStatus) -> String {
         switch status {

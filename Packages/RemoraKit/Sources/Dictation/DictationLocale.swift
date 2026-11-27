@@ -27,17 +27,20 @@ public struct DictationSettings: Codable, Sendable, Equatable {
     public var defaultLocale: DictationLocale
     /// Menu-bar quick switch; nil = Automatic.
     public var pinnedLocale: DictationLocale? = nil
+    /// Older keys authorized uploads only on an explicit insertion action.
+    public var transcribeOnStop = false
     public var cleanupEnabled = true
 
     public init(defaultLocale: DictationLocale = .systemDefault()) { self.defaultLocale = defaultLocale }
 
-    private enum CodingKeys: String, CodingKey { case enabled, defaultLocale, pinnedLocale, cleanupEnabled }
+    private enum CodingKeys: String, CodingKey { case enabled, defaultLocale, pinnedLocale, cleanupEnabled, transcribeOnStop }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
         defaultLocale = try c.decodeIfPresent(DictationLocale.self, forKey: .defaultLocale) ?? .systemDefault()
         pinnedLocale = try c.decodeIfPresent(DictationLocale.self, forKey: .pinnedLocale)
+        transcribeOnStop = try c.decodeIfPresent(Bool.self, forKey: .transcribeOnStop) ?? false
         cleanupEnabled = try c.decodeIfPresent(Bool.self, forKey: .cleanupEnabled) ?? true
     }
 }

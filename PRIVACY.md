@@ -78,8 +78,8 @@ Everything is stored on your Mac, in `~/Library/Application Support/Remora/remor
   Imported meetings stay local by default. The separate **Use saved notes in chat** option
   allows relevant excerpts from saved notes in interactive chat. It is off by default.
 - **Audio transcription at `api.openai.com/v1/audio/transcriptions`** uses the OpenAI API project
-  key you save in Dictation settings. Eligible dictation audio is sent when you choose **Insert
-  transcript**. When automatic meeting recording is enabled, eligible meeting audio is sent in
+  key you save in Dictation settings. With **Transcribe on stop** enabled, eligible writing audio is sent when recording
+  finishes, before you review the transcript. When automatic meeting recording is enabled, eligible meeting audio is sent in
   segments during the call. Your API project handles usage and billing.
 - **Update checks and downloads from GitHub (`github.com` and its release-asset hosts)**, which
   see your IP address and the app version.
@@ -127,14 +127,14 @@ Choosing Send submits the reviewed text as a regular chat message.
 **Draft and insert** and **Rewrite** can send the reviewed transcript as text using the writing
 privacy rules above. Those actions keep the audio on your Mac.
 
-If you save a project API key in **Settings › Dictation › OpenAI transcription**, Remora can send
-the completed recording to `api.openai.com/v1/audio/transcriptions` with `gpt-transcribe` after you
-choose **Insert transcript** with the unchanged transcript. The request uses that API project, and
+With a project key and **Transcribe on stop** enabled in **Settings › Dictation**, Remora can send
+the completed recording to `api.openai.com/v1/audio/transcriptions` with `gpt-transcribe` when you
+release the key or click Stop. Older saved keys require enabling this preference. The request uses that API project, and
 OpenAI detects the language from the audio.
 Cloud transcription requires a verifiable, allowed window throughout the dictation. Dictation
 audio stays local while capture is paused or if privacy checks fail. Dismissing the draft discards
 its audio.
-If the request fails, Remora uses Apple's transcript. Remove the key in Settings to disable uploads.
+If the request fails, Remora uses Apple's transcript. Optional cleanup of Mac transcripts runs on-device before review. Remove the key in Settings to disable uploads.
 
 ## MCP clients
 

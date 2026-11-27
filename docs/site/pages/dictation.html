@@ -10,7 +10,7 @@
 <ol>
   <li>Focus a text field and hold <kbd>right ⌥</kbd> while you speak. A closed popover opens in <strong>Draft</strong>. If the popover is already open, it keeps the selected mode.</li>
   <li>Release to finish recording. Review the transcript and correct any words in the popover.</li>
-  <li>In <strong>Draft</strong>, press <kbd>Return</kbd> to draft from what you said, or choose <strong>Insert transcript</strong> to put your words into the field. Switch to <strong>Rewrite</strong> to apply a spoken instruction to existing text. Press <kbd>Esc</kbd> to discard the draft.</li>
+  <li>In <strong>Draft</strong>, press <kbd>Return</kbd> to draft from what you said, or switch to <strong>Insert</strong> and press Return to insert the text exactly as shown. Switch to <strong>Rewrite</strong> to apply a spoken instruction to existing text. Press <kbd>Esc</kbd> to discard the draft.</li>
 </ol>
 <p>For hands-free dictation, tap <kbd>right ⌥</kbd> to open the popover. Choose <strong>Record</strong> to start and <strong>Stop</strong> to review the transcript. Tap the key or choose a mode in the popover before submitting.</p>
 
@@ -19,9 +19,9 @@
 
 <h2 id="openai-transcription">Use OpenAI for the final transcript</h2>
 <p>To enable it, open <strong>Settings › Dictation › OpenAI transcription</strong>, enter an OpenAI project API key with write access to <code>/v1/audio/transcriptions</code>, and choose <strong>Save and enable</strong>. The key is stored in the macOS Keychain. Use a project in your linked API organization to draw on its credits. When automatic meeting recording is on, Remora also sends eligible meeting app audio and unmuted microphone audio to OpenAI during calls. <a href="@ROOT@docs/privacy/#meeting-audio">Meeting audio and privacy</a></p>
-<p>Your Mac generates the live preview. For eligible recordings, Remora sends the audio to <code>gpt-transcribe</code> when you choose <strong>Insert transcript</strong> with the unchanged transcript. OpenAI detects the language from the audio. Remora uses the Mac transcript if the upload fails, the window changes, capture is paused, or the window is private, excluded, or unverifiable. Drafting and editing use the reviewed text. <a href="@ROOT@docs/privacy/#dictation-audio">Dictation audio and privacy</a></p>
+<p>Your Mac generates the live preview. For eligible recordings, Remora sends the audio to <code>gpt-transcribe</code> when you release the key or click Stop with <strong>Transcribe on stop</strong> enabled. Turn this on in Dictation settings for a previously saved key. OpenAI detects the language from the audio. Remora uses the Mac transcript if the upload fails, the window changes, capture is paused, or the window is private, excluded, or unverifiable. Drafting and editing use the reviewed text. <a href="@ROOT@docs/privacy/#dictation-audio">Dictation audio and privacy</a></p>
 <p>Choose <strong>Remove key</strong> to disable cloud transcription. You can also delete the <code>dev.remora.dictation-transcription</code> item for account <code>openai</code> in Keychain Access.</p>
 
 <h2 id="transcript-cleanup">Transcript cleanup</h2>
-<p><strong>Clean up transcripts</strong> is on by default. When you insert an unchanged transcript, a model pass removes fillers and fixes punctuation while keeping the spoken language. This can send transcript text to OpenAI in an allowed context. If you correct the transcript before inserting it, your corrections are kept as typed.</p>
-<p>Turn cleanup off to insert the transcript directly. In private, excluded, or unverifiable contexts, cleanup uses the on-device model if available. See <a href="@ROOT@docs/privacy/#how-model-routing-works">model routing</a>.</p>
+<p><strong>Clean up Mac transcripts</strong> uses Apple Intelligence to remove fillers and fix punctuation before review. OpenAI transcripts go directly to the editor. Insert preserves subsequent corrections.</p>
+<p>Turn cleanup off to review the original Mac transcript. Remora also uses the original if the local model is unavailable. See <a href="@ROOT@docs/privacy/#how-model-routing-works">model routing</a>.</p>

@@ -27,7 +27,7 @@ public enum DictationNotice: Sendable, Equatable {
         case .localeUnsupported(let l): "\(l.name) dictation isn't supported on this Mac."
         case .microphoneNotReady: "No audio received. Wait for Listening, then speak."
         case .nothingHeard: "No speech recognized. Check the language and try again."
-        case .cleanupSkipped: "Inserted without cleanup."
+        case .cleanupSkipped: "Using the original transcript."
         case .openAITranscriptionUnavailable: "OpenAI transcription unavailable. Used this Mac."
         case .secureField: "Can't dictate into a password field."
         case .copiedInstead: "Couldn't insert here. Copied to the clipboard."

@@ -174,16 +174,17 @@ func dictationCleanupRoute(_ context: WindowContext?, contextPID: pid_t?, fieldP
     #expect(EditVoiceRoute.settleFinal("  ") == nil)
 }
 
-@Test func writingPopoverPrefersInsertAtTheCaretAndEditForASelection() {
+@Test func writingPopoverPrefersDraftAtTheCaretAndEditForASelection() {
     let caret = EditVoiceRoute.Mode.preferred(replacesSelection: false)
     let selection = EditVoiceRoute.Mode.preferred(replacesSelection: true)
-    #expect(caret == .insert && caret.actionTitle(replacesSelection: false) == "Insert at caret")
+    #expect(caret.actionTitle(replacesSelection: false) == "Draft and insert")
     #expect(selection == .edit && selection.actionTitle(replacesSelection: true) == "Rewrite selection")
 }
 
-@Test func insertDraftsWhenTheFieldCanBeVerified() {
-    let mode = EditVoiceRoute.Mode.insert
-    #expect(mode.submission(hasFallback: false) == .compose)
-    #expect(mode.submission(hasFallback: true) == .insertText)
-    #expect(EditVoiceRoute.Mode.edit.submission(hasFallback: false) == .edit)
+@Test func eachWritingModeHasOneActionAndCyclesInTabOrder() {
+    let modes = EditVoiceRoute.Mode.allCases
+    #expect(modes == [.draft, .edit, .insert])
+    #expect(modes.map(\.submission) == [.compose, .edit, .insertText])
+    #expect(modes.map { $0.adjacent() } == [.edit, .insert, .draft])
+    #expect(modes.map { $0.adjacent(backward: true) } == [.insert, .draft, .edit])
 }

@@ -28,7 +28,7 @@ struct DictationStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Dictation (optional)").font(.title2.bold())
-            Text("Hold the rewrite key and talk. Review the transcript, then choose Draft and insert or Insert transcript.")
+            Text("Hold the rewrite key and talk. Review the transcript. Choose Draft, Rewrite, or Insert and press Return.")
                 .fixedSize(horizontal: false, vertical: true)
             Toggle("Turn on dictation", isOn: enabled)
             if dictation.settings.enabled {

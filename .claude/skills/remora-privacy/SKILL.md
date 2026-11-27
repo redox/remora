@@ -23,9 +23,9 @@ the code that enforces them.
   transcription. Chrome’s process audio can include other tabs. Audio stays local without a key.
   No analytics, crash reporting, remote config, fonts, CDNs or "phone home".
   [Meeting sources design](../../../docs/design.md#mcp-and-meeting-sources)
-- Speech-to-text defaults to Apple's local recognizer. Saving a project key in Dictation settings
-  enables `POST /v1/audio/transcriptions` at `api.openai.com` after **Insert transcript** is chosen with an
-  eligible, unchanged transcript. Send only the audio for automatic language detection. Require an observed,
+- Speech-to-text defaults to Apple's local recognizer. A saved project key and **Transcribe on stop** in Dictation settings
+  enable `POST /v1/audio/transcriptions` at `api.openai.com` when an eligible writing recording ends.
+  Existing keys from the former submit-time flow require opt-in to this timing. Send only the audio for automatic language detection. Require an observed,
   verifiable context and freshly loaded exclusions before upload. Capture pause keeps audio local.
   Draft and insert and Edit use the reviewed transcript as text.
   Embeddings and the on-device tier use Apple frameworks.
@@ -46,7 +46,7 @@ Every job that could send captured content decides its access first (`RewriteAcc
 | Draft and insert where field text must stay on-device | **no** | **no** | **no** | Configured tier with only the submitted prompt. Omit app and site identity too. |
 | Password manager, secure field, vault page | refused outright (`RewriteGate`, `FieldRefusal`) | | | |
 
-Never fall back to the cloud with an on-device-only payload. Insert builds the prompt-only
+Never fall back to the cloud with an on-device-only payload. Draft builds the prompt-only
 request separately before calling a model. The writing gate still has to approve the target.
 
 ## 3. Exclusions are read fresh, and failure denies everything

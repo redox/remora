@@ -172,7 +172,7 @@ final class RewriteController {
         case .rewrite: startRewrite()
         case .openPopover: openPopover(o == .holdReleased ? .edit : nil)
         case .switchMode:
-            if !bar.model.isWorking, bar.model.allowsEdit { bar.model.mode = bar.model.mode.other }
+            if !bar.model.isWorking, bar.model.allowsEdit { bar.model.mode = bar.model.mode.adjacent() }
         case .showHoldHint: showHoldHint()
         case .hideHoldHint: hideHoldHint()
         case .beginInstruction(let openBar): beginSpokenInstruction(openBar: openBar)
@@ -454,7 +454,7 @@ final class RewriteController {
                  actions: EditBarPanel.Actions(
                     submit: { [weak self] in self?.submitDraft($0, submission: $1) },
                     record: { [weak self] in self?.toggleRecording() },
-                    showsDictationLanguage: { [weak dictation] in dictation?.hasTranscriptionKey == false },
+                    showsDictationLanguage: { [weak dictation] in dictation?.usesOpenAIForDictation == false },
                     switchLanguage: { [weak self] in self?.switchRecordingLanguage() },
                     undo: { [weak self] in self?.undoRound() ?? false },
                     remember: { [weak self] in self?.previewNote() },
@@ -563,14 +563,13 @@ final class RewriteController {
             dictation?.cancelSession()
             submitRound(text, spoken: bar.model.draftIsSpoken)
         case .compose:
-            // Keep the reviewed transcript available for direct insertion if drafting fails.
             bar.model.isWorking = true
             bar.model.notice = nil
             edit?.round = Task { [weak self] in await self?.composeDraft(text, context: ctx) }
         case .insertText:
             bar.model.isWorking = true
             bar.model.notice = nil
-            edit?.round = Task { [weak self] in await self?.insertDraft(text, context: ctx) }
+            edit?.round = Task { [weak self] in await self?.insertDraft(draft, context: ctx) }
         }
     }
 
@@ -610,25 +609,6 @@ final class RewriteController {
 
     private func insertDraft(_ text: String, context: EditContext) async {
         let mine = context.generation
-        if let field = context.field {
-            // Reject a changed value before processing the recording. The paste path checks the
-            // original caret or selection after the editor gives up keyboard focus.
-            let handle = field.handle
-            let unchanged = await Task.detached(priority: .userInitiated) {
-                handle.value() == field.value
-            }.value
-            guard edit?.generation == mine, !Task.isCancelled else { return }
-            guard unchanged else { return endRound(mine, notice: RewriteFlow.notice(for: .fieldChanged)) }
-        }
-        let prepared: DictationController.InsertionText
-        if let dictation {
-            guard let result = await dictation.prepareInsertion(text, field: context.field) else {
-                return endRound(mine, notice: bar.model.notice)
-            }
-            prepared = result
-        } else {
-            prepared = .init(text: text, locale: .en, notice: nil)
-        }
         let sample = await windows.readContext()
         guard edit?.generation == mine, !Task.isCancelled else { return }
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == context.originalPID,
@@ -637,9 +617,10 @@ final class RewriteController {
         }
 
         if let field = context.field {
-            let preceding = DictationSpacing.preceding(value: field.value, selection: field.selection)
-            let value = DictationSpacing.prepare(prepared.text, preceding: preceding, locale: prepared.locale)
-            let outcome = await write(value, target: .caret, expected: field.value,
+            guard case .proceed = gate(field, sample: sample, rules: policy()) else {
+                return endRound(mine, notice: .unreadable)
+            }
+            let outcome = await write(text, target: .caret, expected: field.value,
                                       expectedSelection: field.selection, field, generation: mine)
             guard edit?.generation == mine else { return }
             switch outcome {
@@ -647,7 +628,7 @@ final class RewriteController {
             case .fieldChanged, .notFocused:
                 return endRound(mine, notice: RewriteFlow.notice(for: outcome))
             case .failed:
-                return copyDraft(prepared.text, at: field)
+                return copyDraft(text, at: field)
             }
         } else if context.fallback == .frontmostPaste, let pid = context.originalPID {
             bar.hideForPaste()
@@ -664,33 +645,27 @@ final class RewriteController {
                 case .refuseSecure:
                     bar.restoreAfterPaste()
                     return endRound(mine, notice: nil)
-                case .nowhere: return copyDraft(prepared.text)
+                case .nowhere: return copyDraft(text)
                 case .field, .frontmostPaste: break
                 }
             }
             let inserter = inserter
             let outcome = await Task.detached(priority: .userInitiated) {
-                await inserter.pasteIntoFrontmost(prepared.text, expectedPID: pid)
+                await inserter.pasteIntoFrontmost(text, expectedPID: pid)
             }.value
             guard edit?.generation == mine else { return }
-            if !RewriteFlow.didInsert(outcome) { return copyDraft(prepared.text) }
+            if !RewriteFlow.didInsert(outcome) { return copyDraft(text) }
         } else {
-            return copyDraft(prepared.text)
+            return copyDraft(text)
         }
-        finishDictationInsertion(prepared.notice, at: context.field)
+        closeEditBar()
     }
 
     private func copyDraft(_ text: String, at field: FocusedField? = nil) {
         _ = SystemPasteboardAccess().write(text: text)
-        finishDictationInsertion(.copiedInstead, at: field)
-    }
-
-    private func finishDictationInsertion(_ notice: DictationNotice?, at field: FocusedField?) {
         closeEditBar()
-        if let notice {
-            indicator.showNotice(notice.writingNotice, in: field) { [weak self] in
-                self?.perform($0)
-            }
+        indicator.showNotice(DictationNotice.copiedInstead.writingNotice, in: field) { [weak self] in
+            self?.perform($0)
         }
     }
 
@@ -975,7 +950,7 @@ final class RewriteController {
         voiceHold = true
         holdOpenedBar = openBar
         if openBar {
-            openPopover(.insert)
+            openPopover(.draft)
         } else {
             startRecording(handsFree: false)
         }

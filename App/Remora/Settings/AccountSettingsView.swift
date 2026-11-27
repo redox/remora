@@ -107,7 +107,7 @@ struct AccountSettingsView: View {
 
     private var routingSection: some View {
         DisclosureGroup(isExpanded: $isJobRoutingExpanded) {
-            ForEach(JobType.allCases.filter { $0 != .meetingNotes }, id: \.self) { job in
+            ForEach(JobType.allCases.filter { $0 != .meetingNotes && $0 != .dictationCleanup }, id: \.self) { job in
                 Picker(job.title, selection: Binding(
                     get: { account.routing.tier(for: job) },
                     set: { account.setTier($0, for: job) })) {

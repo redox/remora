@@ -108,7 +108,7 @@ usage limits, can arrive after the stream opens. The client keeps the preview pr
 supported fields isolated from the rest of the app. [Sign-in documentation](https://developers.openai.com/siwc/token-sharing-open-source) · [Local experiments](research/siwc-spike.md)
 
 **Route by job and by the privacy of its source.** Small jobs such as working memory, query
-expansion, dictation cleanup, hour summaries, and evidence checks default to the small tier
+expansion, hour summaries, and evidence checks default to the small tier
 (Luna). Rewriting, chat, longer summaries, and synthesis default to the large tier (Terra).
 Settings allows tier and job overrides. Apple Foundation Models supplies the on-device tier.
 Background work and rewrites request low reasoning effort, while chat uses the model default.
@@ -245,10 +245,14 @@ available. Fall back to the mouse pointer when Docs exposes no usable text geome
 
 **Keep the writing overlay near the active text.** Place the measured popover beside an ordinary
 composer when it fits. In a full-height editor, prefer the caret. If text bounds are unavailable,
-use the pointer in the field or the field centre. Draft and Rewrite use a Return arrow beside a short
+use the pointer in the field or the field centre. All three modes use a Return arrow beside a short
 prompt to leave room for typing. The button moves below a wrapped or multiline instruction.
 Its tooltip and accessibility label name the current action. When dictation is enabled, a microphone
-sits beside the arrow and becomes a stop button during hands-free recording.
+sits in the composer and becomes a stop button during hands-free recording. Typing and dictation share one editor.
+Draft, Rewrite, and Insert select what Return does. Switching modes preserves the visible text.
+The header shows Prompt only when Draft can send only the submitted prompt, keeping that scope
+visible while typing and reviewing dictation. Undo appears beside Close when an edit can be undone. Usage management is available in Settings
+and in the usage-limit notice.
 
 Ghostty can report an empty selection at offset zero while the terminal cursor is several rows
 down. Use reported cursor or selection bounds when available. Apply the same pointer or pane-centre
@@ -262,7 +266,7 @@ the prompt and available context. Existing text outside the target stays in plac
 settings with Rewrite and checks that the target is safe to write to. In places where field text
 must stay on-device, Draft and insert sends just the submitted prompt with the drafting guidance.
 It uses the field locally to verify the insertion target. A failed draft leaves the prompt in the
-popover for retry. Insert transcript puts the user's words into the field using dictation settings.
+popover for retry. Insert places the reviewed text at the caret or replaces the selection, preserving whitespace and punctuation.
 
 **Finish the result before touching the target.** The original focused field, its text, and the
 selected range or caret are checked before applying a result. In a populated field, an unreadable
@@ -282,8 +286,8 @@ speech. The command bar offers the language switch when OpenAI transcription is 
 Listening once microphone audio starts arriving. This gives Bluetooth inputs time to connect before
 the user starts speaking.
 Recording errors appear in the command bar so the user can retry in place. Release or Stop leaves
-the text in the command bar. Insert transcript can clean up an unchanged draft, and edits to the
-preview are kept as typed. Draft and Rewrite use the reviewed text as an instruction.
+the final transcript in the command bar. Optional cleanup of Mac transcripts runs on-device before
+review. An OpenAI transcript goes directly to review. Draft and Rewrite use the reviewed text as an instruction.
 Cancelling discards the recording. Audio stays in memory and spoken edit instructions are
 excluded from stored instructions.
 
@@ -292,11 +296,12 @@ dictation language. Stop appends the transcript to the current draft for review.
 the chat, sleep, or lock discards the unfinished recording. The chat mic uses no external
 field and has no cloud audio or cleanup step.
 
-**Make cloud transcription a separate opt-in.** A user-supplied project key enables
-`gpt-transcribe` for an eligible unchanged recording after the user chooses Insert transcript. This
+**Make cloud transcription a separate opt-in.** Save and enable turns on Transcribe on stop for
+a new key. Previously saved keys require enabling this preference in Dictation settings because
+they authorized sending only at submission. When enabled, an eligible writing recording goes
+to `gpt-transcribe` on release or Stop, before the user reviews or submits the text. This
 uses the project's transcription endpoint and billing because the ChatGPT sign-in route is
-for text inference. OpenAI detects the language from the bounded audio. Cleanup preserves each
-part of the resulting transcript in its original language. The Mac's locale still controls the
+for text inference. OpenAI detects the language from the bounded audio. The Mac's locale still controls the
 live preview and fallback. The foreground context must remain verifiable and allowed throughout.
 Pause, secure input, and context switches prevent an upload. Drafting and editing use the reviewed
 text. Apple's transcript is available if the request fails.
@@ -497,7 +502,7 @@ unsigned Debug build. [Verification guidance](../.claude/skills/remora-verify/SK
 | Capture and insertion | Safari, Chrome, Arc if installed, Mail, Messages, Notes, Slack, VS Code/Cursor, Terminal, and web composers such as Gmail and LinkedIn. Submit a typed Draft prompt at a caret and over a selection. In an excluded app, verify that Draft shows Prompt only and can draft with Apple Intelligence unavailable. Exercise private windows, secure fields, pause, pasteboard restoration, undo, and the onboarding practice field. |
 | Ghostty popover | Tap right Option with the prompt low in a tall terminal, then repeat in a split pane on a secondary display. Move the pointer inside and outside the focused pane. Check placement at the cursor when available, and the pointer or pane centre otherwise. Repeat with highlighted text. |
 | Google Docs popover | In Chrome, enable **Turn on screen magnifier support** in **Tools › Accessibility**. In a blank document, move the mouse away from the page and tap right Option. Repeat after moving the caret with the keyboard in a populated document or highlighting text. Verify placement follows the text. Disable the setting and verify pointer fallback when no text bounds are available. |
-| Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Draft and insert, Insert transcript, Rewrite, cancel, and a mode switch followed immediately by Return. Verify that OpenAI transcription hides the EN/FR button and detects the language on Insert transcript. The button returns when OpenAI transcription is off. In an excluded app, speak a prompt and verify that Return drafts the result. Check that Listening appears when the microphone is ready and a silent recording shows an inline notice. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
+| Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Draft, Rewrite, Insert, cancel, and a mode switch followed immediately by Return. Verify that OpenAI transcription hides the EN/FR button and finalizes on release or Stop. Check exact insertion of leading spaces, punctuation and line breaks after review. The button returns when OpenAI transcription is off. In an excluded app, speak a prompt and verify that Return drafts the result. Check that Listening appears when the microphone is ready and a silent recording shows an inline notice. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
 | Chat dictation | In both chat presentations, add dictated words to a typed draft, stop, edit and send. Try Esc, losing focus, closing, a silent recording, a Bluetooth mic, and a denied microphone permission. |
 | Chat window | Scroll to an earlier reply, enter a draft, choose **Open in window**, and take a window screenshot. Check the reading position, draft, resizing, and a running reply. Close the window and check the protected bar with pinning on and off. |
 | Chat and indicators | Real notch and secondary displays, hide and show the menu bar, hover and pin, IME, trackpad scroll, min size with 150% text, quiet switches between captured and excluded windows, badge placement, light and dark appearance, and accessibility display options. Send from older history and check that the question is visible before the reply. Scroll up mid-reply, then choose **Latest** and check that the view follows the rest of the reply. Open chat from a notification and check the selected message. Drag from one paragraph into the next after opening on hover, then press ⌘C. Check the copy icon on a question and a streaming reply, and the info icon on a completed reply. Return must never approve a card. |

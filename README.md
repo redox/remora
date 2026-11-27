@@ -8,7 +8,7 @@ It reads the text of the window you are working in through the Accessibility API
 database on your Mac, and has a language model organize it in the background into summaries, a
 wiki of people and projects, and open items. You use that memory to rewrite or draft text in any
 field with one key, to dictate, to ask questions in a chat bar under the notch, and to give other AI
-apps read-only access over MCP. Remora uses your ChatGPT plan for rewrite, cleanup, memory, and chat.
+apps read-only access over MCP. Remora uses your ChatGPT plan for rewrite, memory, and chat.
 
 | Rewrite in place | Draft or rewrite with a prompt |
 |---|---|
@@ -65,8 +65,8 @@ Enabling meeting recording also requires macOS system audio recording permission
 
 - Tap **right ⌥** to open the writing popover in **Rewrite** for selected text or **Draft** at the
   caret. Type a prompt in **Draft** and press Return to draft text at the caret. When the
-  footer says **Prompt only**, the model receives only the text you submit in the popover.
-  Tap again to switch modes.
+  header says **Prompt only**, the model receives only the text you submit in the popover.
+  Choose **Insert** to place your text exactly as written. Tap again to cycle through the modes.
 - Double-tap **right ⌥** with the popover closed to rewrite a selection. With nothing selected,
   Remora uses the text around the caret to continue the sentence or fill a gap.
 - Click the bar under the notch or at the top center on displays without a notch. You can also
@@ -75,7 +75,7 @@ Enabling meeting recording also requires macOS system audio recording permission
 ## Dictation
 
 Hold **right ⌥** to dictate and release to review the transcript. In **Draft**, press Return to
-draft from your spoken prompt, or choose **Insert transcript** to put your words into the field.
+draft from your spoken prompt, or switch to **Insert** and press Return to insert exactly what you reviewed.
 Tap the key to switch to **Rewrite** for changes to existing text. For hands-free dictation, click the
 microphone beside the Return arrow, then click Stop to review the transcript.
 
@@ -86,10 +86,10 @@ OpenAI transcription** and choose **Save and enable**. The key needs write acces
 Remora stores the key in Keychain. If automatic meeting recording is enabled, this key also
 enables OpenAI transcription for new meetings. **Remove key** selects Mac transcription for future recordings.
 
-OpenAI detects the language in eligible recordings after you choose **Insert transcript** with
-the unchanged transcript. If the request fails, Remora uses the Mac transcript. Private, paused,
+OpenAI detects the language in eligible recordings when you release the key or click Stop. For a previously saved key,
+enable **Transcribe on stop** in Dictation settings. If the request fails, Remora uses the Mac transcript. Private, paused,
 excluded or unverified contexts use Mac speech recognition. Drafting and editing from speech use
-the reviewed text. Audio is held in memory. Transcript cleanup uses its own model setting.
+the reviewed text. Audio is held in memory. Optional cleanup for Mac transcripts runs on-device before review.
 
 ## Privacy
 

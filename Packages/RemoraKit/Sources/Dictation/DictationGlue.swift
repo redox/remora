@@ -75,22 +75,34 @@ public enum EditVoiceRoute {
         case edit, compose, insertText
     }
 
-    public enum Mode: Hashable, Sendable {
-        case insert, edit
+    public enum Mode: String, CaseIterable, Sendable {
+        case draft = "Draft"
+        case edit = "Rewrite"
+        case insert = "Insert"
 
-        public var other: Mode { self == .insert ? .edit : .insert }
-
-        public static func preferred(replacesSelection: Bool) -> Mode {
-            replacesSelection ? .edit : .insert
+        public func adjacent(backward: Bool = false) -> Mode {
+            switch self {
+            case .draft: backward ? .insert : .edit
+            case .edit: backward ? .draft : .insert
+            case .insert: backward ? .edit : .draft
+            }
         }
 
-        public func submission(hasFallback: Bool) -> Submission {
-            if self == .edit { return .edit }
-            return hasFallback ? .insertText : .compose
+        public static func preferred(replacesSelection: Bool) -> Mode {
+            replacesSelection ? .edit : .draft
+        }
+
+        public var submission: Submission {
+            switch self {
+            case .draft: .compose
+            case .edit: .edit
+            case .insert: .insertText
+            }
         }
 
         public func actionTitle(replacesSelection: Bool) -> String {
             switch self {
+            case .draft: "Draft and insert"
             case .edit: replacesSelection ? "Rewrite selection" : "Apply rewrite"
             case .insert: replacesSelection ? "Replace selection" : "Insert at caret"
             }

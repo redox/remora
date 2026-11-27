@@ -9,8 +9,7 @@ import os
 import Rewrite
 import Storage
 
-/// Records a local draft for chat or the writing popover. Insert transcript can use the configured
-/// transcription and cleanup services. Drafting and editing use the reviewed text.
+/// Records a local preview. Eligible writing sessions can finalize through OpenAI before review.
 @MainActor @Observable
 final class DictationController {
     enum Phase: Equatable { case idle, starting, listening, finishing, transcribing, cleaning }
@@ -21,9 +20,10 @@ final class DictationController {
     private(set) var hasTranscriptionKey = false
     private(set) var isRunning = false
 
-    /// The run can hold a local draft even after the microphone has stopped.
+    var usesOpenAIForDictation: Bool { hasTranscriptionKey && settings.transcribeOnStop }
+
     var isActive: Bool { run != nil }
-    var isRecording: Bool { run != nil && run?.raw == nil }
+    var isRecording: Bool { run != nil }
     var isDictatingChat: Bool { run?.appendToChat != nil }
     private(set) var chatPreview = ""
     private(set) var chatNotice: DictationNotice?
@@ -69,8 +69,6 @@ final class DictationController {
         var finishRequested = false
         var finishing = false
         var notice: DictationNotice?
-        var raw: String?
-        var wav: Data?
 
         init(locale: DictationLocale, appKey: String?, frontmostPID: pid_t?, field: FocusedField?,
              appendToChat: ((String) -> Void)? = nil) {
@@ -126,6 +124,7 @@ final class DictationController {
 
     func update(_ s: DictationSettings) {
         guard s != settings else { return }
+        if !s.transcribeOnStop { invalidateCloudTranscription() }
         settings = s
         do { try store.setValue(s, forKey: DictationSettings.settingsKey) } catch {
             Self.log.error("dictation settings not saved")
@@ -136,6 +135,11 @@ final class DictationController {
     func saveTranscriptionKey(_ key: String) -> String? {
         do { try TranscriptionKeychain.save(key) } catch { return "Could not save the key to Keychain." }
         invalidateCloudTranscription()
+        if !hasTranscriptionKey {
+            var updated = settings
+            updated.transcribeOnStop = true
+            update(updated)
+        }
         hasTranscriptionKey = true
         onTranscriptionKeyChanged?()
         return nil
@@ -161,7 +165,6 @@ final class DictationController {
     func invalidateCloudTranscription() {
         run?.cloudInvalidated = true
         run?.cloudContext = nil
-        run?.wav = nil
         run?.cloudRequest?.cancel()
     }
 
@@ -306,7 +309,7 @@ final class DictationController {
         r.events = Task { [weak self] in
             for await event in session.events { self?.apply(event, r) }
         }
-        if r.field != nil, hasTranscriptionKey {
+        if r.field != nil, usesOpenAIForDictation {
             // Let the microphone start while Accessibility verifies the original context. An
             // early release or an observed switch during the check keeps the result local.
             Task { [weak self] in
@@ -366,86 +369,41 @@ final class DictationController {
         if r.appendToChat == nil { rewrite.finalizeTranscript() }
         r.work = Task { [weak self] in
             let result = await session.finish(retainAudio: retainAudio)
-            self?.finishDraft(r, result: result)
+            await self?.finishDraft(r, result: result)
         }
     }
 
-    private func finishDraft(_ r: Run, result: CompletedDictation) {
+    private func finishDraft(_ r: Run, result: CompletedDictation) async {
         guard isCurrent(r) else { return }
         if result.receivedAudio { Sounds.dictationStop(enabled: soundsEnabled) }
-        guard let raw = EditVoiceRoute.settleFinal(result.text) else {
-            return end(r, notice: r.notice ?? (result.receivedAudio ? .nothingHeard : .microphoneNotReady))
-        }
+        let local = EditVoiceRoute.settleFinal(result.text)
+        let missing = r.notice ?? (result.receivedAudio ? .nothingHeard : .microphoneNotReady)
         if let appendToChat = r.appendToChat {
-            appendToChat(raw)
-            end(r, notice: r.notice)
-            return
+            guard let local else { return end(r, notice: missing) }
+            appendToChat(local)
+            return end(r, notice: r.notice)
         }
         let locale = sessionLocale ?? r.locale
+        let cloud = await transcribeWithOpenAI(result.wav, r)
+        guard isCurrent(r), !Task.isCancelled else { return }
+        guard var text = cloud ?? local else { return end(r, notice: r.notice ?? missing) }
+        var notice = r.notice
+        if cloud == nil, settings.cleanupEnabled {
+            // Automatic cleanup before review may use only the local model.
+            phase = .cleaning
+            guard let outcome = try? await cleaner.process(raw: text, locale: locale, cleanupEnabled: true,
+                                                           cloudAllowed: false),
+                  isCurrent(r), !Task.isCancelled else { return }
+            text = outcome.text
+            notice = notice ?? outcome.notice
+        }
         remember(locale, for: r.appKey)
-        r.raw = raw
-        r.wav = result.wav
-        r.session = nil
-        r.events?.cancel()
-        r.events = nil
-        r.work = nil
-        phase = .idle
-        rewrite.showFinalTranscript(raw)
-    }
-
-    struct InsertionText {
-        let text: String
-        let locale: DictationLocale
-        let notice: DictationNotice?
-    }
-
-    /// The preview is always local. Only an unchanged transcript committed for direct insertion
-    /// can use its audio or the configured cleanup. A correction in the preview wins.
-    func prepareInsertion(_ text: String, field: FocusedField?) async -> InsertionText? {
-        guard let r = run, let raw = r.raw else {
-            return InsertionText(text: text, locale: settings.defaultLocale, notice: nil)
-        }
-        let locale = sessionLocale ?? r.locale
-        let route = await cleanupRoute(field: field, r)
-        guard isCurrent(r), !Task.isCancelled else { return nil }
-        guard route != .refuse, !IsSecureEventInputEnabled(), Self.frontmost().pid == r.frontmostPID else {
-            end(r, notice: .secureField)
-            return nil
-        }
-        guard text == raw else {
-            end(r, notice: nil)
-            return InsertionText(text: text, locale: locale, notice: nil)
-        }
-
-        let wav = r.wav
-        r.wav = nil
-        let cloudTranscript = await transcribeWithOpenAI(wav, r)
-        guard isCurrent(r), !Task.isCancelled else { return nil }
-        let updatedRoute = await cleanupRoute(field: field, r)
-        guard isCurrent(r), !Task.isCancelled else { return nil }
-        guard updatedRoute != .refuse, !IsSecureEventInputEnabled(), Self.frontmost().pid == r.frontmostPID else {
-            end(r, notice: .secureField)
-            return nil
-        }
-
-        phase = .cleaning
-        let cleaned: CleanupOutcome
-        do {
-            cleaned = try await cleaner.process(raw: cloudTranscript ?? raw, locale: cloudTranscript == nil ? locale : nil,
-                                                cleanupEnabled: settings.cleanupEnabled,
-                                                cloudAllowed: route.cloudAllowed && updatedRoute.cloudAllowed)
-        } catch {
-            end(r, notice: nil)
-            return nil
-        }
-        guard isCurrent(r), !Task.isCancelled else { return nil }
-        let notice = r.notice ?? cleaned.notice
-        end(r, notice: nil)
-        return InsertionText(text: cleaned.text, locale: locale, notice: notice)
+        rewrite.showFinalTranscript(text)
+        end(r, notice: notice)
     }
 
     private func transcribeWithOpenAI(_ wav: Data?, _ r: Run) async -> String? {
-        guard let wav, let start = r.cloudContext, let key = try? TranscriptionKeychain.load(),
+        guard usesOpenAIForDictation, let wav, let start = r.cloudContext, let key = try? TranscriptionKeychain.load(),
               await transcriptionContext(r) == start, r.cloudContext == start else { return nil }
         phase = .transcribing
         let client = openAITranscription
@@ -463,35 +421,18 @@ final class DictationController {
     }
 
     private func transcriptionContext(_ r: Run) async -> ContextIdentity? {
-        guard isCurrent(r), !r.cloudInvalidated, observesContextSwitches(), !isPaused(),
+        guard isCurrent(r), usesOpenAIForDictation, !r.cloudInvalidated, observesContextSwitches(), !isPaused(),
               let sample = await windows.readContext(), sample.identity.pid == r.frontmostPID,
               SnapshotPolicy.current(db).shouldCapture(sample.context), let handle = r.field?.handle else { return nil }
         let focused = await Task.detached(priority: .userInitiated) { handle.isFocusedInApp() }.value
         guard focused else { return nil }
         permissions.refreshMicrophone()
-        guard isCurrent(r), !r.cloudInvalidated, observesContextSwitches(), permissions.microphone == .granted,
+        guard isCurrent(r), usesOpenAIForDictation, !r.cloudInvalidated, observesContextSwitches(), permissions.microphone == .granted,
               Self.frontmost().pid == r.frontmostPID, !isPaused() else { return nil }
         return OpenAITranscription.eligibleContext(
             sample.context, identity: sample.identity, fieldPID: handle.pid,
             policy: SnapshotPolicy.current(db), paused: (try? store.isPaused(now: .now)) != false,
             secureInput: IsSecureEventInputEnabled())
-    }
-
-    /// The privacy route for the cleanup: password managers and vault pages refuse; excluded,
-    /// private, unknown or unverifiable contexts clean on-device only (`CleanupRoute.forDictation`).
-    private func cleanupRoute(field: FocusedField?, _ r: Run) async -> CleanupRoute {
-        let sample = await windows.readContext()
-        return CleanupRoute.forDictation(
-            context: sample?.context, contextPID: sample?.identity.pid, fieldPID: field?.handle.pid ?? r.frontmostPID,
-            fieldBundleID: field?.bundleID, policy: policy(), paused: isPaused())
-    }
-
-    /// The user's exclusions; unreadable rules fail closed (nothing is capturable).
-    private func policy() -> CapturePolicy {
-        do { return CapturePolicy(userRules: try ExclusionStore(db).all().compactMap(ExclusionRule.init(pattern:))) } catch {
-            Self.log.error("exclusions unreadable; dictation cleanup stays on-device")
-            return .denyAll
-        }
     }
 
     func cancelSession() {
@@ -511,7 +452,7 @@ final class DictationController {
         r.events?.cancel()
         r.cloudRequest?.cancel()
         if let session = r.session { Task { await session.cancel() } }
-        if r.appendToChat != nil { chatPreview = "" } else if r.raw == nil { rewrite.restoreDraftAfterRecording() }
+        if r.appendToChat != nil { chatPreview = "" } else { rewrite.restoreDraftAfterRecording() }
         sessionLocale = nil
         phase = .idle
     }

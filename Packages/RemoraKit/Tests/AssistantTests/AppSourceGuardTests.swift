@@ -89,17 +89,16 @@ import Testing
         let panel = try source("App/Remora/Rewrite/EditBarPanel.swift")
         #expect(panel.contains("if actions?.showsDictationLanguage() == true, let locale = model.recordingLocale"))
         let controller = try source("App/Remora/Rewrite/RewriteController.swift")
-        #expect(controller.contains("showsDictationLanguage: { [weak dictation] in dictation?.hasTranscriptionKey == false }"))
+        #expect(controller.contains("showsDictationLanguage: { [weak dictation] in dictation?.usesOpenAIForDictation == false }"))
     }
 
-    @Test func insertSubmitsTheReviewedPromptForDrafting() throws {
+    @Test func draftComposesAndInsertPassesTheUntrimmedEditorText() throws {
         let panel = try source("App/Remora/Rewrite/EditBarPanel.swift")
         #expect(panel.contains("actions?.submit(model.instruction, model.submission)"))
-        #expect(panel.contains("mode.submission(hasFallback: fallbackActionTitle != nil)"))
-        #expect(panel.contains("Button(\"Insert transcript\") { actions?.submit(model.instruction, .insertText) }"))
         let controller = try source("App/Remora/Rewrite/RewriteController.swift")
         let compose = try #require(controller.range(of: "case .compose:"))
         let literal = try #require(controller.range(of: "case .insertText:", range: compose.upperBound..<controller.endIndex))
+        #expect(controller[literal.upperBound...].contains("insertDraft(draft, context: ctx)"))
         #expect(controller[compose.upperBound..<literal.lowerBound].contains("composeDraft(text, context: ctx)"))
     }
 

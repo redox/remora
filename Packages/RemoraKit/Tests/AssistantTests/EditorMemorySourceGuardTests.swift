@@ -22,6 +22,29 @@ import Testing
         #expect(controller.contains("bar.model.canUndo = edit?.session?.canUndo ?? false"))
     }
 
+    @Test func dictationLeavesSubmissionToTheSelectedWritingMode() throws {
+        let view = try source("App/Remora/Rewrite/EditBarPanel.swift")
+        #expect(!view.contains("offersTranscriptInsertion"))
+        #expect(!view.contains(#"Button("Insert transcript")"#))
+    }
+
+    @Test func editorShowsUndoInTheHeaderAndLeavesUsageManagementToNotices() throws {
+        let view = try source("App/Remora/Rewrite/EditBarPanel.swift")
+        let controls = try #require(view.range(of: "private var controls:"))
+        let close = try #require(view.range(of: "private var closeButton:"))
+        #expect(view[controls.upperBound..<close.lowerBound].contains("if model.canUndo { undoButton }"))
+        #expect(!view.contains(#"Button("Manage usage")"#))
+    }
+
+    @Test func promptOnlyScopeAppearsInTheHeader() throws {
+        let view = try source("App/Remora/Rewrite/EditBarPanel.swift")
+        let header = try #require(view.range(of: "private var controls:"))
+        let close = try #require(view.range(of: "private var closeButton:"))
+        let scope = #"Text("Prompt only")"#
+        #expect(view[header.upperBound..<close.lowerBound].contains(scope))
+        #expect(!view[close.upperBound...].contains(scope))
+    }
+
     @Test func writingPopoverOffersHandsFreeDictationBesideSubmit() throws {
         let view = try source("App/Remora/Rewrite/EditBarPanel.swift")
         let controls = try #require(view.range(of: "private var composerControls:"))
@@ -53,8 +76,15 @@ import Testing
 
         let dictation = try source("App/Remora/Dictation/DictationController.swift")
         let finish = try #require(dictation.range(of: "private func finishDraft"))
-        let prepare = try #require(dictation.range(of: "func prepareInsertion"))
-        #expect(!dictation[finish.lowerBound..<prepare.lowerBound].contains("await finalTranscript("))
+        let transcribe = try #require(dictation.range(of: "private func transcribeWithOpenAI", range: finish.upperBound..<dictation.endIndex))
+        let finishing = dictation[finish.upperBound..<transcribe.lowerBound]
+        let chat = try #require(finishing.range(of: "if let appendToChat"))
+        let upload = try #require(finishing.range(of: "await transcribeWithOpenAI"))
+        #expect(chat.lowerBound < upload.lowerBound)
+        #expect(finishing.contains("if cloud == nil, settings.cleanupEnabled"))
+        #expect(finishing.contains("cloudAllowed: false"))
+        #expect(!finishing.contains("submitDraft("))
+        #expect(finishing.range(of: "rewrite.showFinalTranscript", range: upload.upperBound..<finishing.endIndex) != nil)
     }
 
     @Test func deleteAllDiscardsTheWritingPopoverDraft() throws {

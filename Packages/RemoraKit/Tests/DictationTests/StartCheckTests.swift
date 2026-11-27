@@ -42,7 +42,7 @@ func startCheck(_ c: StartConditions, expected: StartDecision) {
         (.unsupported, "Speech recognition isn't available on this Mac."),
         (.microphoneNotReady, "No audio received. Wait for Listening, then speak."),
         (.nothingHeard, "No speech recognized. Check the language and try again."),
-        (.cleanupSkipped, "Inserted without cleanup."),
+        (.cleanupSkipped, "Using the original transcript."),
         (.secureField, "Can't dictate into a password field."),
         (.copiedInstead, "Couldn't insert here. Copied to the clipboard."),
         (.limitReached, "Stopped after 5 minutes."),

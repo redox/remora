@@ -51,9 +51,9 @@ and `Input` (the focused field, hotkeys, insertion).
 
 ## Hotkeys and key monitors
 
-- A clean tap of right ⌥ (keycode 61, nothing else pressed in between) opens Edit for a selection
-  or Insert at the caret. Double-tap rewrites selected text or drafts at the caret. A hold previews
-  dictation in Insert when enabled. Tap inside the popover
+- A clean tap of right ⌥ (keycode 61, nothing else pressed in between) opens Rewrite for a selection
+  or Draft at the caret. Double-tap rewrites selected text or drafts at the caret. A hold previews
+  dictation in Draft when enabled. Tap inside the popover
   to switch modes. ⌘⇧G is the optional fallback chord. `TapDetector` must never fire during ⌥ combos used to type
   characters (AZERTY: @, é…). Add a test case to their tests for every new gesture rule. No
   feature may require the Input Monitoring permission.

@@ -34,7 +34,7 @@ struct ShortcutsSettingsView: View {
             Section("Writing popover") {
                 Toggle("Double-tap writes in place", isOn: binding(\.doubleTapRewrites))
                 Toggle("Hold opens the popover", isOn: binding(\.holdOpensEdit))
-                Text("With dictation enabled, holding records speech. Tap the key while the popover is open to switch between Draft and Rewrite.")
+                Text("With dictation enabled, holding records speech. Tap the key while the popover is open to switch between Draft, Rewrite, and Insert.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             .disabled(!s.rewriteKeyEnabled)

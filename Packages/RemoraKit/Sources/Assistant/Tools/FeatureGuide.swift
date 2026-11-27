@@ -134,13 +134,13 @@ public enum FeatureGuide {
             fields and password managers are refused with a beep. An optional fallback shortcut \
             (⇧⌘G, off by default) and the sounds are in Settings › Shortcuts.
             """),
-        GuideSection(id: "edit-mode", title: "Draft and Rewrite", body: """
+        GuideSection(id: "edit-mode", title: "Draft, Rewrite, and Insert", body: """
             Select text and tap the rewrite key to open the writing popover in Rewrite. Type an instruction \
             such as "shorter" or "translate to French", then press Return or choose Rewrite selection. \
             With no selection, the popover opens in Draft. Type what you want written and press Return \
             to draft and insert it at the caret. Where field text must stay on-device, Draft \
             can use ChatGPT with only the prompt you submit. In Rewrite, the popover stays open for more rounds. \
-            Tap the rewrite key to switch modes. Esc or a click outside closes the popover. \
+            Insert places the visible text exactly as written. Tap the rewrite key to cycle modes. Esc or a click outside closes the popover. \
             Configure gestures in Settings › Shortcuts.
             """),
         GuideSection(id: "ask-in-field", title: "Ask in a field", body: """
@@ -151,15 +151,15 @@ public enum FeatureGuide {
         GuideSection(id: "dictation", title: "Dictation", body: """
             Off by default: turn it on in Settings › Dictation. Hold the rewrite key to speak. The \
             writing popover shows the live transcript using your Mac. Release to review the final \
-            text in Draft mode. Press Return to draft from the spoken prompt, or choose Insert transcript \
+            text in Draft mode. Press Return to draft from the spoken prompt, or switch to Insert and press Return \
             to put the words into the field. Switch to Rewrite to apply a spoken instruction to existing text. \
             Esc discards the draft. For hands-free dictation, click the microphone beside the Return arrow, then click Stop to finish.
 
             For Mac speech recognition, pick English or French in the menu bar or let Remora use \
             the last language in that app or your default. The popover also offers a language button \
             when OpenAI transcription is off. With a saved key, OpenAI detects the language in eligible \
-            unchanged recordings after you choose Insert transcript. Cleanup can also run after that \
-            choice. Drafting and editing use the reviewed text.
+            recordings when you stop dictating with Transcribe on stop enabled. Mac transcripts can be cleaned \
+            on-device before review. Drafting and editing use the reviewed text.
             """),
         GuideSection(id: "chat-bar", title: "Chat bar", body: """
             A slim bar docked at a screen edge, under the notch by default. Hovering expands it (can be \
@@ -333,7 +333,7 @@ public enum FeatureGuide {
             - **Right ⌥ tap:** open the writing popover in Rewrite for a selection, or Draft at the caret.
             - **Right ⌥ double-tap:** rewrite the selection, draft at the caret, or answer `/q`. Opens chat outside a text field.
             - **Right ⌥ hold:** dictate into the popover in Draft when dictation is on.
-            - **Right ⌥ tap in the popover:** switch between Draft and Rewrite.
+            - **Right ⌥ tap in the popover:** switch between Draft, Rewrite, and Insert.
             - **⇧⌘G:** fallback shortcut, off by default (it is also Find Previous in many apps).
             - **Esc:** cancel a rewrite or close the writing popover.
 
