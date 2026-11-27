@@ -119,6 +119,19 @@ import Testing
         #expect(!panel.contains("if ignoresMouseEvents"))
     }
 
+    @Test func chatCanOpenInARegularWindowWhileThePopoverStaysProtected() throws {
+        let panel = try source("App/Remora/Chat/ChatPanel.swift")
+        #expect(panel.contains("sharingType = .none"))
+        let view = try source("App/Remora/Chat/ChatView.swift")
+        #expect(view.contains("bar.openChatWindow()"))
+        let window = try source("App/Remora/Chat/ChatWindow.swift")
+        #expect(window.contains("class ChatWindow: NSWindow,"))
+        #expect(!window.contains("sharingType = .none"))
+        let controller = try source("App/Remora/Chat/ChatBarController.swift")
+        #expect(controller.contains("window.contentView = host"))
+        #expect(controller.contains("panel.contentView = host"))
+    }
+
     @Test func chatOpensAtTheWelcomeHeadingOrLatestMessage() throws {
         let view = try source("App/Remora/Chat/ChatView.swift")
         #expect(view.contains(".defaultScrollAnchor(hasMessages ? .bottom : .top, for: .initialOffset)"))

@@ -16,6 +16,7 @@ struct ChatView: View {
     let textScale: Double
     /// The card's height (the confirmation card sizes its summary from it).
     let height: CGFloat
+    let inChatWindow: Bool
     @FocusState private var composerFocused: Bool
     @State private var confirmClear = false
     @State private var messagePosition = ScrollPosition(idType: Int64?.self)
@@ -50,7 +51,12 @@ struct ChatView: View {
             composer
         }
         .environment(\.chatFontSize, fontSize)
-        .modifier(OverlaySurface(cornerRadius: 20))
+        .modifier(OverlaySurface(cornerRadius: inChatWindow ? 0 : 20))
+        .onKeyPress(.escape) {
+            guard inChatWindow, model.isStreaming, !model.isComposing else { return .ignored }
+            model.stop()
+            return .handled
+        }
         .onChange(of: model.focusToken) { if model.takeFocusRequest() { composerFocused = true } }
         .onAppear {
             // A running turn already has its provisional UI. Reloading its stored user row
@@ -90,13 +96,22 @@ struct ChatView: View {
             Text("Remora").font(.system(size: fontSize + 1, weight: .semibold))
             Spacer()
             HStack(spacing: 2) {
-                Button { bar.setPinned(!pinned) } label: {
-                    Image(systemName: pinned ? "pin.fill" : "pin")
-                        .frame(width: 28, height: 28)
+                if !inChatWindow {
+                    Button { bar.openChatWindow() } label: {
+                        Image(systemName: "macwindow.badge.plus")
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(QuietButtonStyle())
+                    .accessibilityLabel("Open in window")
+                    .help("Open in a window visible in screenshots and screen sharing")
+                    Button { bar.setPinned(!pinned) } label: {
+                        Image(systemName: pinned ? "pin.fill" : "pin")
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(QuietButtonStyle(selected: pinned))
+                    .accessibilityLabel(pinned ? "Unpin chat" : "Pin chat")
+                    .help(pinned ? "Unpin: close when you click elsewhere" : "Pin: keep the chat open")
                 }
-                .buttonStyle(QuietButtonStyle(selected: pinned))
-                .accessibilityLabel(pinned ? "Unpin chat" : "Pin chat")
-                .help(pinned ? "Unpin: close when you click elsewhere" : "Pin: keep the chat open")
                 Menu {
                     Button("Clear chat history…") { confirmClear = true }
                     Button("Settings…") { bar.actions.openSettings() }
@@ -109,12 +124,14 @@ struct ChatView: View {
                 .tint(Color.secondary)
                 .fixedSize()
                 .accessibilityLabel("Chat options")
-                Button { bar.collapse() } label: {
-                    Image(systemName: "chevron.up").frame(width: 28, height: 28)
+                if !inChatWindow {
+                    Button { bar.collapse() } label: {
+                        Image(systemName: "chevron.up").frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(QuietButtonStyle())
+                    .accessibilityLabel("Collapse chat")
+                    .help("Collapse")
                 }
-                .buttonStyle(QuietButtonStyle())
-                .accessibilityLabel("Collapse chat")
-                .help("Collapse")
             }
         }
         .font(.system(size: fontSize - 1, weight: .medium))

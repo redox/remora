@@ -9,6 +9,7 @@ import SwiftUI
 @MainActor @Observable
 final class BarViewState {
     var expanded = false
+    var inChatWindow = false
     /// Panel-local, top-left origin.
     var card: CGRect = .zero
     var capsule: CGRect = .zero
@@ -21,7 +22,7 @@ final class BarViewState {
 /// configured edge and expanded to the chat on hover, click, the menu or the rewrite key.
 /// `BarInteraction` decides; this applies its effects (frames from `BarGeometry`, timers, focus).
 ///
-/// It never activates Remora: the panel takes key focus for typing and text selection, and
+/// The floating panel never activates Remora. It takes key focus for typing and text selection, and
 /// never on a hover expand (a key panel would turn the peek into an open bar).
 @MainActor
 final class ChatBarController: NSObject, NSWindowDelegate {
@@ -40,6 +41,7 @@ final class ChatBarController: NSObject, NSWindowDelegate {
     private let model: ChatModel
     private let store: SettingsStore
     private let panel = ChatPanel()
+    private var chatWindow: ChatWindow?
     private var interaction: BarInteraction
     private var settings: BarSettings
     private var hoverTimer: Task<Void, Never>?
@@ -79,8 +81,8 @@ final class ChatBarController: NSObject, NSWindowDelegate {
         panel.onMouseEntered = { [weak self] in self?.hover(true) }
         panel.onMouseExited = { [weak self] in self?.hover(false) }
         model.onStreamingChange = { [weak self] on in self?.handle(.streaming(on)) }
-        model.fieldEditor = { [weak panel] in
-            guard let editor = panel?.firstResponder as? NSTextView, editor.isEditable else { return nil }
+        model.fieldEditor = { [weak host] in
+            guard let editor = host?.window?.firstResponder as? NSTextView, editor.isEditable else { return nil }
             return editor
         }
         screenObserver = NotificationCenter.default.addObserver(
@@ -95,16 +97,46 @@ final class ChatBarController: NSObject, NSWindowDelegate {
     // MARK: - Commands
 
     /// The menu's "Open chat": opens with the composer focused, or collapses.
-    func toggle() { handle(.toggle) }
+    func toggle() {
+        if chatWindow != nil { open(focusInput: true) } else { handle(.toggle) }
+    }
+
+    func openChatWindow() {
+        guard chatWindow == nil, let host = panel.contentView else { return }
+        let window = ChatWindow { [weak self] window in
+            guard let self, let host = window.contentView else { return }
+            window.contentView = nil
+            panel.contentView = host
+            chatWindow = nil
+            state.inChatWindow = false
+            layout()
+        }
+        // Move the existing view so the reader keeps their place and there is only one composer.
+        chatWindow = window
+        state.inChatWindow = true
+        panel.orderOut(nil)
+        panel.contentView = nil
+        window.contentView = host
+        if !interaction.pinned { collapse() }
+        state.hovered = false
+        open(focusInput: true)
+    }
 
     func open(focusInput: Bool) {
+        if let chatWindow {
+            if chatWindow.isMiniaturized { chatWindow.deminiaturize(nil) }
+            NSApp.activate()
+            chatWindow.makeKeyAndOrderFront(nil)
+            if focusInput { model.requestFocus() }
+            return
+        }
         handle(.openRequested, focus: focusInput)
     }
 
     /// Opens the chat on an inbox message (a notification click).
     func openMessage(inboxID: Int64) {
         model.reveal(inboxID: inboxID)
-        handle(.openRequested, focus: false)
+        open(focusInput: false)
     }
 
     /// New bar settings (Settings › Appearance, or a chat action): re-lays out the bar.
@@ -149,6 +181,7 @@ final class ChatBarController: NSObject, NSWindowDelegate {
     // MARK: - Interaction
 
     private func hover(_ inside: Bool) {
+        guard chatWindow == nil else { return }
         state.hovered = inside
         handle(inside ? .mouseEntered : .mouseExited)
     }
@@ -173,7 +206,7 @@ final class ChatBarController: NSObject, NSWindowDelegate {
         if interaction.state != laidOut { layout() }
         // Becoming key can synchronously call the delegate. Settle the window and its content
         // coordinates first, so that callback cannot promote a half-laid-out hover panel.
-        if focusAfterLayout {
+        if focusAfterLayout, chatWindow == nil {
             panel.makeKeyAndOrderFront(nil)  // a non-activating panel: Remora stays inactive
             model.requestFocus()
         }
@@ -206,7 +239,7 @@ final class ChatBarController: NSObject, NSWindowDelegate {
     }
 
     private func layout() {
-        guard started, let s = screen() else { return }
+        guard started, chatWindow == nil, let s = screen() else { return }
         let p = settings.position
         let st = interaction.state
         laidOut = st
@@ -271,7 +304,7 @@ final class ChatBarController: NSObject, NSWindowDelegate {
     /// child, sheet or popover key window is a fallback check).
     func windowDidResignKey(_ notification: Notification) {
         Task { @MainActor [weak self] in
-            guard let self, !self.panel.isKeyWindow else { return }
+            guard let self, self.chatWindow == nil, !self.panel.isKeyWindow else { return }
             guard BarAppearance.collapsesOnResignKey(cardPending: self.model.pendingConfirmation != nil,
                                                      detailsOpen: self.model.detailsOpen) else { return }
             if let key = NSApp.keyWindow, key.parent === self.panel || key.sheetParent === self.panel
@@ -308,11 +341,14 @@ struct ChatBarRootView: View {
         // An overlay cannot grow its host to the card's fixed size while the window is still
         // collapsed. All offsets are panel-local; BarGeometry already accounts for safe areas.
         Color.clear.overlay(alignment: .topLeading) {
-            if state.expanded {
-                ChatView(model: model, bar: bar, pinned: state.pinned, textScale: state.settings.textScale,
-                         height: state.card.height)
-                    .frame(width: state.card.width, height: state.card.height)
-                    .offset(x: state.card.minX, y: state.card.minY)
+            if state.expanded || state.inChatWindow {
+                GeometryReader { bounds in
+                    let card = state.inChatWindow ? CGRect(origin: .zero, size: bounds.size) : state.card
+                    ChatView(model: model, bar: bar, pinned: state.pinned, textScale: state.settings.textScale,
+                             height: card.height, inChatWindow: state.inChatWindow)
+                        .frame(width: card.width, height: card.height)
+                        .offset(x: card.minX, y: card.minY)
+                }
             } else {
                 let style = BarAppearance.capsule(streaming: model.isStreaming,
                                                   awaitingAnswer: model.pendingConfirmation != nil)
