@@ -203,19 +203,16 @@ struct ChatView: View {
             messagePosition.scrollTo(id: Optional(target), anchor: .top)
             model.scrollTarget = nil
         }
+        .mask { transcriptEdgeMask }
         .overlay(alignment: .bottomTrailing) {
             if hasMessages && !atLatest && messagePosition.edge != .bottom {
                 latestButton
-        .mask { transcriptEdgeMask }
                     .padding(.trailing, 16)
                     .padding(.bottom, 8)
             }
         }
     }
 
-    private var latestButton: some View {
-        Button {
-            scrollToLatest()
     @ViewBuilder private var transcriptEdgeMask: some View {
         if reduceTransparency || contrast == .increased {
             Color.black
@@ -233,6 +230,9 @@ struct ChatView: View {
         }
     }
 
+    private var latestButton: some View {
+        Button {
+            scrollToLatest()
         } label: {
             Label("Latest", systemImage: "arrow.down")
                 .font(.system(size: fontSize - 1, weight: .medium))
