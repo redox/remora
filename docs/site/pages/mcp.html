@@ -23,5 +23,10 @@
 <h2 id="query-memory">Query memory</h2>
 <p>Try asking your client “Use Remora to find when I last saw the Thursday review notes.” A client can search for snippets, then fetch the snapshots for matching IDs. See the <a href="@ROOT@docs/mcp-tools/">MCP tool reference</a> for inputs and limits.</p>
 
+<h2 id="checking-a-decision">Check what was decided</h2>
+<p>Ask “Did we decide to ship Kestrel on Friday? Show me the source.” A wiki summary can help the client find the topic. To check the decision, the client can search for <code>Kestrel</code> with <code>search_memory</code> and read the matching captures with <code>get_snapshots</code>.</p>
+<p>In this example, a January 5 note approves Friday. A January 6 note explicitly moves the release to Monday. An answer can cite both: “Friday was approved on January 5 (snapshot 1). The team then moved the release to Monday (January 6, snapshot 2).” The second note records an approved change. A later capture of the old note would still describe the earlier decision.</p>
+<p>Now ask “Did we decide to ship Plover on Friday?” Suppose the only matching capture says “Could we ship the Plover release on Friday?” A grounded answer is “I found Friday proposed for Plover (January 6, snapshot 3). I couldn’t find a decision confirming it.”</p>
+
 <h2 id="trust-and-privacy">Trust and privacy</h2>
 <p>Remora applies current exclusions when serving memory. The server marks captured text as untrusted data. A connected client controls what it does with returned data, including whether it sends it to a model provider. Disconnect clients you no longer want to have access.</p>

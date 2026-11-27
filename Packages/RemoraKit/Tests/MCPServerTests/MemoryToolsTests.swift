@@ -109,6 +109,13 @@ private func seededUsageDB() throws -> URL {
     #expect(rows[0]["captured_at"] as? Int == 1_000_000)
 }
 
+@Test func recallInstructionsAskClientsToCiteDecisionsAndDiscloseGaps() {
+    let instructions = MemoryTools.serverInstructions.lowercased()
+    for term in ["cite", "snapshot id", "decision", "proposal", "conflict", "could not verify"] {
+        #expect(instructions.contains(term), "Missing recall guidance: \(term)")
+    }
+}
+
 @Test func limitsAreClamped() async throws {
     let url = try seededDB(snapshots: (0..<30).map { snap("budget item \($0)", at: 1_000_000 + Double($0)) })
     let tools = MemoryTools(databaseURL: url)
