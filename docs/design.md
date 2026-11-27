@@ -319,7 +319,8 @@ or deleting a note while it is enabled advances the replay watermark.
 other screen-edge positions, pinning, resizing, and 100–150% text sizing. The expanded card defaults
 to 900 × 960 pt for reading longer replies, capped by the space below the notch and above the Dock.
 It remembers the size chosen for each position. **Use default chat size** in the chat options
-restores the default for the current position. Dragging selects passages across paragraphs and lists. The copy icon
+restores the default for the current position. Outgoing messages sit on the right in bubbles that
+fit their text and wrap within the available space. Dragging selects passages across paragraphs and lists. The copy icon
 under each message copies its source text, including Markdown and partial replies during streaming.
 The info icon opens model call details. In both the popover and the chat window, messages fade
 as they scroll past the header or composer. Matching end padding keeps the first and last lines

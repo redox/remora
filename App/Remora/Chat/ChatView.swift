@@ -382,7 +382,10 @@ struct UserBubble<Actions: View>: View {
         HStack {
             Spacer(minLength: 40)
             VStack(alignment: .trailing, spacing: 4) {
-                SelectableChatText(text, font: .systemFont(ofSize: fontSize))
+                let message = SelectableChatText(text, font: .systemFont(ofSize: fontSize))
+                // NSTextView can report the full proposed width even for a single word.
+                message
+                    .frame(maxWidth: ceil(message.content.size().width))
                     .padding(.horizontal, 13)
                     .padding(.vertical, 9)
                     .background(RemoraBrand.accent(scheme).opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))

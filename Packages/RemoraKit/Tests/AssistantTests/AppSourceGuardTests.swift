@@ -172,6 +172,13 @@ import Testing
         #expect(markdown.contains("SelectableChatText("))
     }
 
+    @Test func outgoingBubbleCapsSelectableTextAtItsNaturalWidth() throws {
+        let chat = try source("App/Remora/Chat/ChatView.swift")
+        let bubble = try #require(chat.range(of: "struct UserBubble"))
+        let background = try #require(chat[bubble.upperBound...].range(of: ".background("))
+        #expect(chat[bubble.upperBound..<background.lowerBound].contains(".frame(maxWidth: ceil(message.content.size().width))"))
+    }
+
     @Test func sendingJumpsToLatestBeforeAnyResponseArrives() throws {
         let view = try source("App/Remora/Chat/ChatView.swift")
         let send = try #require(view.range(of: ".onChange(of: model.isStreaming, initial: true)"))
