@@ -112,3 +112,10 @@ private func failed(_ code: String?) -> ChatTurn {
                  ChatTurn(createdAt: .now, role: .user, text: "q", status: .complete)]
     #expect(try ChatPresentation.inboxKinds(turns, db: db) == [id: .eveningWrap])
 }
+
+@Test func dictatedWordsPreserveTheTypedChatDraftAndItsSpacing() {
+    #expect(ChatPresentation.appendingTranscript(" hello ", to: "") == "hello")
+    #expect(ChatPresentation.appendingTranscript("world", to: "hello") == "hello world")
+    #expect(ChatPresentation.appendingTranscript("two", to: "one\n") == "one\ntwo")
+    #expect(ChatPresentation.appendingTranscript("  ", to: "keep this ") == "keep this ")
+}

@@ -1,4 +1,5 @@
 import Assistant
+import Dictation
 import LLM
 import Storage
 import SwiftUI
@@ -23,6 +24,7 @@ struct ChatView: View {
     @State private var atLatest = true
     @Environment(\.colorScheme) private var scheme
 
+    private var dictation: DictationController { model.dictation }
     private var fontSize: CGFloat { 13 * textScale }
     private var hasMessages: Bool { !model.turns.isEmpty || model.sendingText != nil }
 
@@ -53,7 +55,12 @@ struct ChatView: View {
         .environment(\.chatFontSize, fontSize)
         .modifier(OverlaySurface(cornerRadius: inChatWindow ? 0 : 20))
         .onKeyPress(.escape) {
-            guard inChatWindow, model.isStreaming, !model.isComposing else { return .ignored }
+            guard inChatWindow, !model.isComposing else { return .ignored }
+            if dictation.isDictatingChat {
+                dictation.cancelChatRecording()
+                return .handled
+            }
+            guard model.isStreaming else { return .ignored }
             model.stop()
             return .handled
         }
@@ -226,7 +233,7 @@ struct ChatView: View {
     private var emptyState: some View {
         ChatWelcome(prompt: ChatPresentation.emptyPrompt, starters: ChatPresentation.starters,
                     fontSize: fontSize, ask: model.ask)
-            .disabled(model.isStreaming)
+            .disabled(model.isStreaming || dictation.isDictatingChat)
     }
 
     // MARK: Composer
@@ -246,11 +253,33 @@ struct ChatView: View {
                         .font(.system(size: fontSize - 1)).foregroundStyle(.secondary)
                 }
             }
+            if dictation.isDictatingChat {
+                Label(recordingStatus, systemImage: "waveform")
+                    .foregroundStyle(.secondary)
+                if !dictation.chatPreview.isEmpty {
+                    Text(dictation.chatPreview).lineLimit(3)
+                }
+            } else if let notice = dictation.chatNotice {
+                HStack {
+                    Text(notice.text)
+                    if let action = notice.action {
+                        Button("Open settings") { dictation.perform(action) }.buttonStyle(.link)
+                    }
+                }
+            }
             composerInput
         }
         .padding(10)
         .background(OverlayComposerBackground(focused: composerFocused, cornerRadius: 12))
         .padding(12)
+    }
+
+    private var recordingStatus: String {
+        switch dictation.phase {
+        case .starting: "Starting microphone…"
+        case .listening: "Listening…"
+        default: "Finishing dictation…"
+        }
     }
 
     private var composerInput: some View {
@@ -278,6 +307,18 @@ struct ChatView: View {
                     case .send: model.send(); return .handled
                     }
                 }
+            Button {
+                if !dictation.isDictatingChat { bar.open(focusInput: true) }
+                model.toggleDictation()
+            } label: {
+                composerIcon(dictation.isDictatingChat ? "stop.circle.fill" : "mic")
+            }
+            .buttonStyle(QuietButtonStyle(selected: dictation.isDictatingChat))
+            .disabled(model.isStreaming || model.clearing || (dictation.isActive && !dictation.isDictatingChat)
+                      || (dictation.isDictatingChat && dictation.phase == .finishing))
+            .accessibilityLabel(dictation.isDictatingChat ? "Stop dictation" : "Dictate message")
+            .help(dictation.isDictatingChat ? "Stop dictation (Esc to cancel)" :
+                    (dictation.settings.enabled ? "Dictate message" : "Enable voice dictation in Settings"))
             if model.isStreaming {
                 Button { model.stop() } label: { composerIcon("stop.fill") }
                     .buttonStyle(QuietButtonStyle(selected: true))

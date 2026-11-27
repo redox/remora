@@ -20,6 +20,14 @@ public enum ChatPresentation {
     public static let emptyPrompt = "Ask about anything you've seen, or say “remind me…”"
     public static let starters = ["What did I do yesterday?", "What am I waiting on?", "What routines have you noticed?"]
 
+    /// Keep edits made while listening and preserve the user's existing line breaks.
+    public static func appendingTranscript(_ transcript: String, to draft: String) -> String {
+        let words = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !words.isEmpty else { return draft }
+        let separator = draft.last.map { $0.isWhitespace ? "" : " " } ?? ""
+        return draft + separator + words
+    }
+
     /// The line under a failed or cancelled assistant turn, by its stored error code.
     public static func errorCopy(_ t: ChatTurn) -> ErrorCopy? {
         guard t.role == .assistant else { return nil }

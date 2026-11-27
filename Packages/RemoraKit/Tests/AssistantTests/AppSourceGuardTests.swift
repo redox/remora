@@ -119,6 +119,17 @@ import Testing
         #expect(!panel.contains("if ignoresMouseEvents"))
     }
 
+    @Test func chatMicrophoneFinishesIntoTheDraftForReview() throws {
+        let view = try source("App/Remora/Chat/ChatView.swift")
+        let composer = try #require(view.range(of: "private var composerInput:"))
+        #expect(view[composer.upperBound...].contains("model.toggleDictation()"))
+        let model = try source("App/Remora/Chat/ChatModel.swift")
+        let toggle = try #require(model.range(of: "func toggleDictation()"))
+        let body = model[toggle.upperBound...].components(separatedBy: "\n    }")[0]
+        #expect(body.contains("appendingTranscript("))
+        #expect(!body.contains("send("))
+    }
+
     @Test func chatCanOpenInARegularWindowWhileThePopoverStaysProtected() throws {
         let panel = try source("App/Remora/Chat/ChatPanel.swift")
         #expect(panel.contains("sharingType = .none"))

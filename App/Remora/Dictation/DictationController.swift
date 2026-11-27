@@ -9,7 +9,7 @@ import os
 import Rewrite
 import Storage
 
-/// Records a local draft for the writing popover. Insert transcript can use the configured
+/// Records a local draft for chat or the writing popover. Insert transcript can use the configured
 /// transcription and cleanup services. Drafting and editing use the reviewed text.
 @MainActor @Observable
 final class DictationController {
@@ -24,6 +24,9 @@ final class DictationController {
     /// The run can hold a local draft even after the microphone has stopped.
     var isActive: Bool { run != nil }
     var isRecording: Bool { run != nil && run?.raw == nil }
+    var isDictatingChat: Bool { run?.appendToChat != nil }
+    private(set) var chatPreview = ""
+    private(set) var chatNotice: DictationNotice?
 
     // MARK: Dependencies
 
@@ -55,6 +58,7 @@ final class DictationController {
         let appKey: String?
         let frontmostPID: pid_t?
         let field: FocusedField?
+        let appendToChat: ((String) -> Void)?
         var session: DictationSession?
         var work: Task<Void, Never>?
         var events: Task<Void, Never>?
@@ -68,7 +72,9 @@ final class DictationController {
         var raw: String?
         var wav: Data?
 
-        init(locale: DictationLocale, appKey: String?, frontmostPID: pid_t?, field: FocusedField?) {
+        init(locale: DictationLocale, appKey: String?, frontmostPID: pid_t?, field: FocusedField?,
+             appendToChat: ((String) -> Void)? = nil) {
+            self.appendToChat = appendToChat
             self.locale = locale
             self.appKey = appKey
             self.frontmostPID = frontmostPID
@@ -94,6 +100,7 @@ final class DictationController {
         settings = Self.load(DictationSettings.self, DictationSettings.settingsKey, store) ?? DictationSettings()
         localeMemory = Self.load(LocaleMemory.self, LocaleMemory.settingsKey, store) ?? LocaleMemory()
         hasTranscriptionKey = (try? TranscriptionKeychain.load()) != nil
+        applyRunning()
     }
 
     private static func load<T: Decodable>(_ type: T.Type, _ key: String, _ store: SettingsStore) -> T? {
@@ -177,16 +184,20 @@ final class DictationController {
     }
 
     private func applyRunning() {
+        // Chat owns its text field, so its microphone needs sleep and lock handling even without AX.
+        if settings.enabled, observers.isEmpty { observeSleepAndLock() }
+        if !settings.enabled {
+            cancelChatRecording()
+            for observer in observers { observer.center.removeObserver(observer.token) }
+            observers.removeAll()
+        }
         let should = accessibilityGranted && settings.enabled
         guard should != isRunning else { return }
         isRunning = should
         if should {
-            observeSleepAndLock()
             Task { [speechAssets] in await speechAssets.refresh() }
         } else {
             cancelSession()
-            for observer in observers { observer.center.removeObserver(observer.token) }
-            observers.removeAll()
         }
     }
 
@@ -194,15 +205,20 @@ final class DictationController {
         let workspace = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.willSleepNotification, NSWorkspace.sessionDidResignActiveNotification] {
             let token = workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.rewrite.closeEditBar() }
+                MainActor.assumeIsolated { self?.sessionBecameInactive() }
             }
             observers.append((workspace, token))
         }
         let distributed = DistributedNotificationCenter.default()
         let token = distributed.addObserver(forName: .init("com.apple.screenIsLocked"), object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.rewrite.closeEditBar() }
+            MainActor.assumeIsolated { self?.sessionBecameInactive() }
         }
         observers.append((distributed, token))
+    }
+
+    private func sessionBecameInactive() {
+        cancelChatRecording()
+        rewrite.closeEditBar()
     }
 
     // MARK: - Recording
@@ -215,14 +231,31 @@ final class DictationController {
         let front = Self.frontmost()
         let recording = Run(locale: locale ?? chooseLocale(front.appKey), appKey: front.appKey,
                             frontmostPID: front.pid, field: field)
-        run = recording
-        phase = .starting
-        recording.work = Task { [weak self] in await self?.startChecked(recording) }
+        start(recording)
         return true
     }
 
+    func toggleChatRecording(appendToDraft: @escaping (String) -> Void) {
+        if let run, isDictatingChat {
+            if phase == .starting { cancelChatRecording() } else { finish(run) }
+            return
+        }
+        chatNotice = nil
+        guard settings.enabled else { return openDictationSettings() }
+        guard run == nil else { return }
+        guard !IsSecureEventInputEnabled() else { chatNotice = .secureField; return }
+        // The destination is Remora's composer. No external field, app identity or audio upload is needed.
+        start(Run(locale: chooseLocale(nil), appKey: nil, frontmostPID: nil, field: nil, appendToChat: appendToDraft))
+    }
+
+    private func start(_ recording: Run) {
+        run = recording
+        phase = .starting
+        recording.work = Task { [weak self] in await self?.startChecked(recording) }
+    }
+
     func finishRecording() {
-        guard let run, isRecording else { return }
+        guard let run, !isDictatingChat, isRecording else { return }
         finish(run)
     }
 
@@ -264,7 +297,7 @@ final class DictationController {
     private func listen(_ r: Run) async {
         // Released during the start checks: leave the microphone off.
         if r.finishRequested { return end(r, notice: .microphoneNotReady) }
-        guard !IsSecureEventInputEnabled(), Self.frontmost().pid == r.frontmostPID else {
+        guard !IsSecureEventInputEnabled(), r.appendToChat != nil || Self.frontmost().pid == r.frontmostPID else {
             return end(r, notice: nil)
         }
         sessionLocale = r.locale
@@ -305,8 +338,9 @@ final class DictationController {
             if phase == .starting { Sounds.dictationStart(enabled: soundsEnabled) }
             phase = .listening
             sessionLocale = locale
-            rewrite.recordingIsReady(locale)
-        case .transcript(let update): rewrite.showTranscript(update.text)
+            if r.appendToChat == nil { rewrite.recordingIsReady(locale) }
+        case .transcript(let update):
+            if r.appendToChat != nil { chatPreview = update.text } else { rewrite.showTranscript(update.text) }
         case .level: break
         case .interrupted:
             r.notice = r.notice ?? .microphoneLost
@@ -329,7 +363,7 @@ final class DictationController {
         r.finishing = true
         let retainAudio = r.cloudContext != nil && r.notice == nil
         phase = .finishing
-        rewrite.finalizeTranscript()
+        if r.appendToChat == nil { rewrite.finalizeTranscript() }
         r.work = Task { [weak self] in
             let result = await session.finish(retainAudio: retainAudio)
             self?.finishDraft(r, result: result)
@@ -341,6 +375,11 @@ final class DictationController {
         if result.receivedAudio { Sounds.dictationStop(enabled: soundsEnabled) }
         guard let raw = EditVoiceRoute.settleFinal(result.text) else {
             return end(r, notice: r.notice ?? (result.receivedAudio ? .nothingHeard : .microphoneNotReady))
+        }
+        if let appendToChat = r.appendToChat {
+            appendToChat(raw)
+            end(r, notice: r.notice)
+            return
         }
         let locale = sessionLocale ?? r.locale
         remember(locale, for: r.appKey)
@@ -456,21 +495,31 @@ final class DictationController {
     }
 
     func cancelSession() {
-        guard let r = run else { return }
+        guard let r = run, r.appendToChat == nil else { return }
+        discard(r)
+    }
+
+    func cancelChatRecording() {
+        chatNotice = nil
+        guard let r = run, r.appendToChat != nil else { return }
+        discard(r)
+    }
+
+    private func discard(_ r: Run) {
         run = nil
         r.work?.cancel()
         r.events?.cancel()
         r.cloudRequest?.cancel()
         if let session = r.session { Task { await session.cancel() } }
-        if r.raw == nil { rewrite.restoreDraftAfterRecording() }
+        if r.appendToChat != nil { chatPreview = "" } else if r.raw == nil { rewrite.restoreDraftAfterRecording() }
         sessionLocale = nil
         phase = .idle
     }
 
     private func end(_ r: Run, notice: DictationNotice?) {
         guard isCurrent(r) else { return }
-        cancelSession()
-        if let notice { rewrite.showDictationNotice(notice) }
+        discard(r)
+        if r.appendToChat != nil { chatNotice = notice } else if let notice { rewrite.showDictationNotice(notice) }
     }
 
     private func isCurrent(_ r: Run) -> Bool { run === r }

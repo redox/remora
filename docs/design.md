@@ -284,6 +284,11 @@ preview are kept as typed. Draft and insert and Edit use the reviewed text as an
 Cancelling discards the recording. Audio stays in memory and spoken edit instructions are
 excluded from stored instructions.
 
+The mic in the chat composer uses the same on-device recognizer and the pinned or default
+dictation language. Stop appends the transcript to the current draft for review. Esc, leaving
+the chat, sleep, or lock discards the unfinished recording. The chat mic uses no external
+field and has no cloud audio or cleanup step.
+
 **Make cloud transcription a separate opt-in.** A user-supplied project key enables
 `gpt-transcribe` for an eligible unchanged recording after the user chooses Insert transcript. This
 uses the project's transcription endpoint and billing because the ChatGPT sign-in route is
@@ -483,6 +488,7 @@ unsigned Debug build. [Verification guidance](../.claude/skills/remora-verify/SK
 | Ghostty popover | Tap right Option with the prompt low in a tall terminal, then repeat in a split pane on a secondary display. Move the pointer inside and outside the focused pane. Check placement at the cursor when available, and the pointer or pane centre otherwise. Repeat with highlighted text. |
 | Google Docs popover | In Chrome, enable **Turn on screen magnifier support** in **Tools › Accessibility**. In a blank document, move the mouse away from the page and tap right Option. Repeat after moving the caret with the keyboard in a populated document or highlighting text. Verify placement follows the text. Disable the setting and verify pointer fallback when no text bounds are available. |
 | Dictation and notes | English and French, AZERTY Option typing, a Bluetooth microphone, hold and hands-free recording, Draft and insert, Insert transcript, Edit, cancel, and a mode switch followed immediately by Return. Verify that OpenAI transcription hides the EN/FR button and detects the language on Insert transcript. The button returns when OpenAI transcription is off. In an excluded app, speak a prompt and verify that Return drafts the result. Check that Listening appears when the microphone is ready and a silent recording shows an inline notice. Verify a selected or pasted note, manual-only exclusions, and replay after deletion. |
+| Chat dictation | In both chat presentations, add dictated words to a typed draft, stop, edit and send. Try Esc, losing focus, closing, a silent recording, a Bluetooth mic, and a denied microphone permission. |
 | Chat window | Scroll to an earlier reply, enter a draft, choose **Open in window**, and take a window screenshot. Check the reading position, draft, resizing, and a running reply. Close the window and check the protected bar with pinning on and off. |
 | Chat and indicators | Real notch and secondary displays, hide and show the menu bar, hover and pin, IME, trackpad scroll, min size with 150% text, quiet switches between captured and excluded windows, badge placement, light and dark appearance, and accessibility display options. Send from older history and check that the question is visible before the reply. Scroll up mid-reply, then choose **Latest** and check that the view follows the rest of the reply. Open chat from a notification and check the selected message. Drag from one paragraph into the next after opening on hover, then press ⌘C. Check the copy icon on a question and a streaming reply, and the info icon on a completed reply. Return must never approve a card. |
 | Notifications and MCP | In the installed app, use Settings › Notifications › Send a test notification and check for the Remora app icon in the banner and Notification Center. Verify the permission prompt, wake catch-up, reminders with proactive messages off, sharing suppression, and delete-all cleanup. Test Connect and Update in real clients. For meeting sources, use test accounts and synthetic meetings to exercise authorization, resync, pause, forget, and disconnect. |

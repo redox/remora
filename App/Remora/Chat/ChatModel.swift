@@ -50,6 +50,7 @@ final class ChatModel {
     private(set) var detailsOpen = false
     /// The composer's field editor (the panel's first responder), for IME state and ⇧Enter.
     @ObservationIgnored var fieldEditor: (() -> NSTextView?)?
+    let dictation: DictationController
     var draft = ""
     private(set) var editingTurnID: Int64?
     @ObservationIgnored private var draftBeforeEditing: String?
@@ -78,7 +79,8 @@ final class ChatModel {
     @ObservationIgnored private static let log = Logger(subsystem: "dev.remora", category: "chat")
 
     init(agent: ChatAgent, db: AppDatabase, toolKinds: @escaping @Sendable (String) -> ToolKind?,
-         reminders: ReminderEngine, effects: any ActionEffects) {
+         reminders: ReminderEngine, effects: any ActionEffects, dictation: DictationController) {
+        self.dictation = dictation
         self.agent = agent
         self.db = db
         store = ChatStore(db)
@@ -97,10 +99,21 @@ final class ChatModel {
         reload()
     }
 
-    var canSend: Bool { ChatPresentation.canSend(draft: draft, isStreaming: isStreaming, clearing: clearing) }
+    var canSend: Bool {
+        !dictation.isDictatingChat && ChatPresentation.canSend(draft: draft, isStreaming: isStreaming, clearing: clearing)
+    }
+
+    func toggleDictation() {
+        guard !isStreaming, !clearing else { return }
+        dictation.toggleChatRecording { [weak self] transcript in
+            guard let self else { return }
+            draft = ChatPresentation.appendingTranscript(transcript, to: draft)
+            requestFocus()
+        }
+    }
 
     var latestUserTurnID: Int64? { turns.last { $0.role == .user }?.id }
-    var canEditLastMessage: Bool { latestUserTurnID != nil && editingTurnID == nil && !isStreaming && !clearing }
+    var canEditLastMessage: Bool { latestUserTurnID != nil && editingTurnID == nil && !isStreaming && !clearing && !dictation.isDictatingChat }
     var editingHasActions: Bool {
         guard let editingTurnID else { return false }
         return turns.contains { ($0.id ?? 0) > editingTurnID && $0.inboxID == nil && $0.tools.contains { $0.receipt != nil } }
@@ -117,6 +130,7 @@ final class ChatModel {
 
     func cancelEditing() {
         guard editingTurnID != nil, !isStreaming else { return }
+        dictation.cancelChatRecording()
         draft = draftBeforeEditing ?? ""
         editingTurnID = nil
         draftBeforeEditing = nil
@@ -153,7 +167,7 @@ final class ChatModel {
 
     /// Sends a starter chip's question.
     func ask(_ text: String) {
-        guard ChatPresentation.canSend(draft: text, isStreaming: isStreaming, clearing: clearing) else { return }
+        guard !dictation.isDictatingChat, ChatPresentation.canSend(draft: text, isStreaming: isStreaming, clearing: clearing) else { return }
         send(text)
     }
 
@@ -325,6 +339,7 @@ final class ChatModel {
     func clearHistory() async {
         guard !clearing else { return }
         clearing = true
+        dictation.cancelChatRecording()
         defer { clearing = false }
         stop()
         if let turnTask { await turnTask.value }
@@ -345,6 +360,7 @@ final class ChatModel {
     /// Delete-all succeeded: stops the running turn (its card is declined), drops this session's
     /// receipts and shows the now-empty history.
     func dataDeleted() async {
+        dictation.cancelChatRecording()
         stop()
         if let turnTask { await turnTask.value }
         cancelEditing()

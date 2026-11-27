@@ -121,6 +121,9 @@ Dictation is off by default. When on, Apple's speech recognition provides the li
 default final transcript. macOS downloads speech models from Apple as needed. The microphone audio
 is kept in memory for the session and is never written to disk by Remora.
 
+The mic in the chat composer transcribes on your Mac. Stopping adds the words to your draft.
+Choosing Send submits the reviewed text as a regular chat message.
+
 **Draft and insert** and **Edit** can send the reviewed transcript as text using the writing
 privacy rules above. Those actions keep the audio on your Mac.
 

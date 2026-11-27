@@ -158,27 +158,6 @@ final class AppEnvironment {
                                        ]),
                                        calendar: calendar),
             account: account, embedder: embedder, index: index, calendar: calendar)
-        // Chat: the MCP memory tools (same filtering), time report, routines, guide and actions.
-        let reminders = ReminderEngine(store: ReminderStore(db), db: db, calendar: { PeriodKey.localCalendar })
-        self.reminders = reminders
-        let effects = ChatEffects(target: weakSelf)
-        let toolbox = ChatToolbox(
-            MemoryToolAdapter.all(MemoryTools(databaseURL: AppDatabase.defaultURL, embedder: { embedder }))
-                + [TimeReportTool(db: db), RoutineSuggestionsTool(db: db), GuideTool(),
-                   SearchMeetingsTool(importer: meetingSources.importer, db: db), SearchRecordedMeetingsTool(db: db),
-                   SearchSavedNotesTool(db: db)]
-                + ActionTools.all(reminders: reminders, db: db, effects: effects))
-        let agent = ChatAgent(db: db, llm: service, toolbox: toolbox, store: ChatStore(db), calls: calls,
-                              calendar: { PeriodKey.localCalendar })
-        let chat = ChatModel(agent: agent, db: db, toolKinds: { toolbox.kind(of: $0) }, reminders: reminders,
-                             effects: effects)
-        self.chat = chat
-        let bar = ChatBarController(model: chat, settings: settings)
-        self.bar = bar
-        // A notification click opens the chat on its message.
-        let poster = SystemNotificationPoster(onOpen: { [weak bar] id in bar?.openMessage(inboxID: id) })
-        proactive = ProactiveController(db: db, inbox: inbox, poster: poster, reminders: reminders, agent: agent,
-                                        chat: chat)
         rewrite = RewriteController(
             engine: rewriteEngine, account: account, db: db, windows: reader,
             isPaused: { weakSelf.value?.isPaused ?? true },
@@ -192,6 +171,27 @@ final class AppEnvironment {
             observesContextSwitches: { weakSelf.value?.scheduler.observesContextSwitches ?? false },
             openDictationSettings: { weakSelf.value?.openSettings(tab: .dictation) })
         rewrite.dictation = dictation
+        // Chat: the MCP memory tools (same filtering), time report, routines, guide and actions.
+        let reminders = ReminderEngine(store: ReminderStore(db), db: db, calendar: { PeriodKey.localCalendar })
+        self.reminders = reminders
+        let effects = ChatEffects(target: weakSelf)
+        let toolbox = ChatToolbox(
+            MemoryToolAdapter.all(MemoryTools(databaseURL: AppDatabase.defaultURL, embedder: { embedder }))
+                + [TimeReportTool(db: db), RoutineSuggestionsTool(db: db), GuideTool(),
+                   SearchMeetingsTool(importer: meetingSources.importer, db: db), SearchRecordedMeetingsTool(db: db),
+                   SearchSavedNotesTool(db: db)]
+                + ActionTools.all(reminders: reminders, db: db, effects: effects))
+        let agent = ChatAgent(db: db, llm: service, toolbox: toolbox, store: ChatStore(db), calls: calls,
+                              calendar: { PeriodKey.localCalendar })
+        let chat = ChatModel(agent: agent, db: db, toolKinds: { toolbox.kind(of: $0) }, reminders: reminders,
+                             effects: effects, dictation: dictation)
+        self.chat = chat
+        let bar = ChatBarController(model: chat, settings: settings)
+        self.bar = bar
+        // A notification click opens the chat on its message.
+        let poster = SystemNotificationPoster(onOpen: { [weak bar] id in bar?.openMessage(inboxID: id) })
+        proactive = ProactiveController(db: db, inbox: inbox, poster: poster, reminders: reminders, agent: agent,
+                                        chat: chat)
         // The rewrite key with nothing focused opens the chat (a secure field still beeps).
         rewrite.openChat = { weakSelf.value?.bar.open(focusInput: true) }
         bar.actions = ChatBarController.Actions(
@@ -336,6 +336,7 @@ final class AppEnvironment {
         scheduler.stop()
         refreshPause()
         rewrite.closeEditBar()
+        dictation.cancelChatRecording()
         let db = db
         // Background memory is held off too: no job may land after the delete (Task 1 wipes memory).
         await memory.suspendForReset()

@@ -77,7 +77,10 @@ final class ChatBarController: NSObject, NSWindowDelegate {
         panel.contentView = host
         panel.delegate = self
         panel.installTracking()
-        panel.onEscape = { [weak self] in self?.handle(.escape) }
+        panel.onEscape = { [weak self] in
+            guard let self else { return }
+            if model.dictation.isDictatingChat { model.dictation.cancelChatRecording() } else { handle(.escape) }
+        }
         panel.onMouseEntered = { [weak self] in self?.hover(true) }
         panel.onMouseExited = { [weak self] in self?.hover(false) }
         model.onStreamingChange = { [weak self] on in self?.handle(.streaming(on)) }
@@ -103,8 +106,11 @@ final class ChatBarController: NSObject, NSWindowDelegate {
 
     func openChatWindow() {
         guard chatWindow == nil, let host = panel.contentView else { return }
-        let window = ChatWindow { [weak self] window in
+        let window = ChatWindow(onResignKey: { [weak model] in
+            if model?.dictation.isDictatingChat == true { model?.dictation.cancelChatRecording() }
+        }) { [weak self] window in
             guard let self, let host = window.contentView else { return }
+            model.dictation.cancelChatRecording()
             window.contentView = nil
             panel.contentView = host
             chatWindow = nil
@@ -250,6 +256,7 @@ final class ChatBarController: NSObject, NSWindowDelegate {
         var capsule: CGRect = .zero
         switch st {
         case .collapsed:
+            model.dictation.cancelChatRecording()
             frame = BarGeometry.collapsedPanelFrame(p, s)
             let bar = BarGeometry.visibleBarRect(p, s)
             capsule = CGRect(x: bar.minX - frame.minX, y: frame.maxY - bar.maxY, width: bar.width, height: bar.height)
@@ -305,6 +312,7 @@ final class ChatBarController: NSObject, NSWindowDelegate {
     func windowDidResignKey(_ notification: Notification) {
         Task { @MainActor [weak self] in
             guard let self, self.chatWindow == nil, !self.panel.isKeyWindow else { return }
+            if self.model.dictation.isDictatingChat { self.model.dictation.cancelChatRecording() }
             guard BarAppearance.collapsesOnResignKey(cardPending: self.model.pendingConfirmation != nil,
                                                      detailsOpen: self.model.detailsOpen) else { return }
             if let key = NSApp.keyWindow, key.parent === self.panel || key.sheetParent === self.panel
